@@ -239,20 +239,19 @@ func (b2Auth B2Auth) B2GetUploadPartURL(b2File B2File) (B2UploadPartInfo, error)
 	return upload, nil
 }
 
-func (b2Auth B2Auth) B2UploadFile(
-	uploadURL string,
+func (b2Info B2UploadInfo) B2UploadFile(
 	filename string,
 	checksum string,
 	data []byte,
 ) error {
-	req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", b2Info.UploadURL, bytes.NewBuffer(data))
 	if err != nil {
 		log.Printf("Error creating request to upload chunk: %v\n", err)
 		return err
 	}
 
 	req.Header = http.Header{
-		"Authorization":     {b2Auth.AuthorizationToken},
+		"Authorization":     {b2Info.AuthorizationToken},
 		"Content-Type":      {"application/octet-stream"},
 		"Content-Length":    {strconv.Itoa(len(data))},
 		"X-Bz-File-Name":    {filename},
@@ -265,7 +264,7 @@ func (b2Auth B2Auth) B2UploadFile(
 		log.Printf("Error uploading file chunk to B2: %v\n", err)
 		return err
 	} else if res.StatusCode >= 400 {
-		log.Printf("\n%s %s -- error: %d\n", "POST", uploadURL, res.StatusCode)
+		log.Printf("\n%s %s -- error: %d\n", "POST", b2Info.UploadURL, res.StatusCode)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
 		return errors.New("request returned error response")
@@ -274,20 +273,19 @@ func (b2Auth B2Auth) B2UploadFile(
 	return nil
 }
 
-func (b2Auth B2Auth) B2UploadFilePart(
-	uploadURL string,
+func (b2Info B2UploadPartInfo) B2UploadFilePart(
 	chunkNum int,
 	checksum string,
 	chunk []byte,
 ) error {
-	req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer(chunk))
+	req, err := http.NewRequest("POST", b2Info.UploadURL, bytes.NewBuffer(chunk))
 	if err != nil {
 		log.Printf("Error creating request to upload chunk: %v\n", err)
 		return err
 	}
 
 	req.Header = http.Header{
-		"Authorization":     {b2Auth.AuthorizationToken},
+		"Authorization":     {b2Info.AuthorizationToken},
 		"Content-Length":    {strconv.Itoa(len(chunk))},
 		"X-Bz-Part-Number":  {strconv.Itoa(chunkNum)},
 		"X-Bz-Content-Sha1": {checksum},
@@ -299,7 +297,7 @@ func (b2Auth B2Auth) B2UploadFilePart(
 		log.Printf("Error uploading file to B2: %v\n", err)
 		return err
 	} else if res.StatusCode >= 400 {
-		log.Printf("\n%s %s -- error: %d\n", "POST", uploadURL, res.StatusCode)
+		log.Printf("\n%s %s -- error: %d\n", "POST", b2Info.UploadURL, res.StatusCode)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
 	}

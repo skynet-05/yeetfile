@@ -38,7 +38,7 @@ func TestUpload() {
 
 	upload := FileUpload{
 		auth:     b2Auth,
-		filename: filename,
+		filename: "lipsum.enc",
 		data:     file,
 		key:      key,
 		salt:     salt,
@@ -63,8 +63,7 @@ func (upload FileUpload) UploadFile(attempts int) {
 
 	checksum := fmt.Sprintf("%x", utils.GenChecksum(encData))
 
-	err = upload.auth.B2UploadFile(
-		info.UploadURL,
+	err = info.B2UploadFile(
 		upload.filename,
 		checksum,
 		encData,
@@ -74,7 +73,7 @@ func (upload FileUpload) UploadFile(attempts int) {
 		if attempts < 5 {
 			upload.UploadFile(attempts + 1)
 		} else {
-			panic(err)
+			log.Fatalf("Unable to upload file")
 		}
 	}
 }
@@ -108,8 +107,7 @@ func (upload FileUpload) UploadLargeFile() {
 		checksum := utils.GenChecksum(chunk)
 		checksums = append(checksums, fmt.Sprintf("%x", checksum))
 
-		err := upload.auth.B2UploadFilePart(
-			info.UploadURL,
+		err := info.B2UploadFilePart(
 			idx+1,
 			fmt.Sprintf("%x", checksum),
 			chunk,
