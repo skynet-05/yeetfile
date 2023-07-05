@@ -1,7 +1,9 @@
 package main
 
-import "yeetfile/src/utils"
+import (
+	"yeetfile/src/server"
+)
 
 func main() {
-	utils.TestUpload()
+	server.TestUpload()
 }

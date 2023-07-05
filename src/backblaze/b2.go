@@ -1,9 +1,10 @@
-package utils
+package backblaze
 
 import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,14 +15,14 @@ import (
 	"time"
 )
 
-const AUTH_URL string = "https://api.backblazeb2.com/b2api/v2/b2_authorize_account"
-const API_PREFIX string = "b2api/v2"
-const API_START_LARGE_FILE string = "b2_start_large_file"
-const API_GET_UPLOAD_PART_URL string = "b2_get_upload_part_url"
-const API_UPLOAD_PART string = "b2_upload_part"
-const API_FINISH_LARGE_FILE = "b2_finish_large_file"
+const AuthURL string = "https://api.backblazeb2.com/b2api/v2/b2_authorize_account"
+const APIPrefix string = "b2api/v2"
+const APIStartLargeFile string = "b2_start_large_file"
+const APIGetUploadURL string = "b2_get_upload_url"
+const APIGetUploadPartURL string = "b2_get_upload_part_url"
+const APIFinishLargeFile = "b2_finish_large_file"
 
-var CLIENT = &http.Client{Timeout: 10 * time.Second}
+var HTTPClient = &http.Client{Timeout: 10 * time.Second}
 
 type B2Auth struct {
 	AbsoluteMinimumPartSize int    `json:"absoluteMinimumPartSize"`
@@ -69,23 +70,25 @@ type B2File struct {
 }
 
 type B2UploadInfo struct {
+	BucketID           string `json:"bucketId"`
+	UploadURL          string `json:"uploadUrl"`
+	AuthorizationToken string `json:"authorizationToken"`
+}
+
+type B2UploadPartInfo struct {
 	FileID             string `json:"fileId"`
 	UploadURL          string `json:"uploadUrl"`
 	AuthorizationToken string `json:"authorizationToken"`
 }
 
-func B2Init() (B2Auth, error) {
-	req, err := http.NewRequest("GET", AUTH_URL, nil)
+func B2Init(b2BucketKeyId string, b2BucketKey string) (B2Auth, error) {
+	req, err := http.NewRequest("GET", AuthURL, nil)
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v", err)
 		return B2Auth{}, err
 	}
 
-	authString := fmt.Sprintf(
-		"%s:%s",
-		os.Getenv("B2_BUCKET_KEY_ID"),
-		os.Getenv("B2_BUCKET_KEY"))
-
+	authString := fmt.Sprintf("%s:%s", b2BucketKeyId, b2BucketKey)
 	authString = base64.StdEncoding.EncodeToString([]byte(authString))
 
 	req.Header = http.Header{
@@ -93,10 +96,14 @@ func B2Init() (B2Auth, error) {
 		"Authorization": {fmt.Sprintf("Basic: %s", authString)},
 	}
 
-	res, err := CLIENT.Do(req)
+	res, err := HTTPClient.Do(req)
 	if err != nil {
 		log.Printf("Error sending B2 auth request: %v", err)
 		return B2Auth{}, err
+	} else if res.StatusCode >= 400 {
+		log.Printf("%s -- error: %d\n", AuthURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
 	}
 
 	var auth B2Auth
@@ -113,7 +120,7 @@ func B2Init() (B2Auth, error) {
 	return auth, nil
 }
 
-func (b2Auth B2Auth) B2FileInit(filename string) (B2File, error) {
+func (b2Auth B2Auth) B2StartLargeFile(filename string) (B2File, error) {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"bucketId": "%s",
 		"fileName": "%s",
@@ -121,7 +128,7 @@ func (b2Auth B2Auth) B2FileInit(filename string) (B2File, error) {
 	}`, os.Getenv("B2_BUCKET_ID"), filename)))
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, API_PREFIX, API_START_LARGE_FILE)
+		b2Auth.APIURL, APIPrefix, APIStartLargeFile)
 
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
@@ -134,10 +141,14 @@ func (b2Auth B2Auth) B2FileInit(filename string) (B2File, error) {
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := CLIENT.Do(req)
+	res, err := HTTPClient.Do(req)
 	if err != nil {
 		log.Printf("Error sending B2 init file request: %v\n", err)
 		return B2File{}, err
+	} else if res.StatusCode >= 400 {
+		log.Printf("\n%s %s -- error: %d\n", "POST", reqURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
 	}
 
 	var file B2File
@@ -150,13 +161,13 @@ func (b2Auth B2Auth) B2FileInit(filename string) (B2File, error) {
 	return file, nil
 }
 
-func (b2Auth B2Auth) B2GetUploadURL(b2File B2File) (B2UploadInfo, error) {
+func (b2Auth B2Auth) B2GetUploadURL() (B2UploadInfo, error) {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
-		"fileId": "%s"
-	}`, b2File.FileID)))
+		"bucketId": "%s"
+	}`, os.Getenv("B2_BUCKET_ID"))))
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, API_PREFIX, API_GET_UPLOAD_PART_URL)
+		b2Auth.APIURL, APIPrefix, APIGetUploadURL)
 
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
@@ -169,34 +180,107 @@ func (b2Auth B2Auth) B2GetUploadURL(b2File B2File) (B2UploadInfo, error) {
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := CLIENT.Do(req)
+	res, err := HTTPClient.Do(req)
 	if err != nil {
-		log.Printf("Error sending B2 start upload request: %v\n", err)
+		log.Printf("Error requesting B2 upload URL: %v\n", err)
 		return B2UploadInfo{}, err
+	} else if res.StatusCode >= 400 {
+		log.Printf("\n%s %s -- error: %d\n", "POST", reqURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
 	}
 
 	var upload B2UploadInfo
 	err = json.NewDecoder(res.Body).Decode(&upload)
 	if err != nil {
-		log.Printf("Error decoding B2 upload init: %v", err)
+		log.Printf("Error decoding B2 upload info: %v", err)
 		return B2UploadInfo{}, err
 	}
 
 	return upload, nil
 }
 
+func (b2Auth B2Auth) B2GetUploadPartURL(b2File B2File) (B2UploadPartInfo, error) {
+	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
+		"fileId": "%s"
+	}`, b2File.FileID)))
+	reqURL := fmt.Sprintf(
+		"%s/%s/%s",
+		b2Auth.APIURL, APIPrefix, APIGetUploadPartURL)
+
+	req, err := http.NewRequest("POST", reqURL, reqBody)
+	if err != nil {
+		log.Printf("Error creating new HTTP request: %v\n", err)
+		return B2UploadPartInfo{}, err
+	}
+
+	req.Header = http.Header{
+		"Content-Type":  {"application/json"},
+		"Authorization": {b2Auth.AuthorizationToken},
+	}
+
+	res, err := HTTPClient.Do(req)
+	if err != nil {
+		log.Printf("Error sending B2 start upload request: %v\n", err)
+		return B2UploadPartInfo{}, err
+	} else if res.StatusCode >= 400 {
+		log.Printf("\n%s %s -- error: %d\n", "POST", reqURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
+	}
+
+	var upload B2UploadPartInfo
+	err = json.NewDecoder(res.Body).Decode(&upload)
+	if err != nil {
+		log.Printf("Error decoding B2 upload part info: %v", err)
+		return B2UploadPartInfo{}, err
+	}
+
+	return upload, nil
+}
+
+func (b2Auth B2Auth) B2UploadFile(
+	uploadURL string,
+	filename string,
+	checksum string,
+	data []byte,
+) error {
+	req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer(data))
+	if err != nil {
+		log.Printf("Error creating request to upload chunk: %v\n", err)
+		return err
+	}
+
+	req.Header = http.Header{
+		"Authorization":     {b2Auth.AuthorizationToken},
+		"Content-Type":      {"application/octet-stream"},
+		"Content-Length":    {strconv.Itoa(len(data))},
+		"X-Bz-File-Name":    {filename},
+		"X-Bz-Content-Sha1": {checksum},
+	}
+
+	res, err := HTTPClient.Do(req)
+
+	if err != nil {
+		log.Printf("Error uploading file chunk to B2: %v\n", err)
+		return err
+	} else if res.StatusCode >= 400 {
+		log.Printf("\n%s %s -- error: %d\n", "POST", uploadURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
+		return errors.New("request returned error response")
+	}
+
+	return nil
+}
+
 func (b2Auth B2Auth) B2UploadFilePart(
-	info B2UploadInfo,
+	uploadURL string,
 	chunkNum int,
 	checksum string,
 	chunk []byte,
 ) error {
-	//reqURL := fmt.Sprintf(
-	//	"%s/%s/%s",
-	//	b2Auth.APIURL, API_PREFIX, API_UPLOAD_PART)
-	reqURL := info.UploadURL
-
-	req, err := http.NewRequest("POST", reqURL, bytes.NewBuffer(chunk))
+	req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer(chunk))
 	if err != nil {
 		log.Printf("Error creating request to upload chunk: %v\n", err)
 		return err
@@ -209,28 +293,32 @@ func (b2Auth B2Auth) B2UploadFilePart(
 		"X-Bz-Content-Sha1": {checksum},
 	}
 
-	_, err = CLIENT.Do(req)
+	res, err := HTTPClient.Do(req)
+
 	if err != nil {
-		log.Printf("Error uploading file chunk to B2: %v\n", err)
+		log.Printf("Error uploading file to B2: %v\n", err)
 		return err
+	} else if res.StatusCode >= 400 {
+		log.Printf("\n%s %s -- error: %d\n", "POST", uploadURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
 	}
 
 	return nil
 }
 
-func (b2Auth B2Auth) B2FinishFileUpload(
-	info B2UploadInfo,
+func (b2Auth B2Auth) B2FinishLargeFile(
+	fileID string,
 	checksums string,
 ) error {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"fileId": "%s",
 		"partSha1Array": %s
-	}`, info.FileID, checksums)))
-	fmt.Println(reqBody)
+	}`, fileID, checksums)))
 
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, API_PREFIX, API_FINISH_LARGE_FILE)
+		b2Auth.APIURL, APIPrefix, APIFinishLargeFile)
 
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
@@ -243,13 +331,15 @@ func (b2Auth B2Auth) B2FinishFileUpload(
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := CLIENT.Do(req)
+	res, err := HTTPClient.Do(req)
 
-	resp, _ := httputil.DumpResponse(res, true)
-	fmt.Println(fmt.Sprintf("%s", resp))
 	if err != nil {
 		log.Printf("Error sending B2 finish upload request: %v\n", err)
 		return err
+	} else if res.StatusCode >= 400 {
+		log.Printf("\n%s %s -- error: %d\n", "POST", reqURL, res.StatusCode)
+		resp, _ := httputil.DumpResponse(res, true)
+		fmt.Println(fmt.Sprintf("%s", resp))
 	}
 
 	return nil
