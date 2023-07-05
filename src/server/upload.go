@@ -21,7 +21,9 @@ func TestUpload() {
 	filename := "lipsum.txt"
 	password := []byte("topsecret")
 
-	b2Auth, err := backblaze.B2Init(os.Getenv("B2_BUCKET_KEY_ID"), os.Getenv("B2_BUCKET_KEY"))
+	b2Auth, err := backblaze.B2AuthorizeAccount(
+		os.Getenv("B2_BUCKET_KEY_ID"),
+		os.Getenv("B2_BUCKET_KEY"))
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +65,7 @@ func (upload FileUpload) UploadFile(attempts int) {
 
 	checksum := fmt.Sprintf("%x", utils.GenChecksum(encData))
 
-	err = info.B2UploadFile(
+	b2File, err := info.B2UploadFile(
 		upload.filename,
 		checksum,
 		encData,
@@ -76,10 +78,12 @@ func (upload FileUpload) UploadFile(attempts int) {
 			log.Fatalf("Unable to upload file")
 		}
 	}
+
+	fmt.Printf("File ID: %s\n", b2File.FileID)
 }
 
 func (upload FileUpload) UploadLargeFile() {
-	init, err := upload.auth.B2StartLargeFile("lipsum.enc")
+	init, err := upload.auth.B2StartLargeFile(upload.filename)
 	if err != nil {
 		panic(err)
 	}
@@ -100,7 +104,9 @@ func (upload FileUpload) UploadLargeFile() {
 			needsSalt = true
 		}
 
-		chunk := utils.EncryptChunk(upload.key, upload.data[idx:idx+chunkSize])
+		chunk := utils.EncryptChunk(
+			upload.key,
+			upload.data[idx:idx+chunkSize])
 		if needsSalt {
 			chunk = append(chunk, upload.salt...)
 		}
