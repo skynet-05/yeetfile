@@ -80,6 +80,7 @@ func (upload FileUpload) UploadFile(attempts int) {
 	}
 
 	fmt.Printf("File ID: %s\n", b2File.FileID)
+	fmt.Printf("File size: %d\n", b2File.ContentLength)
 }
 
 func (upload FileUpload) UploadLargeFile() {

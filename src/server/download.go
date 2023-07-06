@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"golang.org/x/crypto/nacl/secretbox"
 	"os"
 	"yeetfile/src/backblaze"
 	"yeetfile/src/utils"
@@ -16,20 +17,40 @@ func TestDownload() {
 		panic(err)
 	}
 
-	data, err := auth.B2DownloadById(os.Getenv("B2_TEST_UPLOAD_ID"))
+	id := ""
+	length := 2665
+	password := []byte("topsecret")
+
+	salt, err := auth.B2PartialDownloadById(id, length-utils.KEY_SIZE, length)
+	key, _, err := utils.DeriveKey(password, salt)
 	if err != nil {
-		panic(err)
+		return
 	}
 
-	output, err := os.OpenFile("out.enc", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
-	_, _ = output.Write(data)
+	// ---------------
+	// TODO: Add password validation step before downloading from B2
+	// ---------------
 
-	out, err := os.ReadFile("out.enc")
-	if err != nil {
-		panic("Failed to read the output file")
+	out, err := os.OpenFile("out.enc", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
+
+	start := 0
+	var output []byte
+	for start < length-utils.KEY_SIZE-1 {
+		chunkSize := utils.NONCE_SIZE + utils.BUFFER_SIZE + secretbox.Overhead + start
+		if start+chunkSize > length-utils.KEY_SIZE-1 {
+			chunkSize = length - utils.KEY_SIZE - 1
+		}
+
+		data, _ := auth.B2PartialDownloadById(id, start, chunkSize)
+
+		plaintext, newStart := utils.DecryptChunk(key, data)
+		output = append(output, plaintext...)
+		start = newStart
 	}
 
-	plaintext := utils.Decrypt([]byte("topsecret"), out)
+	_, _ = out.Write(output)
+	_ = out.Close()
 
+	plaintext, _ := os.ReadFile("out.enc")
 	fmt.Println(string(plaintext))
 }

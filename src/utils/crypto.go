@@ -69,7 +69,7 @@ func TestEncryptAndDecrypt() {
 		panic("Failed to read the output file")
 	}
 
-	plaintext := Decrypt(password, out)
+	plaintext := OldDecrypt(password, out)
 
 	fmt.Println(string(plaintext))
 }
@@ -106,7 +106,58 @@ func GenChecksum(data []byte) []byte {
 	return h.Sum(nil)
 }
 
-func Decrypt(password []byte, data []byte) []byte {
+func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int) {
+	var decryptNonce [NONCE_SIZE]byte
+	copy(decryptNonce[:], chunk[:NONCE_SIZE])
+
+	// Define the size of chunk to read
+	//chunkSize := NONCE_SIZE + BUFFER_SIZE + secretbox.Overhead
+	//if chunkSize > len(chunk)+NONCE_SIZE {
+	//	// Read remainder of file if the chunk size exceeds the available data
+	//	chunkSize = len(chunk)
+	//}
+
+	// Decrypt and append contents to output
+	decrypted, ok := secretbox.Open(nil, chunk[NONCE_SIZE:], &decryptNonce, &key)
+	if !ok {
+		panic("decryption error")
+	}
+
+	return decrypted, NONCE_SIZE + len(decrypted) + secretbox.Overhead
+}
+
+func Decrypt(password []byte, salt []byte, data []byte) []byte {
+	key, _, err := DeriveKey(password, salt)
+	if err != nil {
+		return nil
+	}
+
+	var output []byte
+	for len(data) > 0 {
+		var decryptNonce [NONCE_SIZE]byte
+		copy(decryptNonce[:], data[:NONCE_SIZE])
+
+		// Define the size of chunk to read
+		chunkSize := NONCE_SIZE + BUFFER_SIZE + secretbox.Overhead
+		if chunkSize > len(data)+NONCE_SIZE {
+			// Read remainder of file if the chunk size exceeds the available data
+			chunkSize = len(data)
+		}
+
+		// Decrypt and append contents to output
+		decrypted, ok := secretbox.Open(nil, data[NONCE_SIZE:chunkSize], &decryptNonce, &key)
+		if !ok {
+			panic("decryption error")
+		}
+
+		output = append(output, decrypted...)
+		data = data[NONCE_SIZE+len(decrypted)+secretbox.Overhead:]
+	}
+
+	return output
+}
+
+func OldDecrypt(password []byte, data []byte) []byte {
 	salt, data := data[len(data)-KEY_SIZE:], data[:len(data)-KEY_SIZE]
 
 	key, _, err := DeriveKey(password, salt)
