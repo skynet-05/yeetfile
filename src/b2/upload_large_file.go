@@ -1,4 +1,4 @@
-package backblaze
+package b2
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ const APIStartLargeFile string = "b2_start_large_file"
 const APIGetUploadPartURL string = "b2_get_upload_part_url"
 const APIFinishLargeFile = "b2_finish_large_file"
 
-type B2StartFile struct {
+type StartFile struct {
 	AccountID     string `json:"accountId"`
 	Action        string `json:"action"`
 	BucketID      string `json:"bucketId"`
@@ -44,18 +44,18 @@ type B2StartFile struct {
 	UploadTimestamp int64 `json:"uploadTimestamp"`
 }
 
-type B2FilePartInfo struct {
+type FilePartInfo struct {
 	FileID             string `json:"fileId"`
 	UploadURL          string `json:"uploadUrl"`
 	AuthorizationToken string `json:"authorizationToken"`
 }
 
-type B2LargeFile struct {
+type LargeFile struct {
 }
 
-func (b2Auth B2Auth) B2StartLargeFile(
+func (b2Auth Auth) StartLargeFile(
 	filename string,
-) (B2StartFile, error) {
+) (StartFile, error) {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"bucketId": "%s",
 		"fileName": "%s",
@@ -68,7 +68,7 @@ func (b2Auth B2Auth) B2StartLargeFile(
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v\n", err)
-		return B2StartFile{}, err
+		return StartFile{}, err
 	}
 
 	req.Header = http.Header{
@@ -79,27 +79,27 @@ func (b2Auth B2Auth) B2StartLargeFile(
 	res, err := B2Client.Do(req)
 	if err != nil {
 		log.Printf("Error starting B2 file: %v\n", err)
-		return B2StartFile{}, err
+		return StartFile{}, err
 	} else if res.StatusCode >= 400 {
 		log.Printf("\n%s %s\n", "POST", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return B2StartFile{}, B2Error
+		return StartFile{}, B2Error
 	}
 
-	var file B2StartFile
+	var file StartFile
 	err = json.NewDecoder(res.Body).Decode(&file)
 	if err != nil {
 		log.Printf("Error decoding B2 file init: %v", err)
-		return B2StartFile{}, err
+		return StartFile{}, err
 	}
 
 	return file, nil
 }
 
-func (b2Auth B2Auth) B2GetUploadPartURL(
-	b2File B2StartFile,
-) (B2FilePartInfo, error) {
+func (b2Auth Auth) GetUploadPartURL(
+	b2File StartFile,
+) (FilePartInfo, error) {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"fileId": "%s"
 	}`, b2File.FileID)))
@@ -110,7 +110,7 @@ func (b2Auth B2Auth) B2GetUploadPartURL(
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v\n", err)
-		return B2FilePartInfo{}, err
+		return FilePartInfo{}, err
 	}
 
 	req.Header = http.Header{
@@ -121,25 +121,25 @@ func (b2Auth B2Auth) B2GetUploadPartURL(
 	res, err := B2Client.Do(req)
 	if err != nil {
 		log.Printf("Error getting B2 upload url: %v\n", err)
-		return B2FilePartInfo{}, err
+		return FilePartInfo{}, err
 	} else if res.StatusCode >= 400 {
 		log.Printf("\n%s %s\n", "POST", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return B2FilePartInfo{}, B2Error
+		return FilePartInfo{}, B2Error
 	}
 
-	var upload B2FilePartInfo
+	var upload FilePartInfo
 	err = json.NewDecoder(res.Body).Decode(&upload)
 	if err != nil {
 		log.Printf("Error decoding B2 upload part info: %v", err)
-		return B2FilePartInfo{}, err
+		return FilePartInfo{}, err
 	}
 
 	return upload, nil
 }
 
-func (b2PartInfo B2FilePartInfo) B2UploadFilePart(
+func (b2PartInfo FilePartInfo) UploadFilePart(
 	chunkNum int,
 	checksum string,
 	contents []byte,
@@ -175,7 +175,7 @@ func (b2PartInfo B2FilePartInfo) B2UploadFilePart(
 	return nil
 }
 
-func (b2Auth B2Auth) B2FinishLargeFile(
+func (b2Auth Auth) FinishLargeFile(
 	fileID string,
 	checksums string,
 ) error {

@@ -1,4 +1,4 @@
-package backblaze
+package b2
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ func download(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func (b2Auth B2Auth) B2PartialDownloadById(
+func (b2Auth Auth) PartialDownloadById(
 	id string,
 	begin int,
 	end int,
@@ -76,7 +76,7 @@ func (b2Auth B2Auth) B2PartialDownloadById(
 	return download(req)
 }
 
-func (b2Auth B2Auth) B2DownloadById(id string) ([]byte, error) {
+func (b2Auth Auth) DownloadById(id string) ([]byte, error) {
 	req, err := setupDownload(b2Auth.APIURL, id)
 	if err != nil {
 		log.Fatalf("Error setting up download: %v", err)

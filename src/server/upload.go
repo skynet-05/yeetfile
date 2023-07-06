@@ -5,12 +5,12 @@ import (
 	"log"
 	"os"
 	"strings"
-	"yeetfile/src/backblaze"
+	"yeetfile/src/b2"
 	"yeetfile/src/utils"
 )
 
 type FileUpload struct {
-	auth     backblaze.B2Auth
+	b2       b2.Auth
 	filename string
 	data     []byte
 	key      [32]byte
@@ -21,7 +21,7 @@ func TestUpload() {
 	filename := "lipsum.txt"
 	password := []byte("topsecret")
 
-	b2Auth, err := backblaze.B2AuthorizeAccount(
+	b2Auth, err := b2.AuthorizeAccount(
 		os.Getenv("B2_BUCKET_KEY_ID"),
 		os.Getenv("B2_BUCKET_KEY"))
 	if err != nil {
@@ -39,7 +39,7 @@ func TestUpload() {
 	}
 
 	upload := FileUpload{
-		auth:     b2Auth,
+		b2:       b2Auth,
 		filename: "lipsum.enc",
 		data:     file,
 		key:      key,
@@ -55,7 +55,7 @@ func TestUpload() {
 }
 
 func (upload FileUpload) UploadFile(attempts int) {
-	info, err := upload.auth.B2GetUploadURL()
+	info, err := upload.b2.GetUploadURL()
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func (upload FileUpload) UploadFile(attempts int) {
 
 	checksum := fmt.Sprintf("%x", utils.GenChecksum(encData))
 
-	b2File, err := info.B2UploadFile(
+	b2File, err := info.UploadFile(
 		upload.filename,
 		checksum,
 		encData,
@@ -84,12 +84,12 @@ func (upload FileUpload) UploadFile(attempts int) {
 }
 
 func (upload FileUpload) UploadLargeFile() {
-	init, err := upload.auth.B2StartLargeFile(upload.filename)
+	init, err := upload.b2.StartLargeFile(upload.filename)
 	if err != nil {
 		panic(err)
 	}
 
-	info, err := upload.auth.B2GetUploadPartURL(init)
+	info, err := upload.b2.GetUploadPartURL(init)
 	if err != nil {
 		panic(err)
 	}
@@ -114,7 +114,7 @@ func (upload FileUpload) UploadLargeFile() {
 		checksum := utils.GenChecksum(chunk)
 		checksums = append(checksums, fmt.Sprintf("%x", checksum))
 
-		err := info.B2UploadFilePart(
+		err := info.UploadFilePart(
 			idx+1,
 			fmt.Sprintf("%x", checksum),
 			chunk,
@@ -129,7 +129,7 @@ func (upload FileUpload) UploadLargeFile() {
 
 	checksumStr := "[\"" + strings.Join(checksums, "\",\"") + "\"]"
 
-	err = upload.auth.B2FinishLargeFile(info.FileID, checksumStr)
+	err = upload.b2.FinishLargeFile(info.FileID, checksumStr)
 	if err != nil {
 		panic(err)
 	}

@@ -1,4 +1,4 @@
-package backblaze
+package b2
 
 import (
 	"errors"

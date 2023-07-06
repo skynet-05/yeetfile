@@ -1,4 +1,4 @@
-package backblaze
+package b2
 
 import (
 	"encoding/base64"
@@ -12,7 +12,7 @@ import (
 
 const AuthURL string = "https://api.backblazeb2.com/b2api/v2/b2_authorize_account"
 
-type B2Auth struct {
+type Auth struct {
 	AbsoluteMinimumPartSize int    `json:"absoluteMinimumPartSize"`
 	AccountID               string `json:"accountId"`
 	Allowed                 struct {
@@ -28,14 +28,14 @@ type B2Auth struct {
 	S3APIURL            string `json:"s3ApiUrl"`
 }
 
-func B2AuthorizeAccount(
+func AuthorizeAccount(
 	b2BucketKeyId string,
 	b2BucketKey string,
-) (B2Auth, error) {
+) (Auth, error) {
 	req, err := http.NewRequest("GET", AuthURL, nil)
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v", err)
-		return B2Auth{}, err
+		return Auth{}, err
 	}
 
 	authString := fmt.Sprintf("%s:%s", b2BucketKeyId, b2BucketKey)
@@ -49,18 +49,18 @@ func B2AuthorizeAccount(
 	res, err := B2Client.Do(req)
 	if err != nil {
 		log.Printf("Error sending B2 auth request: %v", err)
-		return B2Auth{}, err
+		return Auth{}, err
 	} else if res.StatusCode >= 400 {
 		log.Printf("%s -- error: %d\n", AuthURL, res.StatusCode)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
 	}
 
-	var auth B2Auth
+	var auth Auth
 	err = json.NewDecoder(res.Body).Decode(&auth)
 	if err != nil {
 		log.Printf("Error decoding B2 auth: %v", err)
-		return B2Auth{}, err
+		return Auth{}, err
 	}
 
 	if strings.HasSuffix(auth.APIURL, "/") {

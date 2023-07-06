@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"golang.org/x/crypto/nacl/secretbox"
 	"os"
-	"yeetfile/src/backblaze"
+	"yeetfile/src/b2"
 	"yeetfile/src/utils"
 )
 
 func TestDownload() {
-	auth, err := backblaze.B2AuthorizeAccount(
+	auth, err := b2.AuthorizeAccount(
 		os.Getenv("B2_BUCKET_KEY_ID"),
 		os.Getenv("B2_BUCKET_KEY"))
 
@@ -21,7 +21,7 @@ func TestDownload() {
 	length := 2665
 	password := []byte("topsecret")
 
-	salt, err := auth.B2PartialDownloadById(id, length-utils.KEY_SIZE, length)
+	salt, err := auth.PartialDownloadById(id, length-utils.KEY_SIZE, length)
 	key, _, err := utils.DeriveKey(password, salt)
 	if err != nil {
 		return
@@ -41,7 +41,7 @@ func TestDownload() {
 			chunkSize = length - utils.KEY_SIZE - 1
 		}
 
-		data, _ := auth.B2PartialDownloadById(id, start, chunkSize)
+		data, _ := auth.PartialDownloadById(id, start, chunkSize)
 
 		plaintext, newStart := utils.DecryptChunk(key, data)
 		output = append(output, plaintext...)

@@ -1,4 +1,4 @@
-package backblaze
+package b2
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 
 const APIGetUploadURL string = "b2_get_upload_url"
 
-type B2File struct {
+type File struct {
 	AccountID     string `json:"accountId"`
 	Action        string `json:"action"`
 	BucketID      string `json:"bucketId"`
@@ -40,13 +40,13 @@ type B2File struct {
 	UploadTimestamp int64 `json:"uploadTimestamp"`
 }
 
-type B2FileInfo struct {
+type FileInfo struct {
 	BucketID           string `json:"bucketId"`
 	UploadURL          string `json:"uploadUrl"`
 	AuthorizationToken string `json:"authorizationToken"`
 }
 
-func (b2Auth B2Auth) B2GetUploadURL() (B2FileInfo, error) {
+func (b2Auth Auth) GetUploadURL() (FileInfo, error) {
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
 		b2Auth.APIURL, APIPrefix, APIGetUploadURL)
@@ -59,7 +59,7 @@ func (b2Auth B2Auth) B2GetUploadURL() (B2FileInfo, error) {
 
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v\n", err)
-		return B2FileInfo{}, err
+		return FileInfo{}, err
 	}
 
 	req.Header = http.Header{
@@ -70,36 +70,36 @@ func (b2Auth B2Auth) B2GetUploadURL() (B2FileInfo, error) {
 	res, err := B2Client.Do(req)
 	if err != nil {
 		log.Printf("Error requesting B2 upload URL: %v\n", err)
-		return B2FileInfo{}, err
+		return FileInfo{}, err
 	} else if res.StatusCode >= 400 {
 		log.Printf("\n%s %s\n", "GET", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return B2FileInfo{}, B2Error
+		return FileInfo{}, B2Error
 	}
 
-	var upload B2FileInfo
+	var upload FileInfo
 	err = json.NewDecoder(res.Body).Decode(&upload)
 	if err != nil {
 		log.Printf("Error decoding B2 upload info: %v", err)
-		return B2FileInfo{}, err
+		return FileInfo{}, err
 	}
 
 	return upload, nil
 }
 
-func (b2Info B2FileInfo) B2UploadFile(
+func (b2Info FileInfo) UploadFile(
 	filename string,
 	checksum string,
 	contents []byte,
-) (B2File, error) {
+) (File, error) {
 	req, err := http.NewRequest(
 		"POST",
 		b2Info.UploadURL,
 		bytes.NewBuffer(contents))
 	if err != nil {
 		log.Printf("Error creating upload request: %v\n", err)
-		return B2File{}, err
+		return File{}, err
 	}
 
 	req.Header = http.Header{
@@ -114,19 +114,19 @@ func (b2Info B2FileInfo) B2UploadFile(
 
 	if err != nil {
 		log.Printf("Error uploading file chunk to B2: %v\n", err)
-		return B2File{}, err
+		return File{}, err
 	} else if res.StatusCode >= 400 {
 		log.Printf("\n%s %s\n", "POST", b2Info.UploadURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return B2File{}, B2Error
+		return File{}, B2Error
 	}
 
-	var b2File B2File
+	var b2File File
 	err = json.NewDecoder(res.Body).Decode(&b2File)
 	if err != nil {
 		log.Printf("Error decoding B2 file: %v", err)
-		return B2File{}, err
+		return File{}, err
 	}
 
 	return b2File, nil
