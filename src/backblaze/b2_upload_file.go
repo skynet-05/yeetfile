@@ -47,14 +47,16 @@ type B2FileInfo struct {
 }
 
 func (b2Auth B2Auth) B2GetUploadURL() (B2FileInfo, error) {
-	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
-		"bucketId": "%s"
-	}`, os.Getenv("B2_BUCKET_ID"))))
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
 		b2Auth.APIURL, APIPrefix, APIGetUploadURL)
 
-	req, err := http.NewRequest("POST", reqURL, reqBody)
+	req, err := http.NewRequest("GET", reqURL, nil)
+
+	q := req.URL.Query()
+	q.Add("bucketId", os.Getenv("B2_BUCKET_ID"))
+	req.URL.RawQuery = q.Encode()
+
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v\n", err)
 		return B2FileInfo{}, err
@@ -70,7 +72,7 @@ func (b2Auth B2Auth) B2GetUploadURL() (B2FileInfo, error) {
 		log.Printf("Error requesting B2 upload URL: %v\n", err)
 		return B2FileInfo{}, err
 	} else if res.StatusCode >= 400 {
-		log.Printf("\n%s %s\n", "POST", reqURL)
+		log.Printf("\n%s %s\n", "GET", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
 		return B2FileInfo{}, B2Error

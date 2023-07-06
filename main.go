@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
-	server.TestUpload()
+	//server.TestUpload()
+	server.TestDownload()
 }
