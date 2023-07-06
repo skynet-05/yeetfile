@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"strconv"
+	"yeetfile/src/b2/utils"
 )
 
 const APIStartLargeFile string = "b2_start_large_file"
@@ -51,6 +52,30 @@ type FilePartInfo struct {
 }
 
 type LargeFile struct {
+	AccountID     string `json:"accountId"`
+	Action        string `json:"action"`
+	BucketID      string `json:"bucketId"`
+	ContentLength int    `json:"contentLength"`
+	ContentMd5    any    `json:"contentMd5"`
+	ContentSha1   string `json:"contentSha1"`
+	ContentType   string `json:"contentType"`
+	FileID        string `json:"fileId"`
+	FileInfo      struct {
+	} `json:"fileInfo"`
+	FileName      string `json:"fileName"`
+	FileRetention struct {
+		IsClientAuthorizedToRead bool `json:"isClientAuthorizedToRead"`
+		Value                    any  `json:"value"`
+	} `json:"fileRetention"`
+	LegalHold struct {
+		IsClientAuthorizedToRead bool `json:"isClientAuthorizedToRead"`
+		Value                    any  `json:"value"`
+	} `json:"legalHold"`
+	ServerSideEncryption struct {
+		Algorithm string `json:"algorithm"`
+		Mode      string `json:"mode"`
+	} `json:"serverSideEncryption"`
+	UploadTimestamp int64 `json:"uploadTimestamp"`
 }
 
 func (b2Auth Auth) StartLargeFile(
@@ -63,7 +88,7 @@ func (b2Auth Auth) StartLargeFile(
 	}`, os.Getenv("B2_BUCKET_ID"), filename)))
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, APIPrefix, APIStartLargeFile)
+		b2Auth.APIURL, utils.APIPrefix, APIStartLargeFile)
 
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
@@ -76,7 +101,7 @@ func (b2Auth Auth) StartLargeFile(
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 	if err != nil {
 		log.Printf("Error starting B2 file: %v\n", err)
 		return StartFile{}, err
@@ -84,7 +109,7 @@ func (b2Auth Auth) StartLargeFile(
 		log.Printf("\n%s %s\n", "POST", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return StartFile{}, B2Error
+		return StartFile{}, utils.Error
 	}
 
 	var file StartFile
@@ -105,7 +130,7 @@ func (b2Auth Auth) GetUploadPartURL(
 	}`, b2File.FileID)))
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, APIPrefix, APIGetUploadPartURL)
+		b2Auth.APIURL, utils.APIPrefix, APIGetUploadPartURL)
 
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
@@ -118,7 +143,7 @@ func (b2Auth Auth) GetUploadPartURL(
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 	if err != nil {
 		log.Printf("Error getting B2 upload url: %v\n", err)
 		return FilePartInfo{}, err
@@ -126,7 +151,7 @@ func (b2Auth Auth) GetUploadPartURL(
 		log.Printf("\n%s %s\n", "POST", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return FilePartInfo{}, B2Error
+		return FilePartInfo{}, utils.Error
 	}
 
 	var upload FilePartInfo
@@ -160,7 +185,7 @@ func (b2PartInfo FilePartInfo) UploadFilePart(
 		"X-Bz-Content-Sha1": {checksum},
 	}
 
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 
 	if err != nil {
 		log.Printf("Error uploading file to B2: %v\n", err)
@@ -169,7 +194,7 @@ func (b2PartInfo FilePartInfo) UploadFilePart(
 		log.Printf("\n%s %s\n", "POST", b2PartInfo.UploadURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return B2Error
+		return utils.Error
 	}
 
 	return nil
@@ -178,7 +203,7 @@ func (b2PartInfo FilePartInfo) UploadFilePart(
 func (b2Auth Auth) FinishLargeFile(
 	fileID string,
 	checksums string,
-) error {
+) (LargeFile, error) {
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"fileId": "%s",
 		"partSha1Array": %s
@@ -186,12 +211,12 @@ func (b2Auth Auth) FinishLargeFile(
 
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, APIPrefix, APIFinishLargeFile)
+		b2Auth.APIURL, utils.APIPrefix, APIFinishLargeFile)
 
 	req, err := http.NewRequest("POST", reqURL, reqBody)
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v\n", err)
-		return err
+		return LargeFile{}, err
 	}
 
 	req.Header = http.Header{
@@ -199,17 +224,24 @@ func (b2Auth Auth) FinishLargeFile(
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 
 	if err != nil {
 		log.Printf("Error finishing B2 upload: %v\n", err)
-		return err
+		return LargeFile{}, err
 	} else if res.StatusCode >= 400 {
 		log.Printf("\n%s %s\n", "POST", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return B2Error
+		return LargeFile{}, utils.Error
 	}
 
-	return nil
+	var largeFile LargeFile
+	err = json.NewDecoder(res.Body).Decode(&largeFile)
+	if err != nil {
+		log.Printf("Error decoding B2 large file info: %v", err)
+		return LargeFile{}, err
+	}
+
+	return largeFile, nil
 }

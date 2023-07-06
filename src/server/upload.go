@@ -18,7 +18,7 @@ type FileUpload struct {
 }
 
 func TestUpload() {
-	filename := "lipsum.txt"
+	filename := "lipsum-big.txt"
 	password := []byte("topsecret")
 
 	b2Auth, err := b2.AuthorizeAccount(
@@ -40,7 +40,7 @@ func TestUpload() {
 
 	upload := FileUpload{
 		b2:       b2Auth,
-		filename: "lipsum.enc",
+		filename: "lipsum-big.enc",
 		data:     file,
 		key:      key,
 		salt:     salt,
@@ -97,6 +97,7 @@ func (upload FileUpload) UploadLargeFile() {
 	var checksums []string
 
 	idx := 0
+	chunkNum := 1
 	for idx < len(upload.data) {
 		chunkSize := utils.BUFFER_SIZE
 		needsSalt := false
@@ -115,7 +116,7 @@ func (upload FileUpload) UploadLargeFile() {
 		checksums = append(checksums, fmt.Sprintf("%x", checksum))
 
 		err := info.UploadFilePart(
-			idx+1,
+			chunkNum,
 			fmt.Sprintf("%x", checksum),
 			chunk,
 		)
@@ -125,12 +126,16 @@ func (upload FileUpload) UploadLargeFile() {
 		}
 
 		idx += chunkSize
+		chunkNum += 1
 	}
 
 	checksumStr := "[\"" + strings.Join(checksums, "\",\"") + "\"]"
 
-	err = upload.b2.FinishLargeFile(info.FileID, checksumStr)
+	largeFile, err := upload.b2.FinishLargeFile(info.FileID, checksumStr)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("File ID: %s\n", largeFile.FileID)
+	fmt.Printf("File size: %d\n", largeFile.ContentLength)
 }

@@ -18,7 +18,7 @@ func TestDownload() {
 	}
 
 	id := ""
-	length := 2665
+	length := 10035052
 	password := []byte("topsecret")
 
 	salt, err := auth.PartialDownloadById(id, length-utils.KEY_SIZE, length)
@@ -36,16 +36,16 @@ func TestDownload() {
 	start := 0
 	var output []byte
 	for start < length-utils.KEY_SIZE-1 {
-		chunkSize := utils.NONCE_SIZE + utils.BUFFER_SIZE + secretbox.Overhead + start
+		chunkSize := utils.NONCE_SIZE + utils.BUFFER_SIZE + secretbox.Overhead + start - 1
 		if start+chunkSize > length-utils.KEY_SIZE-1 {
 			chunkSize = length - utils.KEY_SIZE - 1
 		}
 
 		data, _ := auth.PartialDownloadById(id, start, chunkSize)
 
-		plaintext, newStart := utils.DecryptChunk(key, data)
+		plaintext, readSize := utils.DecryptChunk(key, data)
 		output = append(output, plaintext...)
-		start = newStart
+		start += readSize
 	}
 
 	_, _ = out.Write(output)

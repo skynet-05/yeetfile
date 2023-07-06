@@ -11,7 +11,8 @@ import (
 	"os"
 )
 
-const BUFFER_SIZE int = 10485760 // 10mb (b2 min part is 5mb)
+// const BUFFER_SIZE int = 10485760 // 10mb (b2 min part is 5mb)
+const BUFFER_SIZE int = 5242880
 const NONCE_SIZE int = 24
 const KEY_SIZE int = 32
 

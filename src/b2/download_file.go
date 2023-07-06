@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"yeetfile/src/b2/utils"
 )
 
 const APIDownloadById string = "b2_download_file_by_id"
@@ -13,7 +14,7 @@ const APIDownloadById string = "b2_download_file_by_id"
 func setupDownload(apiURL string, fileID string) (*http.Request, error) {
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		apiURL, APIPrefix, APIDownloadById)
+		apiURL, utils.APIPrefix, APIDownloadById)
 
 	req, err := http.NewRequest("GET", reqURL, nil)
 
@@ -30,14 +31,14 @@ func setupDownload(apiURL string, fileID string) (*http.Request, error) {
 }
 
 func download(req *http.Request) ([]byte, error) {
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 	if err != nil {
 		log.Printf("Error requesting B2 download: %v\n", err)
 		return nil, err
 	} else if res.StatusCode >= 400 {
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return nil, B2Error
+		return nil, utils.Error
 	}
 
 	defer func(Body io.ReadCloser) {

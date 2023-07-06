@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"strconv"
+	"yeetfile/src/b2/utils"
 )
 
 const APIGetUploadURL string = "b2_get_upload_url"
@@ -49,7 +50,7 @@ type FileInfo struct {
 func (b2Auth Auth) GetUploadURL() (FileInfo, error) {
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
-		b2Auth.APIURL, APIPrefix, APIGetUploadURL)
+		b2Auth.APIURL, utils.APIPrefix, APIGetUploadURL)
 
 	req, err := http.NewRequest("GET", reqURL, nil)
 
@@ -67,7 +68,7 @@ func (b2Auth Auth) GetUploadURL() (FileInfo, error) {
 		"Authorization": {b2Auth.AuthorizationToken},
 	}
 
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 	if err != nil {
 		log.Printf("Error requesting B2 upload URL: %v\n", err)
 		return FileInfo{}, err
@@ -75,7 +76,7 @@ func (b2Auth Auth) GetUploadURL() (FileInfo, error) {
 		log.Printf("\n%s %s\n", "GET", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return FileInfo{}, B2Error
+		return FileInfo{}, utils.Error
 	}
 
 	var upload FileInfo
@@ -110,7 +111,7 @@ func (b2Info FileInfo) UploadFile(
 		"X-Bz-Content-Sha1": {checksum},
 	}
 
-	res, err := B2Client.Do(req)
+	res, err := utils.Client.Do(req)
 
 	if err != nil {
 		log.Printf("Error uploading file chunk to B2: %v\n", err)
@@ -119,7 +120,7 @@ func (b2Info FileInfo) UploadFile(
 		log.Printf("\n%s %s\n", "POST", b2Info.UploadURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
-		return File{}, B2Error
+		return File{}, utils.Error
 	}
 
 	var b2File File
