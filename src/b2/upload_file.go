@@ -14,6 +14,7 @@ import (
 
 const APIGetUploadURL string = "b2_get_upload_url"
 
+// File represents the data returned by UploadFile
 type File struct {
 	AccountID     string `json:"accountId"`
 	Action        string `json:"action"`
@@ -41,12 +42,16 @@ type File struct {
 	UploadTimestamp int64 `json:"uploadTimestamp"`
 }
 
+// FileInfo represents the data returned by GetUploadURL
 type FileInfo struct {
 	BucketID           string `json:"bucketId"`
 	UploadURL          string `json:"uploadUrl"`
 	AuthorizationToken string `json:"authorizationToken"`
 }
 
+// GetUploadURL returns a FileInfo struct containing the URL to use
+// for uploading a file, the ID of the bucket the file will be put
+// in, and a token for authenticating the upload request.
 func (b2Auth Auth) GetUploadURL() (FileInfo, error) {
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
@@ -89,6 +94,10 @@ func (b2Auth Auth) GetUploadURL() (FileInfo, error) {
 	return upload, nil
 }
 
+// UploadFile uploads file byte content to B2 alongside a name for the file
+// and a SHA1 checksum for the byte content. It returns a File object, which
+// contains fields such as FileID and ContentLength which can be stored and
+// used later to download the file.
 func (b2Info FileInfo) UploadFile(
 	filename string,
 	checksum string,

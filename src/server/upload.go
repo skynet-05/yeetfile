@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 	"yeetfile/src/b2"
-	"yeetfile/src/utils"
+	"yeetfile/src/crypto"
 )
 
 type FileUpload struct {
@@ -33,7 +33,7 @@ func TestUpload() {
 		panic("Unable to open file")
 	}
 
-	key, salt, err := utils.DeriveKey(password, nil)
+	key, salt, err := crypto.DeriveKey(password, nil)
 	if err != nil {
 		log.Fatalf("Failed to derive key: %v", err.Error())
 	}
@@ -46,7 +46,7 @@ func TestUpload() {
 		salt:     salt,
 	}
 
-	if utils.BUFFER_SIZE > len(file) {
+	if crypto.BUFFER_SIZE > len(file) {
 		upload.UploadFile(0)
 	} else {
 		upload.UploadLargeFile()
@@ -60,10 +60,10 @@ func (upload FileUpload) UploadFile(attempts int) {
 		panic(err)
 	}
 
-	encData := utils.EncryptChunk(upload.key, upload.data)
+	encData := crypto.EncryptChunk(upload.key, upload.data)
 	encData = append(encData, upload.salt...)
 
-	checksum := fmt.Sprintf("%x", utils.GenChecksum(encData))
+	checksum := fmt.Sprintf("%x", crypto.GenChecksum(encData))
 
 	b2File, err := info.UploadFile(
 		upload.filename,
@@ -99,20 +99,20 @@ func (upload FileUpload) UploadLargeFile() {
 	idx := 0
 	chunkNum := 1
 	for idx < len(upload.data) {
-		chunkSize := utils.BUFFER_SIZE
+		chunkSize := crypto.BUFFER_SIZE
 		needsSalt := false
-		if idx+utils.BUFFER_SIZE > len(upload.data) {
+		if idx+crypto.BUFFER_SIZE > len(upload.data) {
 			chunkSize = len(upload.data) - idx
 			needsSalt = true
 		}
 
-		chunk := utils.EncryptChunk(
+		chunk := crypto.EncryptChunk(
 			upload.key,
 			upload.data[idx:idx+chunkSize])
 		if needsSalt {
 			chunk = append(chunk, upload.salt...)
 		}
-		checksum := utils.GenChecksum(chunk)
+		checksum := crypto.GenChecksum(chunk)
 		checksums = append(checksums, fmt.Sprintf("%x", checksum))
 
 		err := info.UploadFilePart(

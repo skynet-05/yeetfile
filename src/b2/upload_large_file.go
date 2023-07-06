@@ -16,6 +16,7 @@ const APIStartLargeFile string = "b2_start_large_file"
 const APIGetUploadPartURL string = "b2_get_upload_part_url"
 const APIFinishLargeFile = "b2_finish_large_file"
 
+// StartFile represents the data returned by StartLargeFile
 type StartFile struct {
 	AccountID     string `json:"accountId"`
 	Action        string `json:"action"`
@@ -45,12 +46,14 @@ type StartFile struct {
 	UploadTimestamp int64 `json:"uploadTimestamp"`
 }
 
+// FilePartInfo represents the data returned by GetUploadPartURL
 type FilePartInfo struct {
 	FileID             string `json:"fileId"`
 	UploadURL          string `json:"uploadUrl"`
 	AuthorizationToken string `json:"authorizationToken"`
 }
 
+// LargeFile represents the file object created by FinishLargeFile
 type LargeFile struct {
 	AccountID     string `json:"accountId"`
 	Action        string `json:"action"`
@@ -78,6 +81,8 @@ type LargeFile struct {
 	UploadTimestamp int64 `json:"uploadTimestamp"`
 }
 
+// StartLargeFile begins the process for uploading a multi-chunk file to B2.
+// The filename provided cannot change once the large file upload has begun.
 func (b2Auth Auth) StartLargeFile(
 	filename string,
 ) (StartFile, error) {
@@ -122,17 +127,22 @@ func (b2Auth Auth) StartLargeFile(
 	return file, nil
 }
 
+// GetUploadPartURL generates a URL and token for uploading individual chunks
+// of a file to B2. It requires a StartFile struct returned by StartLargeFile,
+// which contains the unique file ID for this new file.
 func (b2Auth Auth) GetUploadPartURL(
 	b2File StartFile,
 ) (FilePartInfo, error) {
-	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
-		"fileId": "%s"
-	}`, b2File.FileID)))
 	reqURL := fmt.Sprintf(
 		"%s/%s/%s",
 		b2Auth.APIURL, utils.APIPrefix, APIGetUploadPartURL)
 
-	req, err := http.NewRequest("POST", reqURL, reqBody)
+	req, err := http.NewRequest("GET", reqURL, nil)
+
+	q := req.URL.Query()
+	q.Add("fileId", b2File.FileID)
+	req.URL.RawQuery = q.Encode()
+
 	if err != nil {
 		log.Printf("Error creating new HTTP request: %v\n", err)
 		return FilePartInfo{}, err
@@ -148,7 +158,7 @@ func (b2Auth Auth) GetUploadPartURL(
 		log.Printf("Error getting B2 upload url: %v\n", err)
 		return FilePartInfo{}, err
 	} else if res.StatusCode >= 400 {
-		log.Printf("\n%s %s\n", "POST", reqURL)
+		log.Printf("\n%s %s\n", "GET", reqURL)
 		resp, _ := httputil.DumpResponse(res, true)
 		fmt.Println(fmt.Sprintf("%s", resp))
 		return FilePartInfo{}, utils.Error
@@ -164,6 +174,10 @@ func (b2Auth Auth) GetUploadPartURL(
 	return upload, nil
 }
 
+// UploadFilePart uploads a single chunk of file data to the URL provided by
+// GetUploadPartURL. Each subsequent chunk should increment chunkNum, with the
+// first chunk starting at 1 (not 0). Each chunk should be provided with a
+// SHA1 checksum as well.
 func (b2PartInfo FilePartInfo) UploadFilePart(
 	chunkNum int,
 	checksum string,
@@ -200,6 +214,10 @@ func (b2PartInfo FilePartInfo) UploadFilePart(
 	return nil
 }
 
+// FinishLargeFile completes the chunked upload process. The FileID from
+// calling StartLargeFile should be used here, and all checksums from
+// UploadFilePart should be passed a string-ified array.
+// For example: "['checksum1', 'checksum2']"
 func (b2Auth Auth) FinishLargeFile(
 	fileID string,
 	checksums string,

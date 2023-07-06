@@ -5,7 +5,7 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"os"
 	"yeetfile/src/b2"
-	"yeetfile/src/utils"
+	"yeetfile/src/crypto"
 )
 
 func TestDownload() {
@@ -21,8 +21,8 @@ func TestDownload() {
 	length := 10035052
 	password := []byte("topsecret")
 
-	salt, err := auth.PartialDownloadById(id, length-utils.KEY_SIZE, length)
-	key, _, err := utils.DeriveKey(password, salt)
+	salt, err := auth.PartialDownloadById(id, length-crypto.KEY_SIZE, length)
+	key, _, err := crypto.DeriveKey(password, salt)
 	if err != nil {
 		return
 	}
@@ -35,15 +35,15 @@ func TestDownload() {
 
 	start := 0
 	var output []byte
-	for start < length-utils.KEY_SIZE-1 {
-		chunkSize := utils.NONCE_SIZE + utils.BUFFER_SIZE + secretbox.Overhead + start - 1
-		if start+chunkSize > length-utils.KEY_SIZE-1 {
-			chunkSize = length - utils.KEY_SIZE - 1
+	for start < length-crypto.KEY_SIZE-1 {
+		chunkSize := crypto.NONCE_SIZE + crypto.BUFFER_SIZE + secretbox.Overhead + start - 1
+		if start+chunkSize > length-crypto.KEY_SIZE-1 {
+			chunkSize = length - crypto.KEY_SIZE - 1
 		}
 
 		data, _ := auth.PartialDownloadById(id, start, chunkSize)
 
-		plaintext, readSize := utils.DecryptChunk(key, data)
+		plaintext, readSize := crypto.DecryptChunk(key, data)
 		output = append(output, plaintext...)
 		start += readSize
 	}
