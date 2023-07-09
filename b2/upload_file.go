@@ -9,7 +9,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"strconv"
-	"yeetfile/src/b2/utils"
+	"yeetfile/b2/utils"
 )
 
 const APIGetUploadURL string = "b2_get_upload_url"

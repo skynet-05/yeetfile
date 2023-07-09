@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strings"
-	"yeetfile/src/b2/utils"
+	"yeetfile/b2/utils"
 )
 
 const AuthURL string = "https://api.backblazeb2.com/b2api/v2/b2_authorize_account"

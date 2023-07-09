@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
-	"yeetfile/src/b2"
-	"yeetfile/src/crypto"
+	"yeetfile/b2"
+	"yeetfile/crypto"
 )
 
 type FileUpload struct {

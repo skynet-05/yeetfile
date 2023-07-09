@@ -2,6 +2,7 @@ package utils
 
 import (
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
@@ -16,6 +17,14 @@ func GenRandomString(n int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func GetEnvVar(key, fallback string) string {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		value = fallback
+	}
+	return value
 }
 
 func GenFilePath() string {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"golang.org/x/crypto/nacl/secretbox"
 	"os"
-	"yeetfile/src/b2"
-	"yeetfile/src/crypto"
+	"yeetfile/b2"
+	"yeetfile/crypto"
 )
 
 func TestDownload() {

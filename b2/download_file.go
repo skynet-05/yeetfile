@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"yeetfile/src/b2/utils"
+	"yeetfile/b2/utils"
 )
 
 const APIDownloadById string = "b2_download_file_by_id"
