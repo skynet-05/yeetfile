@@ -53,15 +53,35 @@ func home(w http.ResponseWriter, req *http.Request) {
 	_, _ = io.WriteString(w, "Yeetfile home page\n")
 }
 
-func upload(w http.ResponseWriter, req *http.Request) {
-	_, _ = io.WriteString(w, "Yeetfile upload\n")
+func uploadInit(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		_, _ = io.WriteString(w, "Method not allowed.\n")
+		return
+	}
+
+	// TODO: Receive file metadata for uploadData, return ID for uploadData
+	_, _ = io.WriteString(w, "init upload")
+}
+
+func uploadData(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		_, _ = io.WriteString(w, "Method not allowed.\n")
+		return
+	}
+
+	segments := strings.Split(req.URL.Path, "/")
+	id := segments[len(segments)-1]
+
+	// TODO: Process individual file chunks
+	_, _ = io.WriteString(w, "upload file data: "+id)
 }
 
 func download(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
-	fileTag := segments[len(segments)-1]
+	tag := segments[len(segments)-1]
 
-	_, _ = io.WriteString(w, "Yeetfile download: "+fileTag+"\n")
+	// TODO: Fetch file by tag and begin download
+	_, _ = io.WriteString(w, "Yeetfile download: "+tag+"\n")
 }
 
 func Run(port string) {
@@ -70,8 +90,14 @@ func Run(port string) {
 	}
 
 	r.routes["/"] = home
+	r.routes["/home"] = home
+
+	// Upload
+	r.routes["/upload"] = uploadInit
+	r.routes["/upload/*"] = uploadData
+
+	// Download
 	r.routes["/*"] = download
-	r.routes["/upload"] = upload
 
 	addr := fmt.Sprintf("localhost:%s", port)
 	log.Printf("Running on http://%s\n", addr)
