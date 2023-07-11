@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-const letters string = "abcdefghijklmnopqrstuvwxyz"
+const characters string = "abcdefghijklmnopqrstuvwxyz1234567890"
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func GenRandomString(n int) string {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = characters[rand.Intn(len(characters))]
 	}
 	return string(b)
 }
