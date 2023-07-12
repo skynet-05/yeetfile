@@ -9,8 +9,9 @@ import (
 	"yeetfile/crypto"
 )
 
+var B2 b2.Auth
+
 type FileUpload struct {
-	b2       b2.Auth
 	filename string
 	data     []byte
 	key      [32]byte
@@ -20,13 +21,6 @@ type FileUpload struct {
 func TestUpload() {
 	filename := "lipsum-big.txt"
 	password := []byte("topsecret")
-
-	b2Auth, err := b2.AuthorizeAccount(
-		os.Getenv("B2_BUCKET_KEY_ID"),
-		os.Getenv("B2_BUCKET_KEY"))
-	if err != nil {
-		panic(err)
-	}
 
 	file, err := os.ReadFile(filename)
 	if err != nil {
@@ -39,7 +33,6 @@ func TestUpload() {
 	}
 
 	upload := FileUpload{
-		b2:       b2Auth,
 		filename: "lipsum-big.enc",
 		data:     file,
 		key:      key,
@@ -55,7 +48,7 @@ func TestUpload() {
 }
 
 func (upload FileUpload) UploadFile(attempts int) {
-	info, err := upload.b2.GetUploadURL()
+	info, err := B2.GetUploadURL()
 	if err != nil {
 		panic(err)
 	}
@@ -84,12 +77,12 @@ func (upload FileUpload) UploadFile(attempts int) {
 }
 
 func (upload FileUpload) UploadLargeFile() {
-	init, err := upload.b2.StartLargeFile(upload.filename)
+	init, err := B2.StartLargeFile(upload.filename)
 	if err != nil {
 		panic(err)
 	}
 
-	info, err := upload.b2.GetUploadPartURL(init)
+	info, err := B2.GetUploadPartURL(init)
 	if err != nil {
 		panic(err)
 	}
@@ -131,11 +124,21 @@ func (upload FileUpload) UploadLargeFile() {
 
 	checksumStr := "[\"" + strings.Join(checksums, "\",\"") + "\"]"
 
-	largeFile, err := upload.b2.FinishLargeFile(info.FileID, checksumStr)
+	largeFile, err := B2.FinishLargeFile(info.FileID, checksumStr)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Printf("File ID: %s\n", largeFile.FileID)
 	fmt.Printf("File size: %d\n", largeFile.ContentLength)
+}
+
+func init() {
+	var err error
+	B2, err = b2.AuthorizeAccount(
+		os.Getenv("B2_BUCKET_KEY_ID"),
+		os.Getenv("B2_BUCKET_KEY"))
+	if err != nil {
+		panic(err)
+	}
 }
