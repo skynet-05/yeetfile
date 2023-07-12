@@ -1,12 +1,14 @@
 package server
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+	"yeetfile/crypto"
 	"yeetfile/db"
 )
 
@@ -15,8 +17,9 @@ type router struct {
 }
 
 type metadata struct {
-	Name   string `json:"name"`
-	Chunks int    `json:"chunks"`
+	Name     string `json:"name"`
+	Chunks   int    `json:"chunks"`
+	Password string `json:"password"`
 }
 
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -69,15 +72,34 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, _ := db.InsertMetadata(meta.Chunks, meta.Name)
+	key, salt, err := crypto.DeriveKey([]byte(meta.Password), nil)
+	encodedKey := base64.StdEncoding.EncodeToString(key[:])
+
+	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, salt)
 
 	// Return ID to user
-	_, _ = io.WriteString(w, id)
+	// TODO: Make this not weird
+	_, _ = io.WriteString(w, fmt.Sprintf("%s|%s", id, encodedKey))
 }
 
 func uploadData(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
-		_, _ = io.WriteString(w, "Method not allowed.\n")
+		http.Error(w, "Error", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// TODO: Use chunk num + total chunks to determine which upload method
+	// has to be used
+	//chunkNum := req.Header.Get("Chunk")
+
+	key := req.Header.Get("Key")
+	decodedKey, _ := base64.StdEncoding.DecodeString(key)
+	var keyBytes [crypto.KEY_SIZE]byte
+	copy(keyBytes[:], decodedKey[:crypto.KEY_SIZE])
+
+	data, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, "Error", http.StatusBadRequest)
 		return
 	}
 
@@ -87,6 +109,13 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 	// TODO: Process individual file chunks and ensure chunk num doesn't
 	// exceed count stored in metadata
 	metadata := db.RetrieveMetadata(id)
+	upload := FileUpload{
+		data:     data,
+		filename: metadata.Name,
+		key:      keyBytes,
+		salt:     metadata.Salt,
+	}
+	upload.UploadFile(0)
 	_, _ = io.WriteString(w, "upload file data: "+metadata.ID)
 }
 

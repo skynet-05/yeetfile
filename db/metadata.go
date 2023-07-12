@@ -9,9 +9,10 @@ type FileMetadata struct {
 	ID     string
 	Chunks int
 	Name   string
+	Salt   []byte
 }
 
-func InsertMetadata(chunks int, filename string) (string, error) {
+func InsertMetadata(chunks int, filename string, salt []byte) (string, error) {
 	id := utils.GenRandomString(32)
 
 	// Ensure the id isn't already being used in the table
@@ -19,8 +20,8 @@ func InsertMetadata(chunks int, filename string) (string, error) {
 		id = utils.GenRandomString(32)
 	}
 
-	s := `INSERT INTO metadata (id, chunks, filename) VALUES ($1, $2, $3)`
-	_, err := db.Exec(s, id, chunks, filename)
+	s := `INSERT INTO metadata (id, chunks, filename, salt) VALUES ($1, $2, $3, $4)`
+	_, err := db.Exec(s, id, chunks, filename, salt)
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +45,7 @@ func MetadataIDExists(id string) bool {
 }
 
 func RetrieveMetadata(id string) FileMetadata {
-	rows, err := db.Query(`SELECT * FROM metadata WHERE id = $1`, id)
+	rows, err := db.Query(`SELECT 1 FROM metadata WHERE id = $1`, id)
 	if err != nil {
 		log.Fatalf("Error retrieving metadata: %v", err)
 		return FileMetadata{}
