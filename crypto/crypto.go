@@ -43,7 +43,7 @@ func TestEncryptAndDecrypt() {
 		}
 
 		chunk := EncryptChunk(key, file[idx:idx+chunkSize])
-		checksum := GenChecksum(chunk)
+		_, checksum := GenChecksum(chunk)
 
 		fmt.Println(fmt.Sprintf("Chunk checksum: %x", checksum))
 
@@ -100,11 +100,12 @@ func EncryptChunk(key [KEY_SIZE]byte, data []byte) []byte {
 	return secretbox.Seal(nonce[:], data, &nonce, &key)
 }
 
-func GenChecksum(data []byte) []byte {
+func GenChecksum(data []byte) ([]byte, string) {
 	h := sha1.New()
 	h.Write(data)
 
-	return h.Sum(nil)
+	checksum := h.Sum(nil)
+	return checksum, fmt.Sprintf("%x", checksum)
 }
 
 func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int) {

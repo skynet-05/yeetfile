@@ -64,6 +64,16 @@ func RetrieveMetadata(id string) FileMetadata {
 	return FileMetadata{}
 }
 
+func UpdateB2Metadata(id string, b2ID string, length int) bool {
+	s := `UPDATE metadata SET b2_id=$1, length=$2 WHERE id=$4`
+	_, err := db.Exec(s, b2ID, length, id)
+	if err != nil {
+		panic(err)
+	}
+
+	return true
+}
+
 func DeleteMetadata(id string) bool {
 	s := `DELETE FROM metadata WHERE id = $1`
 	_, err := db.Exec(s, id)

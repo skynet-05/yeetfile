@@ -61,6 +61,15 @@ func InitLargeB2Upload(filename string) (b2.FilePartInfo, error) {
 	return B2.GetUploadPartURL(init)
 }
 
+func FinishLargeB2Upload(b2ID string, checksums string) (string, int) {
+	largeFile, err := B2.FinishLargeFile(b2ID, checksums)
+	if err != nil {
+		panic(err)
+	}
+
+	return largeFile.FileID, largeFile.ContentLength
+}
+
 func (upload FileUpload) UploadFile(attempts int) {
 	info, err := B2.GetUploadURL()
 	if err != nil {
@@ -70,7 +79,7 @@ func (upload FileUpload) UploadFile(attempts int) {
 	encData := crypto.EncryptChunk(upload.key, upload.data)
 	encData = append(encData, upload.salt...)
 
-	checksum := fmt.Sprintf("%x", crypto.GenChecksum(encData))
+	_, checksum := crypto.GenChecksum(encData)
 
 	b2File, err := info.UploadFile(
 		upload.filename,
@@ -119,12 +128,12 @@ func (upload FileUpload) UploadLargeFile() {
 		if needsSalt {
 			chunk = append(chunk, upload.salt...)
 		}
-		checksum := crypto.GenChecksum(chunk)
-		checksums = append(checksums, fmt.Sprintf("%x", checksum))
+		_, checksum := crypto.GenChecksum(chunk)
+		checksums = append(checksums, checksum)
 
 		err := info.UploadFilePart(
 			chunkNum,
-			fmt.Sprintf("%x", checksum),
+			checksum,
 			chunk,
 		)
 

@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
 )
@@ -115,7 +117,7 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 
 	// TODO: Use chunk num + total chunks to determine which upload method
 	// has to be used
-	//chunkNum := req.Header.Get("Chunk")
+	chunkNum, _ := strconv.Atoi(req.Header.Get("Chunk"))
 
 	key := req.Header.Get("Key")
 	decodedKey, _ := base64.StdEncoding.DecodeString(key)
@@ -128,12 +130,38 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	_, checksum := crypto.GenChecksum(data)
+
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
 
 	// TODO: Process individual file chunks and ensure chunk num doesn't
 	// exceed count stored in metadata
 	metadata := db.RetrieveMetadata(id)
+	uploadValues := db.GetUploadValues(id)
+
+	if metadata.Chunks > 1 {
+		largeFile := b2.FilePartInfo{
+			FileID:             uploadValues.UploadID,
+			AuthorizationToken: uploadValues.Token,
+			UploadURL:          uploadValues.UploadURL,
+		}
+
+		err = largeFile.UploadFilePart(chunkNum, checksum, data)
+		if err != nil {
+			panic(err)
+		}
+
+		if chunkNum == metadata.Chunks {
+			// TODO: Create checksums list
+			b2ID, length := FinishLargeB2Upload(
+				uploadValues.UploadID,
+				"")
+			db.UpdateB2Metadata(metadata.ID, b2ID, length)
+		}
+	} else {
+		// TODO
+	}
 	upload := FileUpload{
 		data:     data,
 		filename: metadata.Name,

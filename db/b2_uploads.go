@@ -1,5 +1,7 @@
 package db
 
+import "log"
+
 type B2Upload struct {
 	MetadataID string
 	UploadURL  string
@@ -29,4 +31,30 @@ func (b2Upload B2Upload) UpdateUploadValues(
 	}
 
 	return true
+}
+
+func GetUploadValues(id string) B2Upload {
+	rows, err := db.Query(`SELECT 1 FROM b2_uploads WHERE metadata_id = $1`, id)
+	if err != nil {
+		log.Fatalf("Error retrieving upload values: %v", err)
+		return B2Upload{}
+	}
+
+	if rows.Next() {
+		var metadataID string
+		var uploadURL string
+		var token string
+		var uploadID string
+
+		err = rows.Scan(&metadataID, &uploadURL, &token, &uploadID)
+
+		return B2Upload{
+			MetadataID: metadataID,
+			UploadURL:  uploadURL,
+			Token:      token,
+			UploadID:   uploadID,
+		}
+	}
+
+	return B2Upload{}
 }
