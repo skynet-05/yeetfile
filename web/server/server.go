@@ -54,7 +54,7 @@ func matchPath(pattern, path string) bool {
 	return true
 }
 
-func home(w http.ResponseWriter, req *http.Request) {
+func home(w http.ResponseWriter, _ *http.Request) {
 	_, _ = io.WriteString(w, "Yeetfile home page\n")
 }
 
@@ -76,6 +76,31 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	encodedKey := base64.StdEncoding.EncodeToString(key[:])
 
 	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, salt)
+	b2Upload := db.InsertNewUpload(id)
+
+	if meta.Chunks == 1 {
+		info, err := InitB2Upload()
+		if err != nil {
+			http.Error(w, "Unable to init file", http.StatusBadRequest)
+			return
+		}
+
+		b2Upload.UpdateUploadValues(
+			info.UploadURL,
+			info.AuthorizationToken,
+			info.BucketID)
+	} else {
+		info, err := InitLargeB2Upload(meta.Name)
+		if err != nil {
+			http.Error(w, "Unable to init file", http.StatusBadRequest)
+			return
+		}
+
+		b2Upload.UpdateUploadValues(
+			info.UploadURL,
+			info.AuthorizationToken,
+			info.FileID)
+	}
 
 	// Return ID to user
 	// TODO: Make this not weird

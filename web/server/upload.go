@@ -16,6 +16,7 @@ type FileUpload struct {
 	data     []byte
 	key      [32]byte
 	salt     []byte
+	chunk    int
 }
 
 func TestUpload() {
@@ -45,6 +46,19 @@ func TestUpload() {
 		upload.UploadLargeFile()
 	}
 
+}
+
+func InitB2Upload() (b2.FileInfo, error) {
+	return B2.GetUploadURL()
+}
+
+func InitLargeB2Upload(filename string) (b2.FilePartInfo, error) {
+	init, err := B2.StartLargeFile(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	return B2.GetUploadPartURL(init)
 }
 
 func (upload FileUpload) UploadFile(attempts int) {
