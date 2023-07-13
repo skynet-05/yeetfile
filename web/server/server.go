@@ -12,6 +12,7 @@ import (
 	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
+	"yeetfile/utils"
 )
 
 type router struct {
@@ -130,8 +131,6 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, checksum := crypto.GenChecksum(data)
-
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
 
@@ -139,6 +138,9 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 	// exceed count stored in metadata
 	metadata := db.RetrieveMetadata(id)
 	uploadValues := db.GetUploadValues(id)
+
+	_, checksum := crypto.GenChecksum(data)
+	db.UpdateChecksums(id, checksum)
 
 	if metadata.Chunks > 1 {
 		largeFile := b2.FilePartInfo{
@@ -156,7 +158,7 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 			// TODO: Create checksums list
 			b2ID, length := FinishLargeB2Upload(
 				uploadValues.UploadID,
-				"")
+				utils.StrArrToStr(uploadValues.Checksums))
 			db.UpdateB2Metadata(metadata.ID, b2ID, length)
 		}
 	} else {

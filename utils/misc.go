@@ -27,6 +27,10 @@ func GetEnvVar(key, fallback string) string {
 	return value
 }
 
+func StrArrToStr(arr []string) string {
+	return "[\"" + strings.Join(arr, "\",\"") + "\"]"
+}
+
 func GenFilePath() string {
 	min := 0
 	max := len(EFFLongWordList)

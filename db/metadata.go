@@ -20,7 +20,8 @@ func InsertMetadata(chunks int, filename string, salt []byte) (string, error) {
 		id = utils.GenRandomString(32)
 	}
 
-	s := `INSERT INTO metadata (id, chunks, filename, salt) VALUES ($1, $2, $3, $4)`
+	s := `INSERT INTO metadata (id, chunks, filename, salt)
+	      VALUES ($1, $2, $3, $4)`
 	_, err := db.Exec(s, id, chunks, filename, salt)
 	if err != nil {
 		panic(err)
@@ -65,7 +66,9 @@ func RetrieveMetadata(id string) FileMetadata {
 }
 
 func UpdateB2Metadata(id string, b2ID string, length int) bool {
-	s := `UPDATE metadata SET b2_id=$1, length=$2 WHERE id=$4`
+	s := `UPDATE metadata
+	      SET b2_id=$1, length=$2
+	      WHERE id=$4`
 	_, err := db.Exec(s, b2ID, length, id)
 	if err != nil {
 		panic(err)
@@ -75,7 +78,8 @@ func UpdateB2Metadata(id string, b2ID string, length int) bool {
 }
 
 func DeleteMetadata(id string) bool {
-	s := `DELETE FROM metadata WHERE id = $1`
+	s := `DELETE FROM metadata
+	      WHERE id = $1`
 	_, err := db.Exec(s, id)
 	if err != nil {
 		return false
