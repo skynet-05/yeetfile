@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/rand"
 	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
@@ -190,4 +191,12 @@ func OldDecrypt(password []byte, data []byte) []byte {
 	}
 
 	return output
+}
+
+func KeyFromB64(b64 string) [KEY_SIZE]byte {
+	decodedKey, _ := base64.StdEncoding.DecodeString(b64)
+	var keyBytes [KEY_SIZE]byte
+	copy(keyBytes[:], decodedKey[:KEY_SIZE])
+
+	return keyBytes
 }

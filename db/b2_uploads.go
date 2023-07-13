@@ -49,7 +49,7 @@ func UpdateChecksums(id string, checksum string) bool {
 	return true
 }
 
-func GetUploadValues(id string) B2Upload {
+func GetB2UploadValues(id string) B2Upload {
 	s := `SELECT 1
 	      FROM b2_uploads
 	      WHERE metadata_id = $1`

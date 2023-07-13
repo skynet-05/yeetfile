@@ -9,10 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
-	"yeetfile/utils"
 )
 
 type router struct {
@@ -116,14 +114,11 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO: Use chunk num + total chunks to determine which upload method
-	// has to be used
 	chunkNum, _ := strconv.Atoi(req.Header.Get("Chunk"))
+	key := crypto.KeyFromB64(req.Header.Get("Key"))
 
-	key := req.Header.Get("Key")
-	decodedKey, _ := base64.StdEncoding.DecodeString(key)
-	var keyBytes [crypto.KEY_SIZE]byte
-	copy(keyBytes[:], decodedKey[:crypto.KEY_SIZE])
+	segments := strings.Split(req.URL.Path, "/")
+	id := segments[len(segments)-1]
 
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -131,47 +126,15 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	segments := strings.Split(req.URL.Path, "/")
-	id := segments[len(segments)-1]
+	upload, b2Values := PrepareUpload(id, key, chunkNum, data)
+	err = upload.Upload(b2Values)
 
-	// TODO: Process individual file chunks and ensure chunk num doesn't
-	// exceed count stored in metadata
-	metadata := db.RetrieveMetadata(id)
-	uploadValues := db.GetUploadValues(id)
-
-	_, checksum := crypto.GenChecksum(data)
-	db.UpdateChecksums(id, checksum)
-
-	if metadata.Chunks > 1 {
-		largeFile := b2.FilePartInfo{
-			FileID:             uploadValues.UploadID,
-			AuthorizationToken: uploadValues.Token,
-			UploadURL:          uploadValues.UploadURL,
-		}
-
-		err = largeFile.UploadFilePart(chunkNum, checksum, data)
-		if err != nil {
-			panic(err)
-		}
-
-		if chunkNum == metadata.Chunks {
-			// TODO: Create checksums list
-			b2ID, length := FinishLargeB2Upload(
-				uploadValues.UploadID,
-				utils.StrArrToStr(uploadValues.Checksums))
-			db.UpdateB2Metadata(metadata.ID, b2ID, length)
-		}
-	} else {
-		// TODO
+	if err != nil {
+		http.Error(w, "Upload error", http.StatusBadRequest)
+		return
 	}
-	upload := FileUpload{
-		data:     data,
-		filename: metadata.Name,
-		key:      keyBytes,
-		salt:     metadata.Salt,
-	}
-	upload.UploadFile(0)
-	_, _ = io.WriteString(w, "upload file data: "+metadata.ID)
+
+	_, _ = io.WriteString(w, "upload file data: "+id)
 }
 
 func download(w http.ResponseWriter, req *http.Request) {
