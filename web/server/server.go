@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
@@ -24,9 +25,11 @@ type router struct {
 }
 
 type Metadata struct {
-	Name     string `json:"name"`
-	Chunks   int    `json:"chunks"`
-	Password string `json:"password"`
+	Name       string `json:"name"`
+	Chunks     int    `json:"chunks"`
+	Password   string `json:"password"`
+	Downloads  int    `json:"downloads"`
+	Expiration string `json:"expiration"`
 }
 
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -87,6 +90,9 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 
 	id, _ := db.NewMetadata(meta.Chunks, b64Name, salt)
 	b2Upload := db.InsertNewUpload(id)
+
+	exp := utils.StrToDuration(meta.Expiration)
+	db.SetFileExpiry(id, meta.Downloads, time.Now().Add(exp))
 
 	if meta.Chunks == 1 {
 		info, err := InitB2Upload()

@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -29,6 +31,26 @@ func GetEnvVar(key, fallback string) string {
 
 func StrArrToStr(arr []string) string {
 	return "[\"" + strings.Join(arr, "\",\"") + "\"]"
+}
+
+func StrToDuration(str string) time.Duration {
+	unit := string(str[len(str)-1])
+	length, _ := strconv.Atoi(str[:len(str)-1])
+
+	if unit == "d" {
+		fmt.Println("OK")
+		fmt.Println(time.Duration(length))
+		fmt.Println(time.Duration(length) * time.Hour * 24)
+		return time.Duration(length) * time.Hour * 24
+	} else if unit == "h" {
+		return time.Duration(length) * time.Hour
+	} else if unit == "m" {
+		return time.Duration(length) * time.Minute
+	} else if unit == "s" {
+		return time.Duration(length) * time.Second
+	}
+
+	return 0
 }
 
 func GenFilePath() string {

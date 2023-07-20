@@ -48,10 +48,6 @@ func TestDownload() {
 		return
 	}
 
-	// ---------------
-	// TODO: Add password validation step before downloading from B2
-	// ---------------
-
 	out, err := os.OpenFile("out.enc", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
 
 	start := 0
