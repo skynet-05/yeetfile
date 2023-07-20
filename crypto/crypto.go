@@ -3,7 +3,8 @@ package crypto
 import (
 	"crypto/rand"
 	"crypto/sha1"
-	"encoding/base64"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
@@ -129,6 +130,18 @@ func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int) {
 	return decrypted, NONCE_SIZE + len(decrypted) + secretbox.Overhead
 }
 
+func DecryptString(key [32]byte, byteStr []byte) (string, error) {
+	var decryptNonce [NONCE_SIZE]byte
+	copy(decryptNonce[:], byteStr[:NONCE_SIZE])
+
+	decrypted, ok := secretbox.Open(nil, byteStr[NONCE_SIZE:], &decryptNonce, &key)
+	if !ok {
+		return "", errors.New("Incorrect password")
+	}
+
+	return string(decrypted), nil
+}
+
 func Decrypt(password []byte, salt []byte, data []byte) []byte {
 	key, _, err := DeriveKey(password, salt)
 	if err != nil {
@@ -193,8 +206,8 @@ func OldDecrypt(password []byte, data []byte) []byte {
 	return output
 }
 
-func KeyFromB64(b64 string) [KEY_SIZE]byte {
-	decodedKey, _ := base64.StdEncoding.DecodeString(b64)
+func KeyFromHex(key string) [KEY_SIZE]byte {
+	decodedKey, _ := hex.DecodeString(key)
 	var keyBytes [KEY_SIZE]byte
 	copy(keyBytes[:], decodedKey[:KEY_SIZE])
 
