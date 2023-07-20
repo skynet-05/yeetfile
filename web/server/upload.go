@@ -11,8 +11,6 @@ import (
 	"yeetfile/utils"
 )
 
-var B2 b2.Auth
-
 type FileUpload struct {
 	filename string
 	data     []byte
@@ -31,11 +29,11 @@ func PrepareUpload(
 ) (FileUpload, db.B2Upload) {
 	encData := crypto.EncryptChunk(key, data)
 
-	metadata := db.RetrieveMetadata(id)
-	b2Values := db.GetB2UploadValues(id)
-
 	_, checksum := crypto.GenChecksum(encData)
 	db.UpdateChecksums(id, checksum)
+
+	metadata := db.RetrieveMetadata(id)
+	b2Values := db.GetB2UploadValues(id)
 
 	upload := FileUpload{
 		data:     encData,
@@ -50,7 +48,7 @@ func PrepareUpload(
 	return upload, b2Values
 }
 
-func (upload FileUpload) Upload(b2Values db.B2Upload) error {
+func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 	var err error
 
 	if upload.chunks > 1 {
@@ -66,15 +64,17 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) error {
 			upload.data)
 
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if upload.chunk == upload.chunks {
-			// TODO: Create checksums list
 			b2ID, length := FinishLargeB2Upload(
 				b2Values.UploadID,
 				utils.StrArrToStr(b2Values.Checksums))
 			db.UpdateB2Metadata(b2Values.MetadataID, b2ID, length)
+			return true, nil
+		} else {
+			return false, nil
 		}
 	} else {
 		file := b2.FileInfo{
@@ -89,16 +89,16 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) error {
 			upload.data)
 
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		db.UpdateB2Metadata(
 			b2Values.MetadataID,
 			resp.FileID,
 			resp.ContentLength)
-	}
 
-	return nil
+		return true, nil
+	}
 }
 
 func TestUpload() {
@@ -236,14 +236,4 @@ func (upload FileUpload) UploadLargeFile() {
 
 	fmt.Printf("File ID: %s\n", largeFile.FileID)
 	fmt.Printf("File size: %d\n", largeFile.ContentLength)
-}
-
-func init() {
-	var err error
-	B2, err = b2.AuthorizeAccount(
-		os.Getenv("B2_BUCKET_KEY_ID"),
-		os.Getenv("B2_BUCKET_KEY"))
-	if err != nil {
-		panic(err)
-	}
 }

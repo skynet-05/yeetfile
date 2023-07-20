@@ -1,23 +1,29 @@
 package server
 
 import (
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
+	"yeetfile/shared"
+	"yeetfile/utils"
 )
+
+var B2 b2.Auth
 
 type router struct {
 	routes map[string]http.HandlerFunc
 }
 
-type metadata struct {
+type Metadata struct {
 	Name     string `json:"name"`
 	Chunks   int    `json:"chunks"`
 	Password string `json:"password"`
@@ -66,7 +72,7 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	}
 
 	decoder := json.NewDecoder(req.Body)
-	var meta metadata
+	var meta Metadata
 	err := decoder.Decode(&meta)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -74,9 +80,12 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	}
 
 	key, salt, err := crypto.DeriveKey([]byte(meta.Password), nil)
-	encodedKey := base64.StdEncoding.EncodeToString(key[:])
+	encodedKey := hex.EncodeToString(key[:])
 
-	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, salt)
+	encName := crypto.EncryptChunk(key, []byte(meta.Name))
+	b64Name := hex.EncodeToString(encName[:])
+
+	id, _ := db.NewMetadata(meta.Chunks, b64Name, salt)
 	b2Upload := db.InsertNewUpload(id)
 
 	if meta.Chunks == 1 {
@@ -91,7 +100,7 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 			info.AuthorizationToken,
 			info.BucketID)
 	} else {
-		info, err := InitLargeB2Upload(meta.Name)
+		info, err := InitLargeB2Upload(b64Name)
 		if err != nil {
 			http.Error(w, "Unable to init file", http.StatusBadRequest)
 			return
@@ -115,7 +124,7 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 	}
 
 	chunkNum, _ := strconv.Atoi(req.Header.Get("Chunk"))
-	key := crypto.KeyFromB64(req.Header.Get("Key"))
+	key := crypto.KeyFromHex(req.Header.Get("Key"))
 
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
@@ -127,22 +136,75 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 	}
 
 	upload, b2Values := PrepareUpload(id, key, chunkNum, data)
-	err = upload.Upload(b2Values)
+	done, err := upload.Upload(b2Values)
 
 	if err != nil {
 		http.Error(w, "Upload error", http.StatusBadRequest)
 		return
 	}
 
-	_, _ = io.WriteString(w, "upload file data: "+id)
+	if done {
+		path := utils.GenFilePath()
+		if db.SetMetadataPath(id, path) {
+			_, _ = io.WriteString(w, path)
+		} else {
+			http.Error(w, "Error generating file path", http.StatusInternalServerError)
+		}
+	}
 }
 
 func download(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
-	tag := segments[len(segments)-1]
+	path := segments[len(segments)-1]
 
-	// TODO: Fetch file by tag and begin download
-	_, _ = io.WriteString(w, "Yeetfile download: "+tag+"\n")
+	decoder := json.NewDecoder(req.Body)
+	var d DownloadRequest
+	err := decoder.Decode(&d)
+
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	metadata := db.RetrieveMetadataByPath(path)
+	nameBytes, _ := hex.DecodeString(metadata.Name)
+	key, _, _ := crypto.DeriveKey([]byte(d.Password), metadata.Salt)
+	name, err := crypto.DecryptString(key, nameBytes)
+
+	if err != nil {
+		http.Error(w, "Incorrect password", http.StatusForbidden)
+		return
+	}
+
+	response := shared.DownloadResponse{
+		Name:   name,
+		ID:     metadata.ID,
+		Key:    hex.EncodeToString(key[:]),
+		Chunks: metadata.Chunks,
+	}
+
+	jsonData, _ := json.Marshal(response)
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(jsonData)
+}
+
+func downloadChunk(w http.ResponseWriter, req *http.Request) {
+	segments := strings.Split(req.URL.Path, "/")
+
+	if len(segments) < 3 {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
+	id := segments[len(segments)-2]
+	chunk, _ := strconv.Atoi(segments[len(segments)-1])
+	key := crypto.KeyFromHex(req.Header.Get("Key"))
+
+	metadata := db.RetrieveMetadata(id)
+
+	bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk, key)
+	_, _ = w.Write(bytes)
 }
 
 func Run(port string) {
@@ -159,6 +221,7 @@ func Run(port string) {
 
 	// Download
 	r.routes["/d/*"] = download
+	r.routes["/d/*/*"] = downloadChunk
 
 	addr := fmt.Sprintf("localhost:%s", port)
 	log.Printf("Running on http://%s\n", addr)
@@ -166,5 +229,15 @@ func Run(port string) {
 	err := http.ListenAndServe(addr, r)
 	if err != nil {
 		log.Fatalf("Unable to start server: %v\n", err)
+	}
+}
+
+func init() {
+	var err error
+	B2, err = b2.AuthorizeAccount(
+		os.Getenv("B2_BUCKET_KEY_ID"),
+		os.Getenv("B2_BUCKET_KEY"))
+	if err != nil {
+		panic(err)
 	}
 }

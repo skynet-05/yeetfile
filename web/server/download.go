@@ -8,6 +8,27 @@ import (
 	"yeetfile/crypto"
 )
 
+type DownloadRequest struct {
+	Password string `json:"password"`
+}
+
+func DownloadFile(b2ID string, length int, chunk int, key [32]byte) []byte {
+	start := (chunk - 1) * crypto.BUFFER_SIZE
+	if chunk > 1 {
+		start += crypto.NONCE_SIZE + secretbox.Overhead
+	}
+
+	end := crypto.NONCE_SIZE + crypto.BUFFER_SIZE + secretbox.Overhead + start - 1
+	if start+end > length-1 {
+		end = length - 1
+	}
+
+	data, _ := B2.PartialDownloadById(b2ID, start, end)
+	plaintext, _ := crypto.DecryptChunk(key, data)
+
+	return plaintext
+}
+
 func TestDownload() {
 	auth, err := b2.AuthorizeAccount(
 		os.Getenv("B2_BUCKET_KEY_ID"),
