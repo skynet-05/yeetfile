@@ -17,6 +17,6 @@ func main() {
 		UploadFile(arg)
 	} else {
 		// Arg is (probably) a URL for a file
-		DownloadFile(arg)
+		StartDownload(arg)
 	}
 }

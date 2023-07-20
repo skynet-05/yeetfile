@@ -8,8 +8,10 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
+	"yeetfile/shared"
 )
 
 type Upload struct {
@@ -44,7 +46,6 @@ func UploadFile(filename string) {
 	}
 
 	upload := InitializeUpload(filename, file, string(pw))
-	fmt.Println("ID:", upload.ID)
 
 	if len(file) > ChunkSize {
 		upload.MultiPartUpload()
@@ -102,9 +103,69 @@ func InitializeUpload(
 }
 
 func (upload Upload) MultiPartUpload() {
+	client := &http.Client{}
 
+	fmt.Print("\033[2K\rUploading...")
+
+	i := 0
+	start := 0
+	for start < len(upload.Data) {
+		start = shared.ChunkSize * i
+		end := shared.ChunkSize * (i + 1)
+
+		if end > len(upload.Data) {
+			end = len(upload.Data)
+		}
+
+		buf := bytes.NewBuffer(upload.Data[start:end])
+		req, _ := http.NewRequest("POST", domain+"/u/"+upload.ID, buf)
+
+		req.Header = http.Header{
+			"Chunk": {strconv.Itoa(i + 1)},
+			"Key":   {upload.Key},
+		}
+
+		resp, _ := client.Do(req)
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Error fetching response")
+			return
+		}
+
+		if len(body) > 0 {
+			fmt.Print("\033[2K\rUploading: DONE")
+			fmt.Println()
+			fmt.Println("Link: " + string(body))
+			break
+		}
+
+		i += 1
+	}
 }
 
 func (upload Upload) SingleUpload() {
+	client := &http.Client{}
 
+	fmt.Print("\033[2K\rUploading...")
+
+	buf := bytes.NewBuffer(upload.Data)
+	req, _ := http.NewRequest("POST", domain+"/u/"+upload.ID, buf)
+
+	req.Header = http.Header{
+		"Chunk": {"1"},
+		"Key":   {upload.Key},
+	}
+
+	resp, _ := client.Do(req)
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error fetching response")
+		return
+	}
+
+	fmt.Print("\033[2K\rUploading: DONE")
+	fmt.Println()
+	fmt.Println("Link: " + string(body))
 }
