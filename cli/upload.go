@@ -21,7 +21,7 @@ type Upload struct {
 	Data []byte
 }
 
-func UploadFile(filename string) {
+func UploadFile(filename string, downloads int, exp string) {
 	fmt.Println("Uploading file:", filename)
 	fmt.Println("==========")
 
@@ -45,9 +45,9 @@ func UploadFile(filename string) {
 		panic("Unable to open file")
 	}
 
-	upload := InitializeUpload(filename, file, string(pw))
+	upload := InitializeUpload(filename, file, string(pw), downloads, exp)
 
-	if len(file) > ChunkSize {
+	if len(file) > shared.ChunkSize {
 		upload.MultiPartUpload()
 	} else {
 		upload.SingleUpload()
@@ -58,17 +58,21 @@ func InitializeUpload(
 	filename string,
 	data []byte,
 	password string,
+	downloads int,
+	exp string,
 ) Upload {
 	fmt.Print("\033[2K\rInitializing upload...")
 	client := &http.Client{}
 
-	numChunks := math.Ceil(float64(len(data)) / float64(ChunkSize))
+	numChunks := math.Ceil(float64(len(data)) / float64(shared.ChunkSize))
 
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"name": "%s",
 		"chunks": %d,
-		"password": "%s"
-	}`, filename, int(numChunks), password)))
+		"password": "%s",
+		"downloads": %d,
+		"expiration": "%s"
+	}`, filename, int(numChunks), password, downloads, exp)))
 
 	req, err := http.NewRequest("POST", domain+"/u", reqBody)
 	if err != nil {
