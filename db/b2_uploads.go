@@ -1,6 +1,9 @@
 package db
 
-import "log"
+import (
+	"github.com/lib/pq"
+	"log"
+)
 
 type B2Upload struct {
 	MetadataID string
@@ -50,7 +53,7 @@ func UpdateChecksums(id string, checksum string) bool {
 }
 
 func GetB2UploadValues(id string) B2Upload {
-	s := `SELECT 1
+	s := `SELECT *
 	      FROM b2_uploads
 	      WHERE metadata_id = $1`
 
@@ -72,7 +75,7 @@ func GetB2UploadValues(id string) B2Upload {
 			&uploadURL,
 			&token,
 			&uploadID,
-			&checksums)
+			pq.Array(&checksums))
 
 		return B2Upload{
 			MetadataID: metadataID,
