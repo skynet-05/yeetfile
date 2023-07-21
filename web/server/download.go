@@ -13,13 +13,11 @@ type DownloadRequest struct {
 }
 
 func DownloadFile(b2ID string, length int, chunk int, key [32]byte) []byte {
-	start := (chunk - 1) * crypto.BUFFER_SIZE
-	if chunk > 1 {
-		start += crypto.NONCE_SIZE + secretbox.Overhead
-	}
+	start := (chunk-1)*crypto.BUFFER_SIZE +
+		((crypto.NONCE_SIZE + secretbox.Overhead) * (chunk - 1))
 
 	end := crypto.NONCE_SIZE + crypto.BUFFER_SIZE + secretbox.Overhead + start - 1
-	if start+end > length-1 {
+	if end > length-1 {
 		end = length - 1
 	}
 
