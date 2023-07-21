@@ -50,6 +50,31 @@ func DecrementDownloads(id string) int {
 	return -1
 }
 
+func GetFileExpiry(metadataID string) FileExpiry {
+	s := `SELECT * FROM expiry WHERE id=$1`
+	rows, err := db.Query(s, metadataID)
+	if err != nil {
+		log.Fatalf("Error retrieving file expiry: %v", err)
+		return FileExpiry{}
+	}
+
+	if rows.Next() {
+		var id string
+		var downloads int
+		var date time.Time
+
+		err = rows.Scan(&id, &downloads, &date)
+
+		return FileExpiry{
+			ID:        id,
+			Downloads: downloads,
+			Date:      date,
+		}
+	}
+
+	return FileExpiry{}
+}
+
 func DeleteExpiry(id string) bool {
 	s := `DELETE FROM expiry
 	      WHERE id = $1`
