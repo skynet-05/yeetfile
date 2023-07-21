@@ -209,7 +209,29 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 
 	metadata := db.RetrieveMetadata(id)
 
-	bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk, key)
+	eof, bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk, key)
+
+	// If the file is finished downloading, decrease the download counter
+	// for that file, and delete if 0 are remaining
+	remaining := -1
+	if eof {
+		b2Del := false
+		dbDel := false
+		remaining = db.DecrementDownloads(metadata.ID)
+		if remaining == 0 {
+			b2Del = B2.DeleteFile(metadata.B2ID, metadata.Name)
+			if b2Del {
+				log.Println("B2 file removed")
+				dbDel = db.DeleteAllByID(metadata.ID)
+			}
+
+			if dbDel {
+				log.Println("DB entries removed")
+			}
+		}
+	}
+
+	w.Header().Set("Remaining-Downloads", strconv.Itoa(remaining))
 	_, _ = w.Write(bytes)
 }
 
