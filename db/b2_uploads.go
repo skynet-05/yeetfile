@@ -88,3 +88,14 @@ func GetB2UploadValues(id string) B2Upload {
 
 	return B2Upload{}
 }
+
+func DeleteB2Uploads(id string) bool {
+	s := `DELETE FROM b2_uploads
+	      WHERE metadata_id = $1`
+	_, err := db.Exec(s, id)
+	if err != nil {
+		return false
+	}
+
+	return true
+}

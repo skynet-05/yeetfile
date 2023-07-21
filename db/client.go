@@ -29,3 +29,11 @@ func init() {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
 }
+
+func DeleteAllByID(id string) bool {
+	metadataDeleted := DeleteMetadata(id)
+	b2InfoDeleted := DeleteB2Uploads(id)
+	expiryDeleted := DeleteExpiry(id)
+
+	return metadataDeleted && b2InfoDeleted && expiryDeleted
+}

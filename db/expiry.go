@@ -42,10 +42,21 @@ func DecrementDownloads(id string) int {
 		var downloads int
 		err = rows.Scan(&downloads)
 
-		if err != nil {
+		if err == nil {
 			return downloads
 		}
 	}
 
 	return -1
+}
+
+func DeleteExpiry(id string) bool {
+	s := `DELETE FROM expiry
+	      WHERE id = $1`
+	_, err := db.Exec(s, id)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
