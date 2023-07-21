@@ -213,12 +213,12 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 
 	// If the file is finished downloading, decrease the download counter
 	// for that file, and delete if 0 are remaining
-	remaining := -1
+	rem := -1
 	if eof {
 		b2Del := false
 		dbDel := false
-		remaining = db.DecrementDownloads(metadata.ID)
-		if remaining == 0 {
+		rem = db.DecrementDownloads(metadata.ID)
+		if rem == 0 {
 			b2Del = B2.DeleteFile(metadata.B2ID, metadata.Name)
 			if b2Del {
 				log.Println("B2 file removed")
@@ -229,9 +229,15 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 				log.Println("DB entries removed")
 			}
 		}
+
+		exp := db.GetFileExpiry(metadata.ID)
+
+		if exp.Downloads >= 0 {
+			w.Header().Set("Downloads", strconv.Itoa(exp.Downloads))
+		}
+		w.Header().Set("Date", fmt.Sprintf("%s", exp.Date.String()))
 	}
 
-	w.Header().Set("Remaining-Downloads", strconv.Itoa(remaining))
 	_, _ = w.Write(bytes)
 }
 
