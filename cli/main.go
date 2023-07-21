@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 const domain string = "http://localhost:8090"
@@ -54,17 +55,20 @@ func main() {
 	if *help {
 		fmt.Print(helpMsg)
 		return
-	} else if len(*expiration) == 0 {
-		fmt.Println("Missing expiration argument ('-e'), see '-h' " +
-			"for help uploading.")
-		return
 	}
 
 	if arg == "config" {
 		// TODO: Implement configurable backend
 	} else if _, err := os.Stat(arg); err == nil {
 		// Arg is a file that we should upload
-		UploadFile(arg, *downloads, *expiration)
+		if len(*expiration) == 0 {
+			fmt.Println("Missing expiration argument ('-e'), " +
+				"see '-h' for help with uploading.")
+			return
+		}
+
+		name := filepath.Base(arg)
+		UploadFile(name, *downloads, *expiration)
 	} else {
 		// Arg is (probably) a URL for a file
 		StartDownload(arg)
