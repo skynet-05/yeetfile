@@ -6,24 +6,34 @@ import (
 	"os"
 	"yeetfile/b2"
 	"yeetfile/crypto"
+	"yeetfile/service"
 )
 
 type DownloadRequest struct {
 	Password string `json:"password"`
 }
 
-func DownloadFile(b2ID string, length int, chunk int, key [32]byte) (bool, []byte) {
+func DownloadFile(
+	b2ID string,
+	length int,
+	chunk int,
+	key [32]byte,
+) (bool, []byte) {
 	eof := false
 	start := (chunk-1)*crypto.BUFFER_SIZE +
 		((crypto.NONCE_SIZE + secretbox.Overhead) * (chunk - 1))
 
-	end := crypto.NONCE_SIZE + crypto.BUFFER_SIZE + secretbox.Overhead + start - 1
+	end := crypto.NONCE_SIZE +
+		crypto.BUFFER_SIZE +
+		secretbox.Overhead +
+		start - 1
+
 	if end > length-1 {
 		end = length - 1
 		eof = true
 	}
 
-	data, _ := B2.PartialDownloadById(b2ID, start, end)
+	data, _ := service.B2.PartialDownloadById(b2ID, start, end)
 	plaintext, _ := crypto.DecryptChunk(key, data)
 
 	return eof, plaintext

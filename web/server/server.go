@@ -7,18 +7,14 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
-	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
 	"yeetfile/shared"
 	"yeetfile/utils"
 )
-
-var B2 b2.Auth
 
 type router struct {
 	routes map[string]http.HandlerFunc
@@ -92,7 +88,7 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	b2Upload := db.InsertNewUpload(id)
 
 	exp := utils.StrToDuration(meta.Expiration)
-	db.SetFileExpiry(id, meta.Downloads, time.Now().Add(exp))
+	db.SetFileExpiry(id, meta.Downloads, time.Now().Add(exp).UTC())
 
 	if meta.Chunks == 1 {
 		info, err := InitB2Upload()
@@ -215,25 +211,15 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 	// for that file, and delete if 0 are remaining
 	rem := -1
 	if eof {
-		b2Del := false
-		dbDel := false
+		exp := db.GetFileExpiry(metadata.ID)
 		rem = db.DecrementDownloads(metadata.ID)
-		if rem == 0 {
-			b2Del = B2.DeleteFile(metadata.B2ID, metadata.Name)
-			if b2Del {
-				log.Println("B2 file removed")
-				dbDel = db.DeleteAllByID(metadata.ID)
-			}
 
-			if dbDel {
-				log.Println("DB entries removed")
-			}
+		if rem == 0 {
+			db.DeleteFileByID(metadata.ID)
 		}
 
-		exp := db.GetFileExpiry(metadata.ID)
-
-		if exp.Downloads >= 0 {
-			w.Header().Set("Downloads", strconv.Itoa(exp.Downloads))
+		if rem >= 0 {
+			w.Header().Set("Downloads", strconv.Itoa(rem))
 		}
 		w.Header().Set("Date", fmt.Sprintf("%s", exp.Date.String()))
 	}
@@ -263,15 +249,5 @@ func Run(port string) {
 	err := http.ListenAndServe(addr, r)
 	if err != nil {
 		log.Fatalf("Unable to start server: %v\n", err)
-	}
-}
-
-func init() {
-	var err error
-	B2, err = b2.AuthorizeAccount(
-		os.Getenv("B2_BUCKET_KEY_ID"),
-		os.Getenv("B2_BUCKET_KEY"))
-	if err != nil {
-		panic(err)
 	}
 }

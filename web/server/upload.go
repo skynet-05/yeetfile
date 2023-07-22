@@ -8,6 +8,7 @@ import (
 	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
+	"yeetfile/service"
 	"yeetfile/utils"
 )
 
@@ -131,20 +132,20 @@ func TestUpload() {
 }
 
 func InitB2Upload() (b2.FileInfo, error) {
-	return B2.GetUploadURL()
+	return service.B2.GetUploadURL()
 }
 
 func InitLargeB2Upload(filename string) (b2.FilePartInfo, error) {
-	init, err := B2.StartLargeFile(filename)
+	init, err := service.B2.StartLargeFile(filename)
 	if err != nil {
 		panic(err)
 	}
 
-	return B2.GetUploadPartURL(init)
+	return service.B2.GetUploadPartURL(init)
 }
 
 func FinishLargeB2Upload(b2ID string, checksums string) (string, int) {
-	largeFile, err := B2.FinishLargeFile(b2ID, checksums)
+	largeFile, err := service.B2.FinishLargeFile(b2ID, checksums)
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +154,7 @@ func FinishLargeB2Upload(b2ID string, checksums string) (string, int) {
 }
 
 func (upload FileUpload) UploadFile(attempts int) {
-	info, err := B2.GetUploadURL()
+	info, err := service.B2.GetUploadURL()
 	if err != nil {
 		panic(err)
 	}
@@ -182,12 +183,12 @@ func (upload FileUpload) UploadFile(attempts int) {
 }
 
 func (upload FileUpload) UploadLargeFile() {
-	init, err := B2.StartLargeFile(upload.filename)
+	init, err := service.B2.StartLargeFile(upload.filename)
 	if err != nil {
 		panic(err)
 	}
 
-	info, err := B2.GetUploadPartURL(init)
+	info, err := service.B2.GetUploadPartURL(init)
 	if err != nil {
 		panic(err)
 	}
@@ -229,7 +230,7 @@ func (upload FileUpload) UploadLargeFile() {
 
 	checksumStr := "[\"" + strings.Join(checksums, "\",\"") + "\"]"
 
-	largeFile, err := B2.FinishLargeFile(info.FileID, checksumStr)
+	largeFile, err := service.B2.FinishLargeFile(info.FileID, checksumStr)
 	if err != nil {
 		panic(err)
 	}
