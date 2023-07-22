@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"yeetfile/service"
 	"yeetfile/utils"
 )
 
@@ -30,10 +31,38 @@ func init() {
 	}
 }
 
-func DeleteAllByID(id string) bool {
-	metadataDeleted := DeleteMetadata(id)
-	b2InfoDeleted := DeleteB2Uploads(id)
-	expiryDeleted := DeleteExpiry(id)
+func DeleteFileByID(id string) {
+	metadata := RetrieveMetadata(id)
 
-	return metadataDeleted && b2InfoDeleted && expiryDeleted
+	// File must be deleted from B2 before removing from the database
+	if service.B2.DeleteFile(metadata.B2ID, metadata.Name) {
+		log.Printf("%s deleted from B2\n", metadata.ID)
+
+		if DeleteMetadata(id) {
+			log.Printf("%s metadata deleted\n",
+				metadata.ID)
+		} else {
+			log.Printf("Failed to delete metadata for %s\n",
+				metadata.ID)
+		}
+
+		if DeleteB2Uploads(id) {
+			log.Printf("%s B2 info deleted\n",
+				metadata.ID)
+		} else {
+			log.Printf("Failed to delete B2 info for %s\n",
+				metadata.ID)
+		}
+
+		if DeleteExpiry(id) {
+			log.Printf("%s expiry fields deleted\n",
+				metadata.ID)
+		} else {
+			log.Printf("Failed to delete expiry fields for %s\n",
+				metadata.ID)
+		}
+	} else {
+		log.Printf("Failed to delete B2 file (metadata id: %s)\n",
+			metadata.ID)
+	}
 }

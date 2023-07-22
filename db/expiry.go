@@ -85,3 +85,33 @@ func DeleteExpiry(id string) bool {
 
 	return true
 }
+
+func CheckExpiry() {
+	s := `SELECT id, date FROM expiry`
+	rows, err := db.Query(s)
+	if err != nil {
+		log.Fatalf("Error retrieving file expiry: %v", err)
+		return
+	}
+
+	for rows.Next() {
+		var id string
+		var date time.Time
+
+		err = rows.Scan(&id, &date)
+
+		if err != nil {
+			log.Fatalf("Error scanning rows: %v", err)
+			return
+		}
+
+		if time.Now().UTC().After(date.UTC()) {
+			// File has expired, remove from the DB and B2
+			log.Printf("%s has expired, removing now\n", id)
+			DeleteFileByID(id)
+		}
+	}
+
+	time.Sleep(1 * time.Second)
+	CheckExpiry()
+}
