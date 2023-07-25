@@ -9,92 +9,29 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 	"io"
-	"log"
-	"os"
 )
 
-// const BUFFER_SIZE int = 10485760 // 10mb (b2 min part is 5mb)
-const BUFFER_SIZE int = 5242880
-const NONCE_SIZE int = 24
-const KEY_SIZE int = 32
+const NonceSize int = 24
+const KeySize int = 32
 
-func TestEncryptAndDecrypt() {
-	filename := "lipsum.txt"
-	password := []byte("topsecret")
-
-	key, salt, err := DeriveKey(password, nil)
-	if err != nil {
-		log.Fatalf("Failed to derive key: %v", err.Error())
-	}
-
-	file, err := os.ReadFile(filename)
-	if err != nil {
-		panic("Unable to open file")
-	}
-
-	output, err := os.OpenFile("test.enc", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0777)
-	if err != nil {
-		panic("Unable to open output file")
-	}
-
-	idx := 0
-	for idx < len(file) {
-		chunkSize := BUFFER_SIZE
-		if idx+BUFFER_SIZE > len(file) {
-			chunkSize = len(file) - idx
-		}
-
-		chunk := EncryptChunk(key, file[idx:idx+chunkSize])
-		_, checksum := GenChecksum(chunk)
-
-		fmt.Println(fmt.Sprintf("Chunk checksum: %x", checksum))
-
-		_, err = output.Write(chunk)
-		if err != nil {
-			panic("Failed to write encrypted chunk to the output file")
-		}
-
-		idx += chunkSize
-	}
-
-	_, err = output.Write(salt)
-	if err != nil {
-		panic("Failed to write salt to the output file")
-	}
-
-	err = output.Close()
-	if err != nil {
-		panic("Failed to close the output file")
-	}
-
-	out, err := os.ReadFile("out.enc")
-	if err != nil {
-		panic("Failed to read the output file")
-	}
-
-	plaintext := OldDecrypt(password, out)
-
-	fmt.Println(string(plaintext))
-}
-
-func DeriveKey(password []byte, salt []byte) ([KEY_SIZE]byte, []byte, error) {
+func DeriveKey(password []byte, salt []byte) ([KeySize]byte, []byte, error) {
 	if salt == nil {
-		salt = make([]byte, KEY_SIZE)
+		salt = make([]byte, KeySize)
 		if _, err := rand.Read(salt); err != nil {
-			return [KEY_SIZE]byte{}, nil, err
+			return [KeySize]byte{}, nil, err
 		}
 	}
 
-	key, err := scrypt.Key(password, salt, 32768, 8, 1, KEY_SIZE)
+	key, err := scrypt.Key(password, salt, 32768, 8, 1, KeySize)
 	if err != nil {
-		return [KEY_SIZE]byte{}, nil, err
+		return [KeySize]byte{}, nil, err
 	}
 
-	return [KEY_SIZE]byte(key), salt, nil
+	return [KeySize]byte(key), salt, nil
 }
 
-func EncryptChunk(key [KEY_SIZE]byte, data []byte) []byte {
-	var nonce [NONCE_SIZE]byte
+func EncryptChunk(key [KeySize]byte, data []byte) []byte {
+	var nonce [NonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		panic(err)
 	}
@@ -110,106 +47,46 @@ func GenChecksum(data []byte) ([]byte, string) {
 	return checksum, fmt.Sprintf("%x", checksum)
 }
 
-func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int) {
-	var decryptNonce [NONCE_SIZE]byte
-	copy(decryptNonce[:], chunk[:NONCE_SIZE])
-
-	// Define the size of chunk to read
-	//chunkSize := NONCE_SIZE + BUFFER_SIZE + secretbox.Overhead
-	//if chunkSize > len(chunk)+NONCE_SIZE {
-	//	// Read remainder of file if the chunk size exceeds the available data
-	//	chunkSize = len(chunk)
-	//}
+func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int, error) {
+	var decryptNonce [NonceSize]byte
+	copy(decryptNonce[:], chunk[:NonceSize])
 
 	// Decrypt and append contents to output
-	decrypted, ok := secretbox.Open(nil, chunk[NONCE_SIZE:], &decryptNonce, &key)
+	decrypted, ok := secretbox.Open(
+		nil,
+		chunk[NonceSize:],
+		&decryptNonce,
+		&key)
+
 	if !ok {
-		panic("decryption error")
+		return []byte{}, 0, errors.New("failed to decrypt")
 	}
 
-	return decrypted, NONCE_SIZE + len(decrypted) + secretbox.Overhead
+	readLen := NonceSize + len(decrypted) + secretbox.Overhead
+	return decrypted, readLen, nil
 }
 
 func DecryptString(key [32]byte, byteStr []byte) (string, error) {
-	var decryptNonce [NONCE_SIZE]byte
-	copy(decryptNonce[:], byteStr[:NONCE_SIZE])
+	var decryptNonce [NonceSize]byte
+	copy(decryptNonce[:], byteStr[:NonceSize])
 
-	decrypted, ok := secretbox.Open(nil, byteStr[NONCE_SIZE:], &decryptNonce, &key)
+	decrypted, ok := secretbox.Open(
+		nil,
+		byteStr[NonceSize:],
+		&decryptNonce,
+		&key)
+
 	if !ok {
-		return "", errors.New("Incorrect password")
+		return "", errors.New("failed to decrypt")
 	}
 
 	return string(decrypted), nil
 }
 
-func Decrypt(password []byte, salt []byte, data []byte) []byte {
-	key, _, err := DeriveKey(password, salt)
-	if err != nil {
-		return nil
-	}
-
-	var output []byte
-	for len(data) > 0 {
-		var decryptNonce [NONCE_SIZE]byte
-		copy(decryptNonce[:], data[:NONCE_SIZE])
-
-		// Define the size of chunk to read
-		chunkSize := NONCE_SIZE + BUFFER_SIZE + secretbox.Overhead
-		if chunkSize > len(data)+NONCE_SIZE {
-			// Read remainder of file if the chunk size exceeds the available data
-			chunkSize = len(data)
-		}
-
-		// Decrypt and append contents to output
-		decrypted, ok := secretbox.Open(nil, data[NONCE_SIZE:chunkSize], &decryptNonce, &key)
-		if !ok {
-			panic("decryption error")
-		}
-
-		output = append(output, decrypted...)
-		data = data[NONCE_SIZE+len(decrypted)+secretbox.Overhead:]
-	}
-
-	return output
-}
-
-func OldDecrypt(password []byte, data []byte) []byte {
-	salt, data := data[len(data)-KEY_SIZE:], data[:len(data)-KEY_SIZE]
-
-	key, _, err := DeriveKey(password, salt)
-	if err != nil {
-		return nil
-	}
-
-	var output []byte
-	for len(data) > 0 {
-		var decryptNonce [NONCE_SIZE]byte
-		copy(decryptNonce[:], data[:NONCE_SIZE])
-
-		// Define the size of chunk to read
-		chunkSize := NONCE_SIZE + BUFFER_SIZE + secretbox.Overhead
-		if chunkSize > len(data)+NONCE_SIZE {
-			// Read remainder of file if the chunk size exceeds the available data
-			chunkSize = len(data)
-		}
-
-		// Decrypt and append contents to output
-		decrypted, ok := secretbox.Open(nil, data[NONCE_SIZE:chunkSize], &decryptNonce, &key)
-		if !ok {
-			panic("decryption error")
-		}
-
-		output = append(output, decrypted...)
-		data = data[NONCE_SIZE+len(decrypted)+secretbox.Overhead:]
-	}
-
-	return output
-}
-
-func KeyFromHex(key string) [KEY_SIZE]byte {
+func KeyFromHex(key string) [KeySize]byte {
 	decodedKey, _ := hex.DecodeString(key)
-	var keyBytes [KEY_SIZE]byte
-	copy(keyBytes[:], decodedKey[:KEY_SIZE])
+	var keyBytes [KeySize]byte
+	copy(keyBytes[:], decodedKey[:KeySize])
 
 	return keyBytes
 }

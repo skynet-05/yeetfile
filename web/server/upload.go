@@ -1,10 +1,6 @@
 package server
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"strings"
 	"yeetfile/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
@@ -20,6 +16,10 @@ type FileUpload struct {
 	checksum string
 	chunk    int
 	chunks   int
+}
+
+func InitB2Upload() (b2.FileInfo, error) {
+	return service.B2.GetUploadURL()
 }
 
 func PrepareUpload(
@@ -102,39 +102,6 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 	}
 }
 
-func TestUpload() {
-	filename := "lipsum-big.txt"
-	password := []byte("topsecret")
-
-	file, err := os.ReadFile(filename)
-	if err != nil {
-		panic("Unable to open file")
-	}
-
-	key, salt, err := crypto.DeriveKey(password, nil)
-	if err != nil {
-		log.Fatalf("Failed to derive key: %v", err.Error())
-	}
-
-	upload := FileUpload{
-		filename: "lipsum-big.enc",
-		data:     file,
-		key:      key,
-		salt:     salt,
-	}
-
-	if crypto.BUFFER_SIZE > len(file) {
-		upload.UploadFile(0)
-	} else {
-		upload.UploadLargeFile()
-	}
-
-}
-
-func InitB2Upload() (b2.FileInfo, error) {
-	return service.B2.GetUploadURL()
-}
-
 func InitLargeB2Upload(filename string) (b2.FilePartInfo, error) {
 	init, err := service.B2.StartLargeFile(filename)
 	if err != nil {
@@ -151,90 +118,4 @@ func FinishLargeB2Upload(b2ID string, checksums string) (string, int) {
 	}
 
 	return largeFile.FileID, largeFile.ContentLength
-}
-
-func (upload FileUpload) UploadFile(attempts int) {
-	info, err := service.B2.GetUploadURL()
-	if err != nil {
-		panic(err)
-	}
-
-	encData := crypto.EncryptChunk(upload.key, upload.data)
-	encData = append(encData, upload.salt...)
-
-	_, checksum := crypto.GenChecksum(encData)
-
-	b2File, err := info.UploadFile(
-		upload.filename,
-		checksum,
-		encData,
-	)
-
-	if err != nil {
-		if attempts < 5 {
-			upload.UploadFile(attempts + 1)
-		} else {
-			log.Fatalf("Unable to upload file")
-		}
-	}
-
-	fmt.Printf("File ID: %s\n", b2File.FileID)
-	fmt.Printf("File size: %d\n", b2File.ContentLength)
-}
-
-func (upload FileUpload) UploadLargeFile() {
-	init, err := service.B2.StartLargeFile(upload.filename)
-	if err != nil {
-		panic(err)
-	}
-
-	info, err := service.B2.GetUploadPartURL(init)
-	if err != nil {
-		panic(err)
-	}
-
-	var checksums []string
-
-	idx := 0
-	chunkNum := 1
-	for idx < len(upload.data) {
-		chunkSize := crypto.BUFFER_SIZE
-		needsSalt := false
-		if idx+crypto.BUFFER_SIZE > len(upload.data) {
-			chunkSize = len(upload.data) - idx
-			needsSalt = true
-		}
-
-		chunk := crypto.EncryptChunk(
-			upload.key,
-			upload.data[idx:idx+chunkSize])
-		if needsSalt {
-			chunk = append(chunk, upload.salt...)
-		}
-		_, checksum := crypto.GenChecksum(chunk)
-		checksums = append(checksums, checksum)
-
-		err := info.UploadFilePart(
-			chunkNum,
-			checksum,
-			chunk,
-		)
-
-		if err != nil {
-			panic(err)
-		}
-
-		idx += chunkSize
-		chunkNum += 1
-	}
-
-	checksumStr := "[\"" + strings.Join(checksums, "\",\"") + "\"]"
-
-	largeFile, err := service.B2.FinishLargeFile(info.FileID, checksumStr)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("File ID: %s\n", largeFile.FileID)
-	fmt.Printf("File size: %d\n", largeFile.ContentLength)
 }
