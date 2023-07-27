@@ -14,13 +14,10 @@ import (
 	"yeetfile/db"
 	"yeetfile/shared"
 	"yeetfile/utils"
+	"yeetfile/web/server/auth"
 )
 
-type router struct {
-	routes map[string]http.HandlerFunc
-}
-
-type Metadata struct {
+type UploadMetadata struct {
 	Name       string `json:"name"`
 	Chunks     int    `json:"chunks"`
 	Password   string `json:"password"`
@@ -28,42 +25,42 @@ type Metadata struct {
 	Expiration string `json:"expiration"`
 }
 
-func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	for path, handler := range r.routes {
-		if matchPath(path, req.URL.Path) {
-			handler(w, req)
-			return
-		}
-	}
-
-	http.NotFound(w, req)
-}
-
-func matchPath(pattern, path string) bool {
-	parts := strings.Split(pattern, "/")
-	segments := strings.Split(path, "/")
-
-	if len(parts) != len(segments) {
-		return false
-	}
-
-	for i, part := range parts {
-		if part == "*" {
-			continue
-		}
-
-		if part != segments[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
+// home returns the homepage html if not logged in, otherwise the upload page
 func home(w http.ResponseWriter, _ *http.Request) {
 	_, _ = io.WriteString(w, "Yeetfile home page\n")
 }
 
+// signup handles new user registration. GET requests return the form for
+// signing up, and POST requests take the data from signing up and create a
+// new user in the system.
+func signup(w http.ResponseWriter, req *http.Request) {
+	if req.Method == http.MethodPost {
+		var signup auth.Signup
+		err := json.NewDecoder(req.Body).Decode(&signup)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = signup.Signup()
+		if err != nil {
+			if err == db.UserAlreadyExists {
+				w.WriteHeader(http.StatusConflict)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	} else if req.Method == http.MethodGet {
+		// Return signup html
+	}
+}
+
+// uploadInit handles a POST request to /u with the metadata required to set
+// up a file for uploading. This is defined in the UploadMetadata struct.
 func uploadInit(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "Error", http.StatusMethodNotAllowed)
@@ -71,7 +68,7 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	}
 
 	decoder := json.NewDecoder(req.Body)
-	var meta Metadata
+	var meta UploadMetadata
 	err := decoder.Decode(&meta)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -119,6 +116,8 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	_, _ = io.WriteString(w, fmt.Sprintf("%s|%s", id, encodedKey))
 }
 
+// uploadData handles the process of uploading file chunks to the server, after
+// having already initialized the file metadata beforehand.
 func uploadData(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "Error", http.StatusMethodNotAllowed)
@@ -150,11 +149,14 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 		if db.SetMetadataPath(id, path) {
 			_, _ = io.WriteString(w, path)
 		} else {
-			http.Error(w, "Error generating file path", http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
 }
 
+// download fetches metadata for downloading a file, such as the name of the
+// file, the number of chunks, and the key for decrypting each chunk.
+// TODO: Some files won't have passwords, how to handle?
 func download(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
 	path := segments[len(segments)-1]
@@ -191,6 +193,9 @@ func download(w http.ResponseWriter, req *http.Request) {
 	_, _ = w.Write(jsonData)
 }
 
+// downloadChunk downloads individual chunks of a file using the chunk num from
+// the file path and the decryption key in the header.
+// Ex: /d/abc123/2 -- download the second chunk of file with id "abc123"
 func downloadChunk(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
 
@@ -227,6 +232,8 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 	_, _ = w.Write(bytes)
 }
 
+// Run defines maps URL paths to handlers for the server and begins listening
+// on the configured port.
 func Run(port string) {
 	r := &router{
 		routes: make(map[string]http.HandlerFunc),
@@ -242,6 +249,11 @@ func Run(port string) {
 	// Download
 	r.routes["/d/*"] = download
 	r.routes["/d/*/*"] = downloadChunk
+
+	// User
+	r.routes["/signup"] = signup
+	//r.routes["/login"] = login
+	//r.routes["/account"] = account
 
 	addr := fmt.Sprintf("localhost:%s", port)
 	log.Printf("Running on http://%s\n", addr)
