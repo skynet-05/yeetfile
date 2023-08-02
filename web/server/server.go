@@ -35,17 +35,19 @@ func home(w http.ResponseWriter, _ *http.Request) {
 // new user in the system.
 func signup(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodPost {
-		var signup auth.Signup
+		var signup shared.Signup
 		err := json.NewDecoder(req.Body).Decode(&signup)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		err = signup.Signup()
+		err = auth.Signup(signup)
 		if err != nil {
 			if err == db.UserAlreadyExists {
 				w.WriteHeader(http.StatusConflict)
+			} else if err == auth.MissingField {
+				w.WriteHeader(http.StatusBadRequest)
 			} else {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
@@ -55,8 +57,34 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else if req.Method == http.MethodGet {
-		// Return signup html
+		// TODO: Return signup html
 	}
+}
+
+// verify handles account verification using the link sent to a user's
+// email immediately after signup.
+func verify(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	email := req.URL.Query().Get("email")
+	token := req.URL.Query().Get("token")
+
+	// Ensure the URL has the correct params for validation
+	if len(email) == 0 || len(token) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if db.VerifyUser(email, token) {
+		// TODO: Redirect to home/upload page?
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	w.WriteHeader(http.StatusForbidden)
 }
 
 // uploadInit handles a POST request to /u with the metadata required to set
@@ -252,6 +280,7 @@ func Run(port string) {
 
 	// User
 	r.routes["/signup"] = signup
+	r.routes["/verify"] = verify
 	//r.routes["/login"] = login
 	//r.routes["/account"] = account
 

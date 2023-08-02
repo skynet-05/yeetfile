@@ -8,3 +8,9 @@ type DownloadResponse struct {
 	Chunks int
 	Key    string
 }
+
+type Signup struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}

@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"log"
+	"time"
 	"yeetfile/utils"
 )
 
@@ -19,21 +20,37 @@ func NewUser(email string, pwHash []byte) error {
 	}
 
 	id := utils.GenRandomString(32)
+	token := utils.GenRandomString(16)
 
 	for UserIDExists(id) {
 		id = utils.GenRandomString(32)
 	}
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, usage, type, verified)
-	      VALUES ($1, $2, $3, 0, -1, false)`
+	      (id, email, pw_hash, usage, type, verified, created, token)
+	      VALUES ($1, $2, $3, 0, -1, false, $4, $5)`
 
-	_, err = db.Exec(s, id, email, pwHash)
+	_, err = db.Exec(s, id, email, pwHash, time.Now(), token)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// VerifyUser uses a user's email and the token sent to their email in order
+// to mark their account as verified.
+func VerifyUser(email string, token string) bool {
+	s := `UPDATE users
+	      SET verified=true
+	      WHERE email=$1 AND token=$2`
+
+	_, err := db.Exec(s, email, token)
+	if err != nil {
+		panic(err)
+	}
+
+	return true
 }
 
 // UserIDExists checks the users table to see if the provided id is already
