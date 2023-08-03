@@ -264,7 +264,10 @@ func Run(port string) {
 	r.routes[Route{Path: "/d/*/*", Method: http.MethodPost}] = downloadChunk
 
 	// Account Management
-	r.routes[Route{Path: "/signup", Method: http.MethodPost}] = signup
+	r.routes[Route{
+		Path:   "/signup",
+		Method: http.MethodPost,
+	}] = LimiterMiddleware(signup)
 	r.routes[Route{Path: "/signup", Method: http.MethodGet}] = signupHTML
 	r.routes[Route{Path: "/verify", Method: http.MethodGet}] = verify
 	//r.routes["/login"] = login
