@@ -13,7 +13,7 @@ var MissingField = errors.New("missing username or email")
 // user. A hash is generated from the provided password and entered into the
 // "users" db table.
 func Signup(signup shared.Signup) error {
-	if len(signup.Email) == 0 && len(signup.Username) == 0 {
+	if len(signup.Email) == 0 || len(signup.Password) == 0 {
 		return MissingField
 	}
 
@@ -23,7 +23,7 @@ func Signup(signup shared.Signup) error {
 	}
 
 	// TODO: Send email verification?
-	err = db.NewUser(signup.Email, signup.Username, hash)
+	err = db.NewUser(signup.Email, hash)
 	if err != nil {
 		return err
 	}

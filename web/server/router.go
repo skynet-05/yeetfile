@@ -5,14 +5,19 @@ import (
 	"strings"
 )
 
+type Route struct {
+	Path   string
+	Method string
+}
+
 type router struct {
-	routes map[string]http.HandlerFunc
+	routes map[Route]http.HandlerFunc
 }
 
 // ServeHTTP finds the proper routing handler for the provided path.
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	for path, handler := range r.routes {
-		if matchPath(path, req.URL.Path) {
+	for el, handler := range r.routes {
+		if matchPath(el.Path, req.URL.Path) && el.Method == req.Method {
 			handler(w, req)
 			return
 		}
