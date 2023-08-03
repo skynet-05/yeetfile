@@ -47,10 +47,12 @@ func UploadFile(filename string, downloads int, exp string) {
 
 	upload := InitializeUpload(filename, file, string(pw), downloads, exp)
 
-	if len(file) > shared.ChunkSize {
-		upload.MultiPartUpload()
-	} else {
-		upload.SingleUpload()
+	if len(upload.Key) > 0 {
+		if len(file) > shared.ChunkSize {
+			upload.MultiPartUpload()
+		} else {
+			upload.SingleUpload()
+		}
 	}
 }
 
@@ -65,7 +67,6 @@ func InitializeUpload(
 	client := &http.Client{}
 
 	numChunks := math.Ceil(float64(len(data)) / float64(shared.ChunkSize))
-
 	reqBody := bytes.NewBuffer([]byte(fmt.Sprintf(`{
 		"name": "%s",
 		"chunks": %d,
@@ -86,9 +87,14 @@ func InitializeUpload(
 		return Upload{}
 	}
 
+	if resp.StatusCode != 200 {
+		fmt.Printf("\033[2K\r\nERROR: %d\n", resp.StatusCode)
+		return Upload{}
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading HTTP response body:", err)
+		fmt.Println("Error reading HTTP response body: ", err)
 		return Upload{}
 	}
 
