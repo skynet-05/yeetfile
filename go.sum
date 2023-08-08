@@ -1,3 +1,5 @@
+github.com/benbusby/b2 v0.0.0-20230808202414-7311f44413f0 h1:Ak3A2STDDUg3ARoIWQeKttOSKmXfFnYmbS2PQM5j+l0=
+github.com/benbusby/b2 v0.0.0-20230808202414-7311f44413f0/go.mod h1:33DCcJUrJLjGlFT1wLIxzg+/oVv4TlYBnbdlfazKnTg=
 github.com/gorilla/securecookie v1.1.1 h1:miw7JPhV+b/lAHSXz4qd/nN9jRiAFV5FwjeKyCS8BvQ=
 github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+HVt/4epWDjd4=
 github.com/gorilla/sessions v1.2.1 h1:DHd3rPN5lE3Ts3D8rKkQ8x/0kqfeNmBAaiSi+o7FsgI=

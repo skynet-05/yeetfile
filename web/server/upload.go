@@ -1,11 +1,10 @@
 package server
 
 import (
-	"yeetfile/b2"
+	"github.com/benbusby/b2"
 	"yeetfile/crypto"
 	"yeetfile/db"
 	"yeetfile/service"
-	"yeetfile/utils"
 )
 
 type FileUpload struct {
@@ -19,7 +18,7 @@ type FileUpload struct {
 }
 
 func InitB2Upload() (b2.FileInfo, error) {
-	return service.B2.GetUploadURL()
+	return service.B2.GetUploadURL(service.B2BucketID)
 }
 
 func PrepareUpload(
@@ -59,7 +58,8 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 			UploadURL:          b2Values.UploadURL,
 		}
 
-		err = largeFile.UploadFilePart(
+		err = b2.UploadFilePart(
+			largeFile,
 			upload.chunk,
 			upload.checksum,
 			upload.data)
@@ -71,7 +71,7 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 		if upload.chunk == upload.chunks {
 			b2ID, length := FinishLargeB2Upload(
 				b2Values.UploadID,
-				utils.StrArrToStr(b2Values.Checksums))
+				b2Values.Checksums)
 			db.UpdateB2Metadata(b2Values.MetadataID, b2ID, length)
 			return true, nil
 		} else {
@@ -84,7 +84,8 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 			UploadURL:          b2Values.UploadURL,
 		}
 
-		resp, err := file.UploadFile(
+		resp, err := b2.UploadFile(
+			file,
 			upload.filename,
 			upload.checksum,
 			upload.data)
@@ -103,7 +104,7 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 }
 
 func InitLargeB2Upload(filename string) (b2.FilePartInfo, error) {
-	init, err := service.B2.StartLargeFile(filename)
+	init, err := service.B2.StartLargeFile(filename, service.B2BucketID)
 	if err != nil {
 		panic(err)
 	}
@@ -111,7 +112,7 @@ func InitLargeB2Upload(filename string) (b2.FilePartInfo, error) {
 	return service.B2.GetUploadPartURL(init)
 }
 
-func FinishLargeB2Upload(b2ID string, checksums string) (string, int) {
+func FinishLargeB2Upload(b2ID string, checksums []string) (string, int) {
 	largeFile, err := service.B2.FinishLargeFile(b2ID, checksums)
 	if err != nil {
 		panic(err)

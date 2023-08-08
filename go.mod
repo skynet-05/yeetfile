@@ -3,6 +3,7 @@ module yeetfile
 go 1.20
 
 require (
+	github.com/benbusby/b2 v0.0.0-20230808202414-7311f44413f0 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
