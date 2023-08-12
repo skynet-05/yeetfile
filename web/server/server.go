@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/sessions"
@@ -11,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"yeetfile/crypto"
 	"yeetfile/db"
 	"yeetfile/shared"
 	"yeetfile/utils"
@@ -89,13 +87,7 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	key, salt, err := crypto.DeriveKey([]byte(meta.Password), nil)
-	encodedKey := hex.EncodeToString(key[:])
-
-	encName := crypto.EncryptChunk(key, []byte(meta.Name))
-	b64Name := hex.EncodeToString(encName[:])
-
-	id, _ := db.NewMetadata(meta.Chunks, b64Name, salt)
+	id, _ := db.NewMetadata(meta.Chunks, meta.Name, meta.Salt)
 	b2Upload := db.InsertNewUpload(id)
 
 	exp := utils.StrToDuration(meta.Expiration)
@@ -113,7 +105,7 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 			info.AuthorizationToken,
 			info.BucketID)
 	} else {
-		info, err := InitLargeB2Upload(b64Name)
+		info, err := InitLargeB2Upload(meta.Name)
 		if err != nil {
 			http.Error(w, "Unable to init file", http.StatusBadRequest)
 			return
@@ -126,15 +118,13 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Return ID to user
-	// TODO: Make this not weird
-	_, _ = io.WriteString(w, fmt.Sprintf("%s|%s", id, encodedKey))
+	_, _ = io.WriteString(w, id)
 }
 
 // uploadData handles the process of uploading file chunks to the server, after
 // having already initialized the file metadata beforehand.
 func uploadData(w http.ResponseWriter, req *http.Request) {
 	chunkNum, _ := strconv.Atoi(req.Header.Get("Chunk"))
-	key := crypto.KeyFromHex(req.Header.Get("Key"))
 
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
@@ -145,7 +135,7 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	upload, b2Values := PrepareUpload(id, key, chunkNum, data)
+	upload, b2Values := PrepareUpload(id, chunkNum, data)
 	done, err := upload.Upload(b2Values)
 
 	if err != nil {
@@ -169,30 +159,13 @@ func download(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
 	path := segments[len(segments)-1]
 
-	decoder := json.NewDecoder(req.Body)
-	var d DownloadRequest
-	err := decoder.Decode(&d)
-
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-
 	metadata := db.RetrieveMetadataByPath(path)
-	nameBytes, _ := hex.DecodeString(metadata.Name)
-	key, _, _ := crypto.DeriveKey([]byte(d.Password), metadata.Salt)
-	name, err := crypto.DecryptString(key, nameBytes)
-
-	if err != nil {
-		http.Error(w, "Incorrect password", http.StatusForbidden)
-		return
-	}
 
 	response := shared.DownloadResponse{
-		Name:   name,
+		Name:   metadata.Name,
 		ID:     metadata.ID,
-		Key:    hex.EncodeToString(key[:]),
 		Chunks: metadata.Chunks,
+		Salt:   metadata.Salt,
 	}
 
 	jsonData, _ := json.Marshal(response)
@@ -214,11 +187,10 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 
 	id := segments[len(segments)-2]
 	chunk, _ := strconv.Atoi(segments[len(segments)-1])
-	key := crypto.KeyFromHex(req.Header.Get("Key"))
 
 	metadata := db.RetrieveMetadata(id)
 
-	eof, bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk, key)
+	eof, bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk)
 
 	// If the file is finished downloading, decrease the download counter
 	// for that file, and delete if 0 are remaining
@@ -260,8 +232,8 @@ func Run(port string) {
 	}] = AuthMiddleware(uploadData)
 
 	// Download
-	r.routes[Route{Path: "/d/*", Method: http.MethodPost}] = download
-	r.routes[Route{Path: "/d/*/*", Method: http.MethodPost}] = downloadChunk
+	r.routes[Route{Path: "/d/*", Method: http.MethodGet}] = download
+	r.routes[Route{Path: "/d/*/*", Method: http.MethodGet}] = downloadChunk
 
 	// Account Management
 	r.routes[Route{

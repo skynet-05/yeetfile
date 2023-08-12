@@ -15,7 +15,6 @@ func DownloadFile(
 	b2ID string,
 	length int,
 	chunk int,
-	key [32]byte,
 ) (bool, []byte) {
 	eof := false
 	start := (chunk-1)*shared.ChunkSize +
@@ -32,7 +31,6 @@ func DownloadFile(
 	}
 
 	data, _ := service.B2.PartialDownloadById(b2ID, start, end)
-	plaintext, _, _ := crypto.DecryptChunk(key, data)
 
-	return eof, plaintext
+	return eof, data
 }

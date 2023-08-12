@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"math/rand"
 	"os"
@@ -29,18 +30,11 @@ func GetEnvVar(key, fallback string) string {
 	return value
 }
 
-func StrArrToStr(arr []string) string {
-	return "[\"" + strings.Join(arr, "\",\"") + "\"]"
-}
-
 func StrToDuration(str string) time.Duration {
 	unit := string(str[len(str)-1])
 	length, _ := strconv.Atoi(str[:len(str)-1])
 
 	if unit == "d" {
-		fmt.Println("OK")
-		fmt.Println(time.Duration(length))
-		fmt.Println(time.Duration(length) * time.Hour * 24)
 		return time.Duration(length) * time.Hour * 24
 	} else if unit == "h" {
 		return time.Duration(length) * time.Hour
@@ -67,4 +61,12 @@ func GenFilePath() string {
 	}
 
 	return strings.Join(words, ".")
+}
+
+func GenChecksum(data []byte) ([]byte, string) {
+	h := sha1.New()
+	h.Write(data)
+
+	checksum := h.Sum(nil)
+	return checksum, fmt.Sprintf("%x", checksum)
 }

@@ -2,15 +2,14 @@ package server
 
 import (
 	"github.com/benbusby/b2"
-	"yeetfile/crypto"
 	"yeetfile/db"
 	"yeetfile/service"
+	"yeetfile/utils"
 )
 
 type FileUpload struct {
 	filename string
 	data     []byte
-	key      [32]byte
 	salt     []byte
 	checksum string
 	chunk    int
@@ -23,22 +22,18 @@ func InitB2Upload() (b2.FileInfo, error) {
 
 func PrepareUpload(
 	id string,
-	key [32]byte,
 	chunk int,
 	data []byte,
 ) (FileUpload, db.B2Upload) {
-	encData := crypto.EncryptChunk(key, data)
-
-	_, checksum := crypto.GenChecksum(encData)
+	_, checksum := utils.GenChecksum(data)
 	db.UpdateChecksums(id, checksum)
 
 	metadata := db.RetrieveMetadata(id)
 	b2Values := db.GetB2UploadValues(id)
 
 	upload := FileUpload{
-		data:     encData,
+		data:     data,
 		filename: metadata.Name,
-		key:      key,
 		salt:     metadata.Salt,
 		checksum: checksum,
 		chunk:    chunk,

@@ -1,7 +1,9 @@
 package server
 
 import (
+	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -18,6 +20,9 @@ type router struct {
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for el, handler := range r.routes {
 		if matchPath(el.Path, req.URL.Path) && el.Method == req.Method {
+			if os.Getenv("YEETFILE_DEBUG") == "1" {
+				log.Printf("%s %s\n", req.Method, req.URL)
+			}
 			handler(w, req)
 			return
 		}

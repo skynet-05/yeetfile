@@ -4,6 +4,7 @@ import (
 	"golang.org/x/time/rate"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -71,6 +72,12 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // handling. This is used primarily for the routes associated with uploading.
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
+		// Skip auth if the app is in debug mode
+		if os.Getenv("YEETFILE_DEBUG") == "1" {
+			next.ServeHTTP(w, req)
+			return
+		}
+
 		session, _ := store.Get(req, "session")
 		if ok, found := session.Values["auth"].(bool); !ok || !found {
 			w.WriteHeader(http.StatusForbidden)

@@ -2,10 +2,8 @@ package crypto
 
 import (
 	"crypto/rand"
-	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 	"io"
@@ -37,14 +35,6 @@ func EncryptChunk(key [KeySize]byte, data []byte) []byte {
 	}
 
 	return secretbox.Seal(nonce[:], data, &nonce, &key)
-}
-
-func GenChecksum(data []byte) ([]byte, string) {
-	h := sha1.New()
-	h.Write(data)
-
-	checksum := h.Sum(nil)
-	return checksum, fmt.Sprintf("%x", checksum)
 }
 
 func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int, error) {

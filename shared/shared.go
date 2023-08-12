@@ -5,7 +5,7 @@ const ChunkSize int = 5242880 // 5 mb
 type UploadMetadata struct {
 	Name       string `json:"name"`
 	Chunks     int    `json:"chunks"`
-	Password   string `json:"password"`
+	Salt       []byte `json:"salt"`
 	Downloads  int    `json:"downloads"`
 	Expiration string `json:"expiration"`
 }
@@ -13,8 +13,8 @@ type UploadMetadata struct {
 type DownloadResponse struct {
 	Name   string
 	ID     string
+	Salt   []byte
 	Chunks int
-	Key    string
 }
 
 type Signup struct {
