@@ -28,6 +28,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	log.Printf("Error: %s %s", req.Method, req.URL)
 	http.NotFound(w, req)
 }
 
@@ -43,7 +44,7 @@ func matchPath(pattern, path string) bool {
 	}
 
 	for i, part := range parts {
-		if part == "*" {
+		if part == "*" && len(path) > 1 {
 			continue
 		}
 

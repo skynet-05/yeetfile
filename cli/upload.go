@@ -10,7 +10,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"strconv"
 	"syscall"
 	"yeetfile/crypto"
 	"yeetfile/shared"
@@ -138,11 +137,9 @@ func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) {
 		_, err := file.ReadAt(contents, start)
 		encData := crypto.EncryptChunk(key, contents)
 		buf := bytes.NewBuffer(encData)
-		req, _ := http.NewRequest("POST", domain+"/u/"+id, buf)
 
-		req.Header = http.Header{
-			"Chunk": {strconv.Itoa(i + 1)},
-		}
+		url := fmt.Sprintf("%s/u/%s/%d", domain, id, i+1)
+		req, _ := http.NewRequest("POST", url, buf)
 
 		resp, _ := client.Do(req)
 

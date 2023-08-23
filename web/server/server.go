@@ -1,9 +1,11 @@
 package server
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/sessions"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -14,16 +16,19 @@ import (
 	"yeetfile/shared"
 	"yeetfile/utils"
 	"yeetfile/web/server/auth"
+	"yeetfile/web/templates"
 )
 
 var (
-	key   = []byte(utils.GenRandomString(16))
-	store = sessions.NewCookieStore(key)
+	key         = []byte(utils.GenRandomString(16))
+	store       = sessions.NewCookieStore(key)
+	staticFiles embed.FS
 )
 
 // home returns the homepage html if not logged in, otherwise the upload page
 func home(w http.ResponseWriter, _ *http.Request) {
-	_, _ = io.WriteString(w, "Yeetfile home page\n")
+	tmpl := template.Must(template.ParseFS(templates.HTML, "index.html"))
+	_ = tmpl.Execute(w, templates.HomePage{LoggedIn: true})
 }
 
 // signup uses data from the incoming POST request to create a new user. The
@@ -83,6 +88,8 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 	var meta shared.UploadMetadata
 	err := decoder.Decode(&meta)
 	if err != nil {
+		log.Printf("%v\n", req.Body)
+		log.Printf("Error: %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -124,10 +131,13 @@ func uploadInit(w http.ResponseWriter, req *http.Request) {
 // uploadData handles the process of uploading file chunks to the server, after
 // having already initialized the file metadata beforehand.
 func uploadData(w http.ResponseWriter, req *http.Request) {
-	chunkNum, _ := strconv.Atoi(req.Header.Get("Chunk"))
-
 	segments := strings.Split(req.URL.Path, "/")
-	id := segments[len(segments)-1]
+	id := segments[len(segments)-2]
+	chunkNum, err := strconv.Atoi(segments[len(segments)-1])
+	if err != nil {
+		http.Error(w, "Invalid upload URL", http.StatusBadRequest)
+		return
+	}
 
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -151,6 +161,11 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
+}
+
+func downloadHTML(w http.ResponseWriter, req *http.Request) {
+	tmpl := template.Must(template.ParseFS(templates.HTML, "download.html"))
+	_ = tmpl.Execute(w, templates.HomePage{LoggedIn: true})
 }
 
 // download fetches metadata for downloading a file, such as the name of the
@@ -212,9 +227,15 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 	_, _ = w.Write(bytes)
 }
 
+func fileHandler(w http.ResponseWriter, req *http.Request) {
+	http.FileServer(http.FS(staticFiles)).ServeHTTP(w, req)
+}
+
 // Run defines maps URL paths to handlers for the server and begins listening
 // on the configured port.
-func Run(port string) {
+func Run(port string, files embed.FS) {
+	staticFiles = files
+
 	r := &router{
 		routes: make(map[Route]http.HandlerFunc),
 	}
@@ -227,11 +248,12 @@ func Run(port string) {
 		Method: http.MethodPost,
 	}] = AuthMiddleware(uploadInit)
 	r.routes[Route{
-		Path:   "/u/*",
+		Path:   "/u/*/*",
 		Method: http.MethodPost,
 	}] = AuthMiddleware(uploadData)
 
 	// Download
+	r.routes[Route{Path: "/*", Method: http.MethodGet}] = downloadHTML
 	r.routes[Route{Path: "/d/*", Method: http.MethodGet}] = download
 	r.routes[Route{Path: "/d/*/*", Method: http.MethodGet}] = downloadChunk
 
@@ -244,6 +266,8 @@ func Run(port string) {
 	r.routes[Route{Path: "/verify", Method: http.MethodGet}] = verify
 	//r.routes["/login"] = login
 	//r.routes["/account"] = account
+
+	r.routes[Route{Path: "/static/*/*", Method: http.MethodGet}] = fileHandler
 
 	addr := fmt.Sprintf("localhost:%s", port)
 	log.Printf("Running on http://%s\n", addr)

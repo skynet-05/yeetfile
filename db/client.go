@@ -31,6 +31,26 @@ func init() {
 	}
 }
 
+func clearDatabase(id string) {
+	if DeleteMetadata(id) {
+		log.Printf("%s metadata deleted\n", id)
+	} else {
+		log.Printf("Failed to delete metadata for %s\n", id)
+	}
+
+	if DeleteB2Uploads(id) {
+		log.Printf("%s B2 info deleted\n", id)
+	} else {
+		log.Printf("Failed to delete B2 info for %s\n", id)
+	}
+
+	if DeleteExpiry(id) {
+		log.Printf("%s expiry fields deleted\n", id)
+	} else {
+		log.Printf("Failed to delete expiry fields for %s\n", id)
+	}
+}
+
 func DeleteFileByID(id string) {
 	metadata := RetrieveMetadata(id)
 
@@ -38,31 +58,14 @@ func DeleteFileByID(id string) {
 	if service.B2.DeleteFile(metadata.B2ID, metadata.Name) {
 		log.Printf("%s deleted from B2\n", metadata.ID)
 
-		if DeleteMetadata(id) {
-			log.Printf("%s metadata deleted\n",
-				metadata.ID)
-		} else {
-			log.Printf("Failed to delete metadata for %s\n",
-				metadata.ID)
-		}
-
-		if DeleteB2Uploads(id) {
-			log.Printf("%s B2 info deleted\n",
-				metadata.ID)
-		} else {
-			log.Printf("Failed to delete B2 info for %s\n",
-				metadata.ID)
-		}
-
-		if DeleteExpiry(id) {
-			log.Printf("%s expiry fields deleted\n",
-				metadata.ID)
-		} else {
-			log.Printf("Failed to delete expiry fields for %s\n",
-				metadata.ID)
-		}
+		clearDatabase(metadata.ID)
 	} else {
-		log.Printf("Failed to delete B2 file (metadata id: %s)\n",
-			metadata.ID)
+		if len(metadata.B2ID) == 0 {
+			clearDatabase(metadata.ID)
+		} else {
+			log.Printf("Failed to delete B2 file (id: %s, "+
+				"metadata id: %s)\n",
+				metadata.B2ID, metadata.ID)
+		}
 	}
 }

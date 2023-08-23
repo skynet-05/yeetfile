@@ -54,13 +54,28 @@ func GenFilePath() string {
 	var words []string
 
 	i := 0
+	randNum := strconv.Itoa(r.Intn(10))
+	numInsert := r.Intn(3)
+	insertBefore := r.Intn(2) != 0
 	for i < 3 {
 		idx := r.Intn(max-min+1) + min
-		words = append(words, EFFLongWordList[idx])
+		word := EFFLongWordList[idx]
+
+		shouldInsertNum := numInsert == i
+
+		if shouldInsertNum {
+			if insertBefore {
+				word = randNum + word
+			} else {
+				word = word + randNum
+			}
+		}
+
+		words = append(words, word)
 		i++
 	}
 
-	return strings.Join(words, ".")
+	return strings.Join(words, "-")
 }
 
 func GenChecksum(data []byte) ([]byte, string) {

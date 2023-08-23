@@ -11,10 +11,10 @@ type UploadMetadata struct {
 }
 
 type DownloadResponse struct {
-	Name   string
-	ID     string
-	Salt   []byte
-	Chunks int
+	Name   string `json:"name"`
+	ID     string `json:"id"`
+	Salt   []byte `json:"salt"`
+	Chunks int    `json:"chunks"`
 }
 
 type Signup struct {

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YeetFile</title>
+    <link rel="stylesheet" href="/static/css/download.css">
+    <script src="/static/js/ponyfill.min.js"></script>
+    <script src="/static/js/StreamSaver.min.js"></script>
+    <script src="/static/js/scrypt.min.js"></script>
+    <script src="/static/js/nacl-fast.min.js"></script>
+    <script src="/static/js/crypto.js"></script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/download.js"></script>
+</head>
+<body>
+    <span id="loading">Loading...</span>
+    <div id="download-prompt-div">
+        <label for="name">File:</label>
+        <span id="name"></span><br>
+
+        <button id="download-nopass" value="Download">Download</button>
+    </div>
+    <div id="password-prompt-div">
+        <label for="password">Password:</label><br>
+        <input id="password" type="password"><br>
+
+        <button id="submit" value="Submit">Submit</button>
+    </div>
+</body>
+</html>
