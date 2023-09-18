@@ -27,7 +27,7 @@ var (
 
 // home returns the homepage html if not logged in, otherwise the upload page
 func home(w http.ResponseWriter, _ *http.Request) {
-	tmpl := template.Must(template.ParseFS(templates.HTML, "index.html"))
+	tmpl := template.Must(template.ParseFS(templates.HTML, "upload.html"))
 	_ = tmpl.Execute(w, templates.HomePage{LoggedIn: true})
 }
 

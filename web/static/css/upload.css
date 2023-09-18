@@ -1,0 +1,28 @@
+#password-div {
+    display: none;
+}
+
+#file-tag-div {
+    display: none;
+}
+
+#use-password:checked + #password-div {
+    display: block;
+}
+
+#upload-div {
+    width: 80%;
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 600px;
+    z-index: 15;
+    padding: 10px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+table {
+    width: 100%;
+}
