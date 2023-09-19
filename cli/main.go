@@ -71,6 +71,12 @@ func main() {
 		UploadFile(name, *downloads, *expiration)
 	} else {
 		// Arg is (probably) a URL for a file
-		StartDownload(arg)
+		path, saltKey, err := ParseDownloadString(arg)
+
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		StartDownload(path, saltKey)
 	}
 }

@@ -91,7 +91,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return handler
 }
 
-// cleanup removes a ip->visitor pairing from the visitors map if they haven't
+// cleanup removes an ip->visitor pairing from the visitors map if they haven't
 // repeated a request in over a minute.
 func cleanup() {
 	mu.Lock()

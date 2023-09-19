@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/term"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
-	"syscall"
 	"time"
 	"yeetfile/crypto"
 	"yeetfile/shared"
@@ -22,21 +20,25 @@ var failedDecrypt = errors.New("failed to decrypt data")
 // StartDownload initiates a download of a file using the file's human-readable
 // tag, a 3-word period-separated string such as "machine.delirium.yarn" (which
 // is returned when uploading a file).
-func StartDownload(tag string) {
+func StartDownload(path string, saltKey [32]byte) {
 	client := &http.Client{}
 
-	fmt.Print("Enter Password: ")
-	pw, _ := term.ReadPassword(syscall.Stdin)
-	fmt.Println()
+	pw := RequestPassword()
 
-	req, _ := http.NewRequest("GET", domain+"/d/"+tag, nil)
+	req, _ := http.NewRequest("GET", domain+"/d/"+path, nil)
 
 	resp, _ := client.Do(req)
 	decoder := json.NewDecoder(resp.Body)
 	var d shared.DownloadResponse
 	_ = decoder.Decode(&d)
 
-	key, _, err := crypto.DeriveKey(pw, d.Salt)
+	salt, _, err := crypto.DecryptChunk(saltKey, d.Salt)
+	if err != nil {
+		fmt.Println("Failed to decrypt salt")
+		return
+	}
+
+	key, _, err := crypto.DeriveKey(pw, salt)
 	if err != nil {
 		fmt.Println("Failed to derive key")
 		return
@@ -122,7 +124,7 @@ func showDownloadInfo(header http.Header) {
 			fmt.Printf("Error parsing exp date: %v\n", err)
 			return
 		}
-		
+
 		fmt.Printf("-- Expires: %s\n   (%s)\n", date, diff)
 	}
 }

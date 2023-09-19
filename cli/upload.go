@@ -5,12 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/term"
 	"io"
 	"math"
 	"net/http"
 	"os"
-	"syscall"
 	"yeetfile/crypto"
 	"yeetfile/shared"
 )
@@ -21,18 +19,9 @@ func UploadFile(filename string, downloads int, exp string) {
 	fmt.Println("Uploading file:", filename)
 	fmt.Println("==========")
 
-	fmt.Print("Enter Password: ")
-	pw, err := term.ReadPassword(syscall.Stdin)
-
-	fmt.Print("\nConfirm Password: ")
-	confirm, err := term.ReadPassword(syscall.Stdin)
-	fmt.Print("\n")
-
-	if err != nil {
-		fmt.Println("Error reading stdin")
-		return
-	} else if string(pw) != string(confirm) {
-		fmt.Println("Passwords don't match")
+	pw := RequestPassword()
+	if !ConfirmPassword(pw) {
+		fmt.Println("Passwords do not match")
 		return
 	}
 
@@ -43,17 +32,32 @@ func UploadFile(filename string, downloads int, exp string) {
 
 	stat, err := file.Stat()
 
+	saltKey, _, _ := crypto.DeriveKey([]byte(""), nil)
 	key, salt, err := crypto.DeriveKey(pw, nil)
+
+	// Encrypt and encode the file name (encoding required for upload to B3)
 	encName := crypto.EncryptChunk(key, []byte(filename))
 	hexEncName := hex.EncodeToString(encName)
 
-	id, err := InitializeUpload(hexEncName, salt, stat.Size(), downloads, exp)
+	// Encrypt salt and encode the salt's key for the final file path
+	encSalt := crypto.EncryptChunk(saltKey, salt)
+	hexSaltKey := hex.EncodeToString(saltKey[:])
+
+	id, err := InitializeUpload(hexEncName, encSalt, stat.Size(), downloads, exp)
 
 	if len(id) > 0 {
+		var path string
 		if stat.Size() > int64(shared.ChunkSize) {
-			MultiPartUpload(id, file, stat.Size(), key)
+			path, err = MultiPartUpload(id, file, stat.Size(), key)
 		} else {
-			SingleUpload(id, file, stat.Size(), key)
+			path, err = SingleUpload(id, file, stat.Size(), key)
+		}
+
+		if err != nil {
+			fmt.Printf("Error uploading file: %v\n", err)
+		} else {
+			fmt.Printf("\nResource: %s#%s\n", path, hexSaltKey)
+			fmt.Printf("Link: %s/%s#%s\n", domain, path, hexSaltKey)
 		}
 	}
 }
@@ -118,11 +122,12 @@ func InitializeUpload(
 // MultiPartUpload uploads a file in multiple chunks, with each chunk containing
 // at most the value of shared.ChunkSize (5mb). The function requires an ID from
 // InitializeUpload, the file pointer, the file size, and the key for encryption
-func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) {
+func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string, error) {
 	client := &http.Client{}
 
 	fmt.Print("\033[2K\rUploading...")
 
+	var path string
 	i := 0
 	start := int64(0)
 	for start < size {
@@ -146,24 +151,26 @@ func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Println("Error fetching response")
-			return
+			return "", err
 		}
 
 		if len(body) > 0 {
 			fmt.Print("\033[2K\rUploading: DONE")
 			fmt.Println()
-			fmt.Println("Link: " + string(body))
+			path = string(body)
 			break
 		}
 
 		i += 1
 	}
+
+	return path, nil
 }
 
 // SingleUpload uploads a file's contents in one chunk. This can only be done if
 // the total file size is less than the chunk size (5mb). The function requires
 // an ID, the file pointer, the file length, and the key for encryption.
-func SingleUpload(id string, file *os.File, length int64, key [32]byte) {
+func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string, error) {
 	client := &http.Client{}
 
 	fmt.Print("\033[2K\rUploading...")
@@ -172,12 +179,12 @@ func SingleUpload(id string, file *os.File, length int64, key [32]byte) {
 	size, err := file.Read(content)
 	if err != nil || int64(size) != length {
 		fmt.Println("Error reading file")
-		return
+		return "", err
 	}
 
 	data := crypto.EncryptChunk(key, content)
 	buf := bytes.NewBuffer(data)
-	req, _ := http.NewRequest("POST", domain+"/u/"+id, buf)
+	req, _ := http.NewRequest("POST", domain+"/u/"+id+"/1", buf)
 
 	req.Header = http.Header{
 		"Chunk": {"1"},
@@ -188,10 +195,10 @@ func SingleUpload(id string, file *os.File, length int64, key [32]byte) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error fetching response")
-		return
+		return "", err
 	}
 
 	fmt.Print("\033[2K\rUploading: DONE")
 	fmt.Println()
-	fmt.Println("Link: " + string(body))
+	return string(body), nil
 }
