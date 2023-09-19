@@ -3,7 +3,6 @@ package db
 import (
 	"errors"
 	"log"
-	"time"
 	"yeetfile/utils"
 )
 
@@ -11,31 +10,30 @@ var UserAlreadyExists = errors.New("user already exists")
 
 // NewUser creates a new user in the "users" table, ensuring that the email
 // provided is not already in use.
-func NewUser(email string, pwHash []byte) error {
+func NewUser(email string, pwHash []byte) (string, error) {
 	rows, err := db.Query(`SELECT * from users WHERE email = $1`, email)
 	if err != nil {
-		return err
+		return "", err
 	} else if rows.Next() {
-		return UserAlreadyExists
+		return "", UserAlreadyExists
 	}
 
-	id := utils.GenRandomString(32)
-	token := utils.GenRandomString(16)
+	id := utils.GenRandomNumbers(16)
 
 	for UserIDExists(id) {
-		id = utils.GenRandomString(32)
+		id = utils.GenRandomNumbers(16)
 	}
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, usage, type, verified, created, token)
-	      VALUES ($1, $2, $3, 0, -1, false, $4, $5)`
+	      (id, email, pw_hash, usage, type)
+	      VALUES ($1, $2, $3, 0, -1)`
 
-	_, err = db.Exec(s, id, email, pwHash, time.Now(), token)
+	_, err = db.Exec(s, id, email, pwHash)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return id, nil
 }
 
 // VerifyUser uses a user's email and the token sent to their email in order

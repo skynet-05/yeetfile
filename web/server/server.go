@@ -4,7 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/sessions"
 	"html/template"
 	"io"
 	"log"
@@ -19,11 +18,7 @@ import (
 	"yeetfile/web/templates"
 )
 
-var (
-	key         = []byte(utils.GenRandomString(16))
-	store       = sessions.NewCookieStore(key)
-	staticFiles embed.FS
-)
+var staticFiles embed.FS
 
 // home returns the homepage html if not logged in, otherwise the upload page
 func home(w http.ResponseWriter, _ *http.Request) {
@@ -41,7 +36,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = auth.Signup(signup)
+	id, err := auth.Signup(signup)
 	if err != nil {
 		if err == db.UserAlreadyExists {
 			w.WriteHeader(http.StatusConflict)
@@ -53,7 +48,15 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	session, _ := GetSession(req)
+	session.Values["authenticated"] = true
+	err = session.Save(req, w)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_, _ = io.WriteString(w, id)
 }
 
 func signupHTML(w http.ResponseWriter, req *http.Request) {
@@ -79,6 +82,21 @@ func verify(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusForbidden)
+}
+
+// logout handles a PUT request to /logout to log the user out of their
+// current session.
+func logout(w http.ResponseWriter, req *http.Request) {
+	session, _ := GetSession(req)
+
+	session.Values["authenticated"] = false
+	err := session.Save(req, w)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // uploadInit handles a POST request to /u with the metadata required to set
@@ -264,6 +282,7 @@ func Run(port string, files embed.FS) {
 	}] = LimiterMiddleware(signup)
 	r.routes[Route{Path: "/signup", Method: http.MethodGet}] = signupHTML
 	r.routes[Route{Path: "/verify", Method: http.MethodGet}] = verify
+	r.routes[Route{Path: "/logout", Method: http.MethodPut}] = logout
 	//r.routes["/login"] = login
 	//r.routes["/account"] = account
 

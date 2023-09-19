@@ -11,15 +11,27 @@ import (
 )
 
 const characters string = "abcdefghijklmnopqrstuvwxyz1234567890"
+const numbers string = "1234567890"
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func GenRandomString(n int) string {
+	randStr := GenRandomArray(n, characters)
+	return string(randStr)
+}
+
+func GenRandomNumbers(n int) string {
+	randNums := GenRandomArray(n, numbers)
+	return string(randNums)
+}
+
+func GenRandomArray(n int, chars string) []byte {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = characters[rand.Intn(len(characters))]
+		b[i] = characters[rand.Intn(len(chars))]
 	}
-	return string(b)
+
+	return b
 }
 
 func GetEnvVar(key, fallback string) string {
@@ -84,4 +96,12 @@ func GenChecksum(data []byte) ([]byte, string) {
 
 	checksum := h.Sum(nil)
 	return checksum, fmt.Sprintf("%x", checksum)
+}
+
+func IsEitherEmpty(a string, b string) bool {
+	if (len(a) == 0 && len(b) != 0) || (len(a) != 0 && len(b) == 0) {
+		return true
+	}
+
+	return false
 }

@@ -78,7 +78,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		session, _ := store.Get(req, "session")
+		session, _ := GetSession(req)
 		if ok, found := session.Values["auth"].(bool); !ok || !found {
 			w.WriteHeader(http.StatusForbidden)
 			return
