@@ -4,9 +4,10 @@ const expUnits = {
     days: 2
 }
 
+let pepper = "";
+
 document.addEventListener("DOMContentLoaded", () => {
     let nameDiv = document.getElementById("name-div");
-
     let filePicker = document.getElementById("upload");
     filePicker.addEventListener("change", () => {
         if (filePicker.files.length > 1) {
@@ -23,14 +24,17 @@ document.addEventListener("DOMContentLoaded", () => {
         let formValues = getFormValues();
 
         if (validateForm(formValues)) {
-            deriveKey(formValues.pw, undefined, () => {
-                updateProgress("Initializing...")
-            }, (key, salt) => {
-                if (formValues.files.length > 1) {
-                    submitFormMulti(formValues, key, salt, hideForm);
-                } else {
-                    submitFormSingle(formValues, key, salt, hideForm);
-                }
+            generatePassphrase(passphrase => {
+                pepper = passphrase;
+                deriveKey(formValues.pw, undefined, passphrase, () => {
+                    updateProgress("Initializing...")
+                }, (key, salt) => {
+                    if (formValues.files.length > 1) {
+                        submitFormMulti(formValues, key, salt, hideForm);
+                    } else {
+                        submitFormSingle(formValues, key, salt, hideForm);
+                    }
+                });
             });
         }
     });
@@ -272,10 +276,10 @@ const showFileTag = (tag) => {
     let fileTag = document.getElementById("file-tag");
     let fileLink = document.getElementById("file-link");
 
-    let link = `${window.location.protocol}//${window.location.host}/${tag}`
+    let link = `${window.location.protocol}//${window.location.host}/${tag}#${pepper}`
 
     tagDiv.style.display = "inherit";
-    fileTag.textContent = tag;
+    fileTag.textContent = `${tag}#${pepper}`;
     fileLink.textContent = link;
     fileLink.href = link;
 }

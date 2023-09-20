@@ -19,7 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const handleMetadata = (download) => {
     // Attempt to decrypt without a password first
-    deriveKey("", base64ToArray(download.salt), () => {}, (key, _) => {
+    let salt = base64ToArray(download.salt);
+    let pepper = location.hash.slice(1);
+
+    deriveKey("", salt, pepper, () => {}, (key, _) => {
         let decryptedName = decryptName(key, download.name);
 
         if (decryptedName) {
@@ -73,7 +76,10 @@ const promptPassword = (download) => {
     let btn = document.getElementById("submit");
 
     btn.addEventListener("click", () => {
-        deriveKey(password.value, base64ToArray(download.salt), () => {
+        let salt = base64ToArray(download.salt);
+        let pepper = location.hash.slice(1);
+
+        deriveKey(password.value, salt, pepper, () => {
             updatePasswordBtn("Validating", true);
         }, (key, _) => {
             let decryptedName = decryptName(key, download.name);
