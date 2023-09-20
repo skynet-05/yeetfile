@@ -61,7 +61,7 @@ func StrToDuration(str string) time.Duration {
 
 func GeneratePassphrase() string {
 	min := 0
-	max := len(EFFLongWordList)
+	max := len(EFFWordList)
 
 	var words []string
 
@@ -71,7 +71,7 @@ func GeneratePassphrase() string {
 	insertBefore := r.Intn(2) != 0
 	for i < 3 {
 		idx := r.Intn(max-min+1) + min
-		word := EFFLongWordList[idx]
+		word := EFFWordList[idx]
 
 		shouldInsertNum := numInsert == i
 
@@ -103,5 +103,14 @@ func IsEitherEmpty(a string, b string) bool {
 		return true
 	}
 
+	return false
+}
+
+func Contains(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
+			return true
+		}
+	}
 	return false
 }

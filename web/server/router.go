@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"yeetfile/utils"
 )
 
 type Route struct {
@@ -15,6 +16,8 @@ type Route struct {
 type router struct {
 	routes map[Route]http.HandlerFunc
 }
+
+var reservedEndpoints []string
 
 // ServeHTTP finds the proper routing handler for the provided path.
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -39,7 +42,10 @@ func matchPath(pattern, path string) bool {
 	parts := strings.Split(pattern, "/")
 	segments := strings.Split(path, "/")
 
-	if len(parts) != len(segments) {
+	isWildcard := parts[1] == "*"
+	isEndpoint := utils.Contains(reservedEndpoints, segments[1])
+
+	if len(parts) != len(segments) || (isWildcard && isEndpoint) {
 		return false
 	}
 

@@ -244,6 +244,14 @@ func fileHandler(w http.ResponseWriter, req *http.Request) {
 	http.FileServer(http.FS(staticFiles)).ServeHTTP(w, req)
 }
 
+func wordlist(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(utils.EFFWordList); err != nil {
+		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
+		return
+	}
+}
+
 // Run defines maps URL paths to handlers for the server and begins listening
 // on the configured port.
 func Run(port string, files embed.FS) {
@@ -281,7 +289,17 @@ func Run(port string, files embed.FS) {
 	//r.routes["/login"] = login
 	//r.routes["/account"] = account
 
+	// Misc
 	r.routes[Route{Path: "/static/*/*", Method: http.MethodGet}] = fileHandler
+	r.routes[Route{Path: "/wordlist", Method: http.MethodGet}] = wordlist
+
+	// Reserve endpoints to protect against bad wildcard matches
+	for route := range r.routes {
+		endpoint := strings.Split(route.Path, "/")[1]
+		if len(endpoint) > 0 && endpoint != "*" {
+			reservedEndpoints = append(reservedEndpoints, endpoint)
+		}
+	}
 
 	addr := fmt.Sprintf("localhost:%s", port)
 	log.Printf("Running on http://%s\n", addr)
