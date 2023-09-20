@@ -12,7 +12,6 @@ type FileMetadata struct {
 	Name   string
 	Salt   []byte
 	B2ID   string
-	Path   string
 	Length int
 }
 
@@ -25,9 +24,9 @@ func NewMetadata(chunks int, filename string, salt []byte) (string, error) {
 	}
 
 	s := `INSERT INTO metadata
-	      (id, chunks, filename, salt, b2_id, path, length)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	_, err := db.Exec(s, id, chunks, filename, salt, "", "", -1)
+	      (id, chunks, filename, salt, b2_id, length)
+	      VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err := db.Exec(s, id, chunks, filename, salt, "", -1)
 	if err != nil {
 		panic(err)
 	}
@@ -66,40 +65,11 @@ func RetrieveMetadata(id string) FileMetadata {
 	return FileMetadata{}
 }
 
-func RetrieveMetadataByPath(path string) FileMetadata {
-	s := `SELECT * FROM metadata WHERE path = $1`
-	rows, err := db.Query(s, path)
-	if err != nil {
-		log.Fatalf("Error retrieving metadata: %v", err)
-		return FileMetadata{}
-	}
-
-	if rows.Next() {
-		return ParseMetadata(rows)
-	}
-
-	log.Fatalf("No metadata found for path: %s", path)
-	return FileMetadata{}
-}
-
 func UpdateB2Metadata(id string, b2ID string, length int) bool {
 	s := `UPDATE metadata
 	      SET b2_id=$1, length=$2
 	      WHERE id=$3`
 	_, err := db.Exec(s, b2ID, length, id)
-	if err != nil {
-		panic(err)
-	}
-
-	return true
-}
-
-func SetMetadataPath(id string, path string) bool {
-	s := `UPDATE metadata
-	      SET path=$1
-	      WHERE id=$2`
-
-	_, err := db.Exec(s, path, id)
 	if err != nil {
 		panic(err)
 	}
@@ -113,10 +83,9 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 	var name string
 	var salt []byte
 	var b2ID string
-	var path string
 	var length int
 
-	err := rows.Scan(&id, &chunks, &name, &salt, &b2ID, &path, &length)
+	err := rows.Scan(&id, &chunks, &name, &salt, &b2ID, &length)
 
 	if err != nil {
 		panic(err)
@@ -129,7 +98,6 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 		Name:   name,
 		Salt:   salt,
 		B2ID:   b2ID,
-		Path:   path,
 		Length: length,
 	}
 }

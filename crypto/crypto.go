@@ -7,25 +7,36 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 	"io"
+	"yeetfile/utils"
 )
 
 const NonceSize int = 24
 const KeySize int = 32
 
-func DeriveKey(password []byte, salt []byte) ([KeySize]byte, []byte, error) {
+func DeriveKey(
+	password []byte,
+	salt []byte,
+	pepper []byte,
+) ([KeySize]byte, []byte, []byte, error) {
 	if salt == nil {
 		salt = make([]byte, KeySize)
 		if _, err := rand.Read(salt); err != nil {
-			return [KeySize]byte{}, nil, err
+			return [KeySize]byte{}, nil, nil, err
 		}
 	}
 
-	key, err := scrypt.Key(password, salt, 32768, 8, 1, KeySize)
-	if err != nil {
-		return [KeySize]byte{}, nil, err
+	if pepper == nil {
+		pepper = []byte(utils.GeneratePassphrase())
 	}
 
-	return [KeySize]byte(key), salt, nil
+	pepperPw := append(password, pepper...)
+
+	key, err := scrypt.Key(pepperPw, salt, 32768, 8, 1, KeySize)
+	if err != nil {
+		return [KeySize]byte{}, nil, nil, err
+	}
+
+	return [KeySize]byte(key), salt, pepper, nil
 }
 
 func EncryptChunk(key [KeySize]byte, data []byte) []byte {

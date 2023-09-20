@@ -9,13 +9,16 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path/filepath"
 	"yeetfile/crypto"
 	"yeetfile/shared"
 )
 
 // UploadFile is the entrypoint to uploading a file to the server. It receives
 // the filename, number of downloads, and expiration date for a file.
-func UploadFile(filename string, downloads int, exp string) {
+func UploadFile(path string, downloads int, exp string) {
+	filename := filepath.Base(path)
+
 	fmt.Println("Uploading file:", filename)
 	fmt.Println("==========")
 
@@ -25,25 +28,20 @@ func UploadFile(filename string, downloads int, exp string) {
 		return
 	}
 
-	file, err := os.Open(filename)
+	file, err := os.Open(path)
 	if err != nil {
 		panic("Unable to open file")
 	}
 
 	stat, err := file.Stat()
 
-	saltKey, _, _ := crypto.DeriveKey([]byte(""), nil)
-	key, salt, err := crypto.DeriveKey(pw, nil)
+	key, salt, pepper, err := crypto.DeriveKey(pw, nil, nil)
 
 	// Encrypt and encode the file name (encoding required for upload to B3)
 	encName := crypto.EncryptChunk(key, []byte(filename))
 	hexEncName := hex.EncodeToString(encName)
 
-	// Encrypt salt and encode the salt's key for the final file path
-	encSalt := crypto.EncryptChunk(saltKey, salt)
-	hexSaltKey := hex.EncodeToString(saltKey[:])
-
-	id, err := InitializeUpload(hexEncName, encSalt, stat.Size(), downloads, exp)
+	id, err := InitializeUpload(hexEncName, salt, stat.Size(), downloads, exp)
 
 	if len(id) > 0 {
 		var path string
@@ -56,16 +54,16 @@ func UploadFile(filename string, downloads int, exp string) {
 		if err != nil {
 			fmt.Printf("Error uploading file: %v\n", err)
 		} else {
-			fmt.Printf("\nResource: %s#%s\n", path, hexSaltKey)
-			fmt.Printf("Link: %s/%s#%s\n", domain, path, hexSaltKey)
+			fmt.Printf("\nResource: %s#%s\n", path, string(pepper))
+			fmt.Printf("Link: %s/%s#%s\n", domain, path, string(pepper))
 		}
 	}
 }
 
 // InitializeUpload begins the upload process by sending the server metadata
 // about the file. This includes the name of the file (encrypted and hex
-// encoded), the salt, the length, the number of downloads allowed, and the date
-// that the file should expire.
+// encoded), the salt, the length, the number of downloads allowed, and the
+// date that the file should expire.
 func InitializeUpload(
 	hexEncName string,
 	salt []byte,

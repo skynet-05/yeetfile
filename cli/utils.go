@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"golang.org/x/term"
@@ -13,25 +12,17 @@ import (
 // ParseDownloadString processes a URL such as "this.example.path#<hex key>" into
 // separate usable components: the path to the file (this.example.path), and
 // a [32]byte key to use for decrypting the encrypted salt from the server.
-func ParseDownloadString(tag string) (string, [32]byte, error) {
+func ParseDownloadString(tag string) (string, []byte, error) {
 	splitTag := strings.Split(tag, "#")
 
 	if len(splitTag) != 2 {
-		return "", [32]byte{}, errors.New("invalid download string")
+		return "", nil, errors.New("invalid download string")
 	}
 
 	path := splitTag[0]
-	hexKey := splitTag[1]
+	pepper := splitTag[1]
 
-	var saltKey [32]byte
-	tmpSaltKey, err := hex.DecodeString(hexKey)
-	if err != nil {
-		return "", [32]byte{}, err
-	} else {
-		copy(saltKey[:], tmpSaltKey)
-	}
-
-	return path, saltKey, nil
+	return path, []byte(pepper), nil
 }
 
 func readPassword() []byte {

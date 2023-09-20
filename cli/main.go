@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 )
 
 const domain string = "http://localhost:8090"
@@ -67,16 +66,15 @@ func main() {
 			return
 		}
 
-		name := filepath.Base(arg)
-		UploadFile(name, *downloads, *expiration)
+		UploadFile(arg, *downloads, *expiration)
 	} else {
 		// Arg is (probably) a URL for a file
-		path, saltKey, err := ParseDownloadString(arg)
+		path, pepper, err := ParseDownloadString(arg)
 
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
 		}
-		StartDownload(path, saltKey)
+		StartDownload(path, pepper)
 	}
 }

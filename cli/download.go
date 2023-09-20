@@ -20,7 +20,7 @@ var failedDecrypt = errors.New("failed to decrypt data")
 // StartDownload initiates a download of a file using the file's human-readable
 // tag, a 3-word period-separated string such as "machine.delirium.yarn" (which
 // is returned when uploading a file).
-func StartDownload(path string, saltKey [32]byte) {
+func StartDownload(path string, pepper []byte) {
 	client := &http.Client{}
 
 	pw := RequestPassword()
@@ -32,13 +32,7 @@ func StartDownload(path string, saltKey [32]byte) {
 	var d shared.DownloadResponse
 	_ = decoder.Decode(&d)
 
-	salt, _, err := crypto.DecryptChunk(saltKey, d.Salt)
-	if err != nil {
-		fmt.Println("Failed to decrypt salt")
-		return
-	}
-
-	key, _, err := crypto.DeriveKey(pw, salt)
+	key, _, _, err := crypto.DeriveKey(pw, d.Salt, pepper)
 	if err != nil {
 		fmt.Println("Failed to derive key")
 		return

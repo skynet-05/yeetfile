@@ -172,12 +172,7 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if done {
-		path := utils.GenFilePath()
-		if db.SetMetadataPath(id, path) {
-			_, _ = io.WriteString(w, path)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
+		_, _ = io.WriteString(w, id)
 	}
 }
 
@@ -190,9 +185,9 @@ func downloadHTML(w http.ResponseWriter, req *http.Request) {
 // file, the number of chunks, and the key for decrypting each chunk.
 func download(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
-	path := segments[len(segments)-1]
+	id := segments[len(segments)-1]
 
-	metadata := db.RetrieveMetadataByPath(path)
+	metadata := db.RetrieveMetadata(id)
 
 	response := shared.DownloadResponse{
 		Name:   metadata.Name,

@@ -59,7 +59,7 @@ func StrToDuration(str string) time.Duration {
 	return 0
 }
 
-func GenFilePath() string {
+func GeneratePassphrase() string {
 	min := 0
 	max := len(EFFLongWordList)
 
