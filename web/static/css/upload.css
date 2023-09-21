@@ -16,13 +16,17 @@
     top: 30%;
     left: 50%;
     transform: translate(-50%, -50%);
-    max-width: 600px;
+    max-width: 750px;
     z-index: 15;
     padding: 10px;
-    border: 1px solid black;
+    border: 1px solid;
     border-radius: 5px;
 }
 
-table {
-    width: 100%;
+#reset {
+    display: none;
+}
+
+#form-fieldset {
+    border-radius: 5px;
 }

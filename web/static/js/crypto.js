@@ -9,12 +9,10 @@ const deriveKey = (password, salt, pepper, updateCallback, keyCallback) => {
     }
 
     password = utf8Encode.encode(password + pepper);
-    console.log(password);
-    console.log(pepper);
 
     let keyPromise = scrypt.scrypt(password, salt, 32768, 8, 1, HashSize, updateCallback);
     keyPromise.then((key) => {
-        keyCallback(key, salt)
+        keyCallback(key, salt);
     });
 }
 

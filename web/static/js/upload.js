@@ -7,6 +7,7 @@ const expUnits = {
 let pepper = "";
 
 document.addEventListener("DOMContentLoaded", () => {
+    let form = document.getElementById("upload-form");
     let nameDiv = document.getElementById("name-div");
     let filePicker = document.getElementById("upload");
     filePicker.addEventListener("change", () => {
@@ -17,22 +18,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    let uploadBtn = document.getElementById("upload-form");
-    uploadBtn.addEventListener("submit", (event) => {
+    form.addEventListener("reset", (event) => {
+        resetForm();
+    });
+
+    form.addEventListener("submit", (event) => {
         event.preventDefault();
 
         let formValues = getFormValues();
 
         if (validateForm(formValues)) {
+            setFormEnabled(false);
             generatePassphrase(passphrase => {
                 pepper = passphrase;
                 deriveKey(formValues.pw, undefined, passphrase, () => {
                     updateProgress("Initializing...")
                 }, (key, salt) => {
                     if (formValues.files.length > 1) {
-                        submitFormMulti(formValues, key, salt, hideForm);
+                        submitFormMulti(formValues, key, salt, allowReset);
                     } else {
-                        submitFormSingle(formValues, key, salt, hideForm);
+                        submitFormSingle(formValues, key, salt, allowReset);
                     }
                 });
             });
@@ -40,15 +45,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+const setFormEnabled = on => {
+    console.log("setFormEnabled");
+    let fieldset = document.getElementById("form-fieldset");
+    fieldset.disabled = !on;
+}
+
 const updateProgress = (txt) => {
     let uploadBtn = document.getElementById("submit");
     uploadBtn.disabled = true;
     uploadBtn.value = txt;
 }
 
-const hideForm = () => {
-    let form = document.getElementById("upload-form");
-    form.style.display = "none";
+const allowReset = () => {
+    updateProgress("Done!")
+    let reset = document.getElementById("reset");
+    reset.style.display = "inline";
+}
+
+const resetForm = () => {
+    let uploadBtn = document.getElementById("submit");
+    uploadBtn.disabled = false;
+    uploadBtn.value = "Upload";
+
+    let reset = document.getElementById("reset");
+    reset.style.display = "none";
+
+    setFormEnabled(true);
 }
 
 const getFormValues = () => {
@@ -82,6 +105,10 @@ const validateForm = (form) => {
     }
 
     if (!validateExpiration(form.exp, form.unit)) {
+        return false;
+    }
+
+    if (!validateDownloads(form.downloads)) {
         return false;
     }
 
@@ -242,28 +269,38 @@ const validatePassword = (pwInput, pwConfirm) => {
     return (pwInput.length === 0 || pwConfirm === pwInput);
 }
 
+const validateDownloads = (numDownloads) => {
+    let maxDownloads = 10;
+    if (numDownloads > maxDownloads) {
+        alert(`The number of downloads must be between 0-${maxDownloads}.`);
+        return false;
+    }
+
+    return true;
+}
+
 const validateExpiration = (exp, unit) => {
-    let maxDays = 10;
+    let maxDays = 30;
     let maxHours = 24 * maxDays;
     let maxMinutes = 60 * maxHours;
 
     if (unit === expUnits.minutes) {
         if (exp <= 0 || exp > maxMinutes) {
-            alert(`Expiration minutes must be between 0-${maxMinutes}`);
+            alert(`Expiration must be between 0-${maxMinutes} minutes`);
             return false;
         }
     }
 
     if (unit === expUnits.hours) {
         if (exp <= 0 || exp > maxHours) {
-            alert(`Expiration minutes must be between 0-${maxHours}`);
+            alert(`Expiration must be between 0-${maxHours} hours`);
             return false;
         }
     }
 
     if (unit === expUnits.days) {
         if (exp <= 0 || exp > maxDays) {
-            alert(`Expiration minutes must be between 0-${maxDays}`);
+            alert(`Expiration must be between 0-${maxDays} days`);
             return false;
         }
     }
