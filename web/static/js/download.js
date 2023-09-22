@@ -43,6 +43,15 @@ const showDownload = (name, download, key) => {
     let nameSpan = document.getElementById("name");
     nameSpan.textContent = name;
 
+    let expiration = document.getElementById("expiration");
+    expiration.textContent = calcTimeRemaining(download.expiration);
+
+    let downloads = document.getElementById("downloads");
+    downloads.textContent = download.downloads;
+
+    let size = document.getElementById("size");
+    size.textContent = calcFileSize(download.size);
+
     let downloadDiv = document.getElementById("download-prompt-div");
     downloadDiv.style.display = "inherit";
 
@@ -65,6 +74,49 @@ const updatePasswordBtn = (txt, disabled) => {
     btn.disabled = disabled;
 }
 
+const setFormEnabled = on => {
+    let fieldset = document.getElementById("download-fieldset");
+    fieldset.disabled = !on;
+}
+
+const calcTimeRemaining = expiration => {
+    let currentTime = new Date();
+    let expTime = new Date(expiration);
+
+    let timeDifference = expTime - currentTime;
+
+    const totalSeconds = Math.floor(timeDifference / 1000);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const days = Math.floor(totalHours / 24);
+
+    const hours = totalHours % 24;
+    const minutes = totalMinutes % 60;
+    const seconds = totalSeconds % 60;
+
+    return `${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+}
+
+const calcFileSize = bytes => {
+    let thresh = 1000;
+
+    if (Math.abs(bytes) < thresh) {
+        return bytes + ' B';
+    }
+
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let u = -1;
+    const r = 10;
+
+    do {
+        bytes /= thresh;
+        ++u;
+    } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+
+
+    return bytes.toFixed(1) + ' ' + units[u];
+}
+
 const promptPassword = (download) => {
     let loading = document.getElementById("loading");
     loading.style.display = "none";
@@ -80,8 +132,11 @@ const promptPassword = (download) => {
         let pepper = location.hash.slice(1);
 
         deriveKey(password.value, salt, pepper, () => {
+            setFormEnabled(false);
             updatePasswordBtn("Validating", true);
         }, (key, _) => {
+            setFormEnabled(true);
+
             let decryptedName = decryptName(key, download.name);
 
             if (decryptedName) {

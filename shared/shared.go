@@ -1,5 +1,7 @@
 package shared
 
+import "time"
+
 const ChunkSize int = 5242880 // 5 mb
 
 type UploadMetadata struct {
@@ -11,10 +13,13 @@ type UploadMetadata struct {
 }
 
 type DownloadResponse struct {
-	Name   string `json:"name"`
-	ID     string `json:"id"`
-	Salt   []byte `json:"salt"`
-	Chunks int    `json:"chunks"`
+	Name       string    `json:"name"`
+	ID         string    `json:"id"`
+	Salt       []byte    `json:"salt"`
+	Size       int       `json:"size"`
+	Chunks     int       `json:"chunks"`
+	Downloads  int       `json:"downloads"`
+	Expiration time.Time `json:"expiration"`
 }
 
 type Signup struct {

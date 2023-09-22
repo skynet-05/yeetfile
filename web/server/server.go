@@ -4,7 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -22,8 +21,11 @@ var staticFiles embed.FS
 
 // home returns the homepage html if not logged in, otherwise the upload page
 func home(w http.ResponseWriter, _ *http.Request) {
-	tmpl := template.Must(template.ParseFS(templates.HTML, "upload.html"))
-	_ = tmpl.Execute(w, templates.HomePage{LoggedIn: true})
+	templates.ServeTemplate(
+		w,
+		templates.UploadHTML,
+		templates.Template{LoggedIn: true},
+	)
 }
 
 // signup uses data from the incoming POST request to create a new user. The
@@ -177,8 +179,11 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 }
 
 func downloadHTML(w http.ResponseWriter, req *http.Request) {
-	tmpl := template.Must(template.ParseFS(templates.HTML, "download.html"))
-	_ = tmpl.Execute(w, templates.HomePage{LoggedIn: true})
+	templates.ServeTemplate(
+		w,
+		templates.DownloadHTML,
+		templates.Template{LoggedIn: true},
+	)
 }
 
 // download fetches metadata for downloading a file, such as the name of the
@@ -188,12 +193,16 @@ func download(w http.ResponseWriter, req *http.Request) {
 	id := segments[len(segments)-1]
 
 	metadata := db.RetrieveMetadata(id)
+	expiry := db.GetFileExpiry(id)
 
 	response := shared.DownloadResponse{
-		Name:   metadata.Name,
-		ID:     metadata.ID,
-		Chunks: metadata.Chunks,
-		Salt:   metadata.Salt,
+		Name:       metadata.Name,
+		ID:         metadata.ID,
+		Chunks:     metadata.Chunks,
+		Salt:       metadata.Salt,
+		Size:       metadata.Length,
+		Downloads:  expiry.Downloads,
+		Expiration: expiry.Date,
 	}
 
 	jsonData, _ := json.Marshal(response)
@@ -252,6 +261,14 @@ func wordlist(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func faq(w http.ResponseWriter, _ *http.Request) {
+	templates.ServeTemplate(
+		w,
+		templates.FaqHTML,
+		templates.Template{LoggedIn: true},
+	)
+}
+
 // Run defines maps URL paths to handlers for the server and begins listening
 // on the configured port.
 func Run(port string, files embed.FS) {
@@ -262,6 +279,7 @@ func Run(port string, files embed.FS) {
 	}
 
 	r.routes[Route{Path: "/", Method: http.MethodGet}] = home
+	r.routes[Route{Path: "/upload", Method: http.MethodGet}] = home
 
 	// Upload
 	r.routes[Route{
@@ -292,6 +310,7 @@ func Run(port string, files embed.FS) {
 	// Misc
 	r.routes[Route{Path: "/static/*/*", Method: http.MethodGet}] = fileHandler
 	r.routes[Route{Path: "/wordlist", Method: http.MethodGet}] = wordlist
+	r.routes[Route{Path: "/faq", Method: http.MethodGet}] = faq
 
 	// Reserve endpoints to protect against bad wildcard matches
 	for route := range r.routes {

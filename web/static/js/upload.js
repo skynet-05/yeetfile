@@ -46,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 const setFormEnabled = on => {
-    console.log("setFormEnabled");
     let fieldset = document.getElementById("form-fieldset");
     fieldset.disabled = !on;
 }

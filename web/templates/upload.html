@@ -13,7 +13,9 @@
     <script src="/static/js/upload.js"></script>
 </head>
 <body>
-<div id="upload-div">
+<div id="center-div">
+    <h1>Upload</h1>
+    <hr>
     <form id="upload-form">
         <fieldset id="form-fieldset">
             <table>
@@ -65,7 +67,7 @@
                             <label for="password">Password:</label>
                         </td>
                         <td>
-                            <input id="password" type="password">
+                            <input id="password" autocomplete="off" type="password">
                         </td>
                     </tr>
                     <tr>
@@ -73,7 +75,7 @@
                            <label for="confirm-password">Confirm Password:</label>
                        </td>
                         <td>
-                            <input id="confirm-password" type="password">
+                            <input id="confirm-password" autocomplete="off" type="password">
                         </td>
                     </tr>
                 </table>
@@ -93,5 +95,6 @@
         </div>
     </form>
 </div>
+{{ template "footer.html" }}
 </body>
 </html>

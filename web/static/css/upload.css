@@ -10,19 +10,6 @@
     display: block;
 }
 
-#upload-div {
-    width: 80%;
-    position: absolute;
-    top: 30%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    max-width: 750px;
-    z-index: 15;
-    padding: 10px;
-    border: 1px solid;
-    border-radius: 5px;
-}
-
 #reset {
     display: none;
 }

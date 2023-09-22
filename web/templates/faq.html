@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/css/common.css">
+    <title>YeetFile | FAQ</title>
+</head>
+<body>
+    <div id="center-div">
+        <h1>FAQ</h1>
+        <hr>
+        <details>
+            <summary>How does YeetFile work?</summary>
+            When you upload a file using YeetFile, it generates a key using a randomly
+            generated passphrase and (if password protection is enabled) your password.
+            Your file is then split into individual “chunks”, and each chunk is encrypted
+            before being sent to the server. The server passes along these encrypted chunks
+            of data to Backblaze for storage. Once either the download limit or expiration
+            date has been reached, the file is deleted from Backblaze, and all metadata
+            pertaining to the file is deleted from the server’s database.
+        </details>
+
+        <details>
+            <summary>What file metadata is stored in YeetFile’s database?</summary>
+            YeetFile stores:
+
+            <ul>
+                <li>The number of chunks that the file was split up into</li>
+                <li>The total file size, in bytes</li>
+                <li>The encrypted filename</li>
+            </ul>
+
+            The filename is encrypted with the same key that file data is encrypted with,
+            and since the server never gains access to the randomly generated passphrase or
+            (if provided) the password, it is unable to ever decrypt the filename.
+        </details>
+
+        <details>
+            <summary>What account metadata is stored in YeetFile’s database?</summary>
+            YeetFile stores:
+
+            <ul>
+                <li>The account number</li>
+                <li>The remaining monthly storage for the account</li>
+                <li>The account type (aka which tier)</li>
+                <li>The subscription expiration date (if applicable)</li>
+                <li>The email address (if supplied)</li>
+                <li>The password hash (if supplied)</li>
+            </ul>
+        </details>
+
+        <details>
+            <summary>Are files that I upload tied to my account specifically?</summary>
+            No, file uploads are not tied to your account. The database does not associate
+            account numbers with files when they’re uploaded. Account usage is determined
+            by your uploaded file sizes, but these values are rounded down to the nearest
+            megabyte and thus do not map perfectly to the actual uploaded file size.
+        </details>
+
+        <details>
+            <summary>Should I use the website or the command line application? What’s the difference?</summary>
+            It’s up to you which one you use, but the command line application has the
+            added security of not requiring external resources to be downloaded in order
+            for it to work. Using the website requires trusting that the JavaScript files
+            sent from the server each time you access the site are the same each time, and
+            that nothing has been modified to alter the site’s behavior.
+            <br><br>
+            As far as differences go, there are none. All features supported in the website
+            are also supported in the command line application.
+        </details>
+
+        <details>
+            <summary>Should I sign up with an email/password or just request an account number?</summary>
+            Whatever you want. With an email/password, you can always recover your account
+            if you lose access to your password. Signing up with only an account number means if
+            you lose your account number, <b>you lose access to your account permanently</b>.
+            <br><br>
+            Note that you can always add an email and/or password to your account later if
+            you signed up with only an account number at first.
+        </details>
+
+        <details>
+            <summary>What emails are sent by YeetFile?</summary>
+            The only email that YeetFile can send is the password reset email (if your
+            account has an email associated with it).
+        </details>
+
+        <details>
+            <summary>Is there a free tier?</summary>
+            There is, but it’s limited to 2MB/month. If you’re only occasionally using
+            YeetFile for small text files or config files, then this will probably be
+            enough.
+        </details>
+
+        <details>
+            <summary>Is YeetFile open source?</summary>
+            Yes, the source for YeetFile is AGPL licensed and available on <a
+                href="https://github.com/benbusby/yeetfile">GitHub</a> and <a
+                href="https://sr.ht/~benbusby/yeetfile">SourceHut</a>.
+        </details>
+
+        <details>
+            <summary>Why are you charging to use YeetFile if it’s open source? Couldn’t I just run my own instance for free?</summary>
+            Just because the source code is free doesn’t mean it’s free to operate. There
+            are costs associated with running multiple servers, as well as data storage and
+            transfer. The base tier of YeetFile comes out to only ~$1.50 USD/month, which
+            my opinion is fair and should cover most use cases.
+            <br><br>
+            If you only want to use YeetFile between yourself and a small group of people,
+            you’re free to do so, but the cost of even a cheap VPS would already exceed the
+            monthly cost for YeetFile (based on a $3/mo VPS from Hetzner, versus the
+            $1.50/mo cost of YeetFile). There are also added privacy benefits to using the
+            official yeetfile.com instance rather than running your own, but that may or
+            may not matter to you.
+        </details>
+
+        <details>
+            <summary>Why a yearly subscription? Why can’t I do a monthly subscription?</summary>
+            The fees associated with payment processing are per transaction, so charging
+            per month would mean losing more money than charging annually. Stripe charges
+            2.9% + 0.30 cents per transaction, and since the base tier is only $19/year —
+            which works out to ~$1.50/month — I would lose close to 25% of monthly
+            subscription costs to Stripe fees.
+        </details>
+
+        <details>
+            <summary>What payment options do you support? Can I pay in crypto?</summary>
+            I use Stripe for all non-crypto payments. You can use PayPal, debit/credit
+            cards, etc through Stripe checkout.
+            <br><br>
+            For crypto I use OpenNode, which supports Bitcoin payments.
+            <br><br>
+            Note: I don’t personally hold any crypto, but you’re welcome to pay with it if
+            that’s how you would prefer to pay.
+        </details>
+
+        <details>
+            <summary>Can I upgrade my subscription if I need more storage later?</summary>
+            Yes, but there’s not a system in place for doing this through the website or
+            command line app. If you’re interested in upgrading your subscription, email me
+            at support@yeetfile.com and I can handle the upgrade process for you.
+        </details>
+
+        <details>
+            <summary>Why should I trust you with my files?</summary>
+            YeetFile is designed to not really require you to trust me at all, since it
+            would be impossible for me to decrypt any file content anyways. That being
+            said, if you truly want to make sure that the system is working as it should
+            (encrypting files locally before upload, not sending key data anywhere, etc),
+            you can verify and build the source code for the command line application
+            yourself and use it to upload/download files.
+        </details>
+    </div>
+    {{ template "footer.html" }}
+</body>
+</html>

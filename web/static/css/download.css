@@ -5,3 +5,17 @@
 #download-prompt-div {
     display: none;
 }
+
+#download-fieldset {
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#download-prompt-div table label {
+    font-weight: bold;
+}
+
+#download-prompt-div table span {
+    font-style: italic;
+}
