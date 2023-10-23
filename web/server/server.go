@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/db"
+	"yeetfile/payments"
 	"yeetfile/shared"
 	"yeetfile/utils"
 	"yeetfile/web/server/auth"
@@ -311,6 +312,9 @@ func Run(port string, files embed.FS) {
 	r.routes[Route{Path: "/static/*/*", Method: http.MethodGet}] = fileHandler
 	r.routes[Route{Path: "/wordlist", Method: http.MethodGet}] = wordlist
 	r.routes[Route{Path: "/faq", Method: http.MethodGet}] = faq
+
+	// Payments
+	r.routes[Route{Path: "/stripe", Method: http.MethodPost}] = payments.StripeWebhook
 
 	// Reserve endpoints to protect against bad wildcard matches
 	for route := range r.routes {

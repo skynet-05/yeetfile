@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -113,4 +114,9 @@ func Contains(items []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func PrettyPrintStruct(v any) {
+	s, _ := json.MarshalIndent(v, "", "\t")
+	fmt.Println(string(s))
 }
