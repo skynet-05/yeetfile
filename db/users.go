@@ -7,7 +7,7 @@ import (
 	"yeetfile/utils"
 )
 
-var defaultUsage = 1024 * 1024 * 10 // 10mb
+var defaultUsage = 1024 * 1024 * 2 // 2mb
 
 var UserAlreadyExists = errors.New("user already exists")
 
@@ -23,16 +23,17 @@ func NewUser(email string, pwHash []byte) (string, error) {
 
 	id := utils.GenRandomNumbers(16)
 	paymentID := utils.GenRandomString(16)
+	verificationToken := utils.GenRandomNumbers(16)
 
 	for UserIDExists(id) {
 		id = utils.GenRandomNumbers(16)
 	}
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, usage, payment_id)
-	      VALUES ($1, $2, $3, $4, $5)`
+	      (id, email, pw_hash, usage, payment_id, token, verified)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	_, err = db.Exec(s, id, email, pwHash, defaultUsage, paymentID)
+	_, err = db.Exec(s, id, email, pwHash, defaultUsage, paymentID, verificationToken, false)
 	if err != nil {
 		return "", err
 	}

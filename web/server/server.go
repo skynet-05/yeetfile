@@ -78,11 +78,11 @@ func verify(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if db.VerifyUser(email, token) {
-		// TODO: Redirect to home/upload page?
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+	//if db.VerifyUser(email, token) {
+	//	// TODO: Redirect to home/upload page?
+	//	w.WriteHeader(http.StatusOK)
+	//	return
+	//}
 
 	w.WriteHeader(http.StatusForbidden)
 }
@@ -179,7 +179,8 @@ func uploadData(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func downloadHTML(w http.ResponseWriter, req *http.Request) {
+// downloadHTML returns the HTML page for downloading a file
+func downloadHTML(w http.ResponseWriter, _ *http.Request) {
 	templates.ServeTemplate(
 		w,
 		templates.DownloadHTML,
@@ -250,11 +251,15 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 	_, _ = w.Write(bytes)
 }
 
+// fileHandler uses the embedded files from staticFiles to return a file
+// resource based on its name
 func fileHandler(w http.ResponseWriter, req *http.Request) {
 	http.FileServer(http.FS(staticFiles)).ServeHTTP(w, req)
 }
 
-func wordlist(w http.ResponseWriter, req *http.Request) {
+// wordlist returns the set of words recommended by the EFF for generating
+// secure passwords
+func wordlist(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(utils.EFFWordList); err != nil {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
@@ -262,12 +267,18 @@ func wordlist(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func faq(w http.ResponseWriter, _ *http.Request) {
+// faqHTML returns the FAQ HTML page
+func faqHTML(w http.ResponseWriter, _ *http.Request) {
 	templates.ServeTemplate(
 		w,
 		templates.FaqHTML,
 		templates.Template{LoggedIn: true},
 	)
+}
+
+// up is used as the health check endpoint for load balancing, docker, etc.
+func up(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 // Run defines maps URL paths to handlers for the server and begins listening
@@ -311,7 +322,8 @@ func Run(port string, files embed.FS) {
 	// Misc
 	r.routes[Route{Path: "/static/*/*", Method: http.MethodGet}] = fileHandler
 	r.routes[Route{Path: "/wordlist", Method: http.MethodGet}] = wordlist
-	r.routes[Route{Path: "/faq", Method: http.MethodGet}] = faq
+	r.routes[Route{Path: "/faq", Method: http.MethodGet}] = faqHTML
+	r.routes[Route{Path: "/up", Method: http.MethodGet}] = up
 
 	// Payments
 	r.routes[Route{Path: "/stripe", Method: http.MethodPost}] = payments.StripeWebhook
