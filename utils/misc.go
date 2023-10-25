@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-const characters string = "abcdefghijklmnopqrstuvwxyz1234567890"
-const numbers string = "1234567890"
+var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var numbers = []rune("1234567890")
 
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -26,10 +26,10 @@ func GenRandomNumbers(n int) string {
 	return string(randNums)
 }
 
-func GenRandomArray(n int, chars string) []byte {
-	b := make([]byte, n)
+func GenRandomArray(n int, runes []rune) []rune {
+	b := make([]rune, n)
 	for i := range b {
-		b[i] = characters[rand.Intn(len(chars))]
+		b[i] = runes[rand.Intn(len(runes))]
 	}
 
 	return b

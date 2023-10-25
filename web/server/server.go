@@ -3,6 +3,7 @@ package server
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -41,12 +42,15 @@ func signup(w http.ResponseWriter, req *http.Request) {
 
 	id, err := auth.Signup(signup)
 	if err != nil {
-		if err == db.UserAlreadyExists {
+		if errors.Is(err, db.UserAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
-		} else if err == auth.MissingField {
+			_, _ = w.Write([]byte("User already exists"))
+		} else if errors.Is(err, auth.MissingField) {
 			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("Bad request"))
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("Server error"))
 		}
 		return
 	}

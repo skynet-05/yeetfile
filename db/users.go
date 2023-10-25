@@ -23,7 +23,7 @@ func NewUser(email string, pwHash []byte) (string, error) {
 
 	id := utils.GenRandomNumbers(16)
 	paymentID := utils.GenRandomString(16)
-	verificationToken := utils.GenRandomNumbers(16)
+	verificationToken := utils.GenRandomNumbers(6)
 
 	for UserIDExists(id) {
 		id = utils.GenRandomNumbers(16)
