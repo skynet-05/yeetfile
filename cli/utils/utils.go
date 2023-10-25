@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"golang.org/x/term"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -74,4 +75,70 @@ func CopyToFile(contents string, to string) error {
 	}
 
 	return err
+}
+
+func StrFlag(strVar *string, name string, fallback string, args []string) {
+	if len(*strVar) > 0 {
+		// This var has already been set
+		return
+	}
+
+	flagNameA := fmt.Sprintf("-%s", string(name[0]))
+	flagNameB := fmt.Sprintf("--%s", name)
+
+	for idx, arg := range args {
+		if arg == flagNameA || arg == flagNameB {
+			if idx > len(args)-1 {
+				// Invalid flag value
+				return
+			}
+			*strVar = args[idx+1]
+			return
+		}
+	}
+
+	*strVar = fallback
+}
+
+func BoolFlag(boolVar *bool, name string, fallback bool, args []string) {
+	if *boolVar {
+		// This var has already been set
+		return
+	}
+
+	flagNameA := fmt.Sprintf("-%s", string(name[0]))
+	flagNameB := fmt.Sprintf("--%s", name)
+
+	for _, arg := range args {
+		if arg == flagNameA || arg == flagNameB {
+			*boolVar = true
+			return
+		}
+	}
+
+	*boolVar = fallback
+}
+
+func IntFlag(intVar *int, name string, fallback int, args []string) {
+	if *intVar != 0 {
+		// This var has already been set
+		return
+	}
+
+	flagNameA := fmt.Sprintf("-%s", string(name[0]))
+	flagNameB := fmt.Sprintf("--%s", name)
+
+	for idx, arg := range args {
+		if arg == flagNameA || arg == flagNameB {
+			if idx > len(args)-1 {
+				// Invalid flag value
+				return
+			}
+
+			*intVar, _ = strconv.Atoi(args[idx+1])
+			return
+		}
+	}
+
+	*intVar = fallback
 }

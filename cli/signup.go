@@ -107,10 +107,14 @@ func sendSignup(signup shared.Signup) ([]byte, error) {
 		return nil, errors.New("error creating account")
 	}
 
-	err = config.SetSession(&userConfig, configPaths, resp.Header.Get("Set-Cookie"))
-	if err != nil {
-		fmt.Printf("Failed to save user session: %v\n", err)
-		return nil, err
+	cookies := resp.Cookies()
+	if len(cookies) > 0 {
+		session = cookies[0].Value
+		err = config.SetSession(configPaths, session)
+		if err != nil {
+			fmt.Printf("Failed to save user session: %v\n", err)
+			return nil, err
+		}
 	}
 
 	return body, nil

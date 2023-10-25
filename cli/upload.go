@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
-	"net/http"
 	"os"
 	"path/filepath"
 	"yeetfile/cli/utils"
@@ -73,7 +71,6 @@ func InitializeUpload(
 	exp string,
 ) (string, error) {
 	fmt.Print("\033[2K\rInitializing upload...")
-	client := &http.Client{}
 
 	numChunks := math.Ceil(float64(length) / float64(shared.ChunkSize))
 
@@ -91,12 +88,7 @@ func InitializeUpload(
 	}
 
 	url := fmt.Sprintf("%s/u", userConfig.Server)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqData))
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := client.Do(req)
+	resp, err := PostRequest(url, reqData)
 	if err != nil {
 		return "", err
 	}
@@ -122,8 +114,6 @@ func InitializeUpload(
 // at most the value of shared.ChunkSize (5mb). The function requires an ID from
 // InitializeUpload, the file pointer, the file size, and the key for encryption
 func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string, error) {
-	client := &http.Client{}
-
 	fmt.Print("\033[2K\rUploading...")
 
 	var path string
@@ -140,12 +130,13 @@ func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string
 		contents := make([]byte, end-start)
 		_, err := file.ReadAt(contents, start)
 		encData := crypto.EncryptChunk(key, contents)
-		buf := bytes.NewBuffer(encData)
 
 		url := fmt.Sprintf("%s/u/%s/%d", userConfig.Server, id, i+1)
-		req, _ := http.NewRequest("POST", url, buf)
-
-		resp, _ := client.Do(req)
+		resp, err := PostRequest(url, encData)
+		if err != nil {
+			fmt.Println("Error sending data")
+			return "", err
+		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -170,8 +161,6 @@ func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string
 // the total file size is less than the chunk size (5mb). The function requires
 // an ID, the file pointer, the file length, and the key for encryption.
 func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string, error) {
-	client := &http.Client{}
-
 	fmt.Print("\033[2K\rUploading...")
 
 	content := make([]byte, length)
@@ -182,14 +171,13 @@ func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string,
 	}
 
 	data := crypto.EncryptChunk(key, content)
-	buf := bytes.NewBuffer(data)
-	req, _ := http.NewRequest("POST", userConfig.Server+"/u/"+id+"/1", buf)
 
-	req.Header = http.Header{
-		"Chunk": {"1"},
+	url := fmt.Sprintf("%s/u/%s/1", userConfig.Server, id)
+	resp, err := PostRequest(url, data)
+	if err != nil {
+		fmt.Println("Error sending data")
+		return "", err
 	}
-
-	resp, _ := client.Do(req)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

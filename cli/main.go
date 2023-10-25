@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +10,7 @@ import (
 
 var userConfig config.Config
 var configPaths config.Paths
+var session string
 
 type Command string
 
@@ -41,12 +41,10 @@ func main() {
 
 	command := os.Args[1]
 	arg := os.Args[len(os.Args)-1]
-	flag.Parse()
 
 	// Check if the user is requesting help generally or for a specific cmd
 	var help bool
-	flag.BoolVar(&help, "help", false, "View help")
-	flag.BoolVar(&help, "h", false, "View help")
+	utils.BoolFlag(&help, "help", false, os.Args)
 
 	if help {
 		helpMsg, ok := HelpMap[Command(command)]
@@ -75,18 +73,20 @@ func signup(_ string) {
 
 func upload(arg string) {
 	var downloads int
-	flag.IntVar(&downloads, "d", -1, "")
-	flag.IntVar(&downloads, "downloads", -1, "")
+	utils.IntFlag(&downloads, "downloads", 0, os.Args)
 
 	var expiration string
-	flag.StringVar(&expiration, "e", "", "")
-	flag.StringVar(&expiration, "expiration", "", "")
+	utils.StrFlag(&expiration, "expiration", "", os.Args)
 
 	if _, err := os.Stat(arg); err == nil {
 		// Arg is a file that we should upload
 		if len(expiration) == 0 {
 			fmt.Println("Missing expiration argument ('-e'), " +
 				"see '-h' for help with uploading.")
+			return
+		} else if downloads < 1 {
+			fmt.Println("Downloads ('-d') must be set to a number " +
+				"greater than 0 and less than or equal to 10.")
 			return
 		}
 
@@ -116,4 +116,5 @@ func init() {
 	}
 
 	userConfig, err = config.ReadConfig(configPaths)
+	session, err = config.ReadSession(configPaths)
 }

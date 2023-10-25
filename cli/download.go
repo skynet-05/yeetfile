@@ -26,7 +26,8 @@ func StartDownload(path string, pepper []byte) {
 
 	pw := utils.RequestPassword()
 
-	req, _ := http.NewRequest("GET", userConfig.Server+"/d/"+path, nil)
+	url := fmt.Sprintf("%s/d/%s", userConfig.Server, path)
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
 
 	resp, _ := client.Do(req)
 	decoder := json.NewDecoder(resp.Body)
@@ -65,7 +66,7 @@ func DownloadFile(d shared.DownloadResponse, key [32]byte) error {
 	for i < d.Chunks {
 		fmt.Printf("\033[2K\rDownloading...(%d/%d)", i+1, d.Chunks)
 		url := fmt.Sprintf("%s/d/%s/%d", userConfig.Server, d.ID, i+1)
-		req, _ := http.NewRequest("GET", url, nil)
+		req, _ := http.NewRequest(http.MethodGet, url, nil)
 		req.Header = http.Header{
 			"Chunk": {strconv.Itoa(i + 1)},
 		}

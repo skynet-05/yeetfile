@@ -2,6 +2,7 @@ package config
 
 import (
 	_ "embed"
+	"errors"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -15,8 +16,7 @@ type Paths struct {
 }
 
 type Config struct {
-	Server  string
-	session string
+	Server string
 }
 
 var baseConfigPath = filepath.Join(".config", "yeetfile")
@@ -93,12 +93,25 @@ func setupDefaultConfig(paths Paths) error {
 
 // SetSession sets the session to the value returned by the server when signing
 // up or logging in, and saves it to a (gitignored) file in the config directory
-func SetSession(config *Config, paths Paths, sessionVal string) error {
+func SetSession(paths Paths, sessionVal string) error {
 	err := utils.CopyToFile(sessionVal, paths.session)
 	if err != nil {
 		return err
 	}
 
-	config.session = sessionVal
 	return nil
+}
+
+// ReadSession reads the value in $config_path/session
+func ReadSession(paths Paths) (string, error) {
+	if _, err := os.Stat(paths.session); err == nil {
+		session, err := os.ReadFile(paths.session)
+		if err != nil {
+			return "", err
+		}
+
+		return string(session), nil
+	} else {
+		return "", errors.New("session file doesn't exist")
+	}
 }
