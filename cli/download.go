@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"yeetfile/cli/utils"
 	"yeetfile/crypto"
 	"yeetfile/shared"
 )
@@ -23,9 +24,9 @@ var failedDecrypt = errors.New("failed to decrypt data")
 func StartDownload(path string, pepper []byte) {
 	client := &http.Client{}
 
-	pw := RequestPassword()
+	pw := utils.RequestPassword()
 
-	req, _ := http.NewRequest("GET", domain+"/d/"+path, nil)
+	req, _ := http.NewRequest("GET", userConfig.Server+"/d/"+path, nil)
 
 	resp, _ := client.Do(req)
 	decoder := json.NewDecoder(resp.Body)
@@ -63,7 +64,7 @@ func DownloadFile(d shared.DownloadResponse, key [32]byte) error {
 	var resp *http.Response
 	for i < d.Chunks {
 		fmt.Printf("\033[2K\rDownloading...(%d/%d)", i+1, d.Chunks)
-		url := fmt.Sprintf("%s/d/%s/%d", domain, d.ID, i+1)
+		url := fmt.Sprintf("%s/d/%s/%d", userConfig.Server, d.ID, i+1)
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header = http.Header{
 			"Chunk": {strconv.Itoa(i + 1)},

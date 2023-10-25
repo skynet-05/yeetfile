@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"yeetfile/cli/utils"
 	"yeetfile/crypto"
 	"yeetfile/shared"
 )
@@ -22,8 +23,8 @@ func UploadFile(path string, downloads int, exp string) {
 	fmt.Println("Uploading file:", filename)
 	fmt.Println("==========")
 
-	pw := RequestPassword()
-	if !ConfirmPassword(pw) {
+	pw := utils.RequestPassword()
+	if !utils.ConfirmPassword(pw) {
 		fmt.Println("Passwords do not match")
 		return
 	}
@@ -55,7 +56,7 @@ func UploadFile(path string, downloads int, exp string) {
 			fmt.Printf("Error uploading file: %v\n", err)
 		} else {
 			fmt.Printf("\nResource: %s#%s\n", path, string(pepper))
-			fmt.Printf("Link: %s/%s#%s\n", domain, path, string(pepper))
+			fmt.Printf("Link: %s/%s#%s\n", userConfig.Server, path, string(pepper))
 		}
 	}
 }
@@ -89,7 +90,7 @@ func InitializeUpload(
 		return "", err
 	}
 
-	url := fmt.Sprintf("%s/u", domain)
+	url := fmt.Sprintf("%s/u", userConfig.Server)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqData))
 	if err != nil {
 		return "", err
@@ -141,7 +142,7 @@ func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string
 		encData := crypto.EncryptChunk(key, contents)
 		buf := bytes.NewBuffer(encData)
 
-		url := fmt.Sprintf("%s/u/%s/%d", domain, id, i+1)
+		url := fmt.Sprintf("%s/u/%s/%d", userConfig.Server, id, i+1)
 		req, _ := http.NewRequest("POST", url, buf)
 
 		resp, _ := client.Do(req)
@@ -182,7 +183,7 @@ func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string,
 
 	data := crypto.EncryptChunk(key, content)
 	buf := bytes.NewBuffer(data)
-	req, _ := http.NewRequest("POST", domain+"/u/"+id+"/1", buf)
+	req, _ := http.NewRequest("POST", userConfig.Server+"/u/"+id+"/1", buf)
 
 	req.Header = http.Header{
 		"Chunk": {"1"},

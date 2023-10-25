@@ -1,6 +1,7 @@
-package main
+package utils
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"golang.org/x/term"
@@ -8,6 +9,20 @@ import (
 	"strings"
 	"syscall"
 )
+
+// StringPrompt prompts the user for string input
+func StringPrompt(label string) string {
+	var s string
+	r := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Fprint(os.Stderr, label+" ")
+		s, _ = r.ReadString('\n')
+		if s != "" {
+			break
+		}
+	}
+	return strings.TrimSpace(s)
+}
 
 // ParseDownloadString processes a URL such as "this.example.path#<hex key>" into
 // separate usable components: the path to the file (this.example.path), and
@@ -43,9 +58,20 @@ func RequestPassword() []byte {
 	return readPassword()
 }
 
+// ConfirmPassword prompts the user for a password again, but checks against
+// the provided password bytes to confirm that they're the same.
 func ConfirmPassword(pw []byte) bool {
 	fmt.Print("Confirm Password: ")
 	confirmPw := readPassword()
 
 	return string(confirmPw) == string(pw)
+}
+
+func CopyToFile(contents string, to string) error {
+	err := os.WriteFile(to, []byte(contents), 0644)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
