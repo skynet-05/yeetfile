@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"yeetfile/web/server/auth"
 )
 
 type Visitor struct {
@@ -72,20 +73,15 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // handling. This is used primarily for the routes associated with uploading.
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		// Skip auth if the app is in debug mode
-		if os.Getenv("YEETFILE_DEBUG") == "1" {
+		// Skip auth if the app is in debug mode, otherwise validate session
+		isDebug := os.Getenv("YEETFILE_DEBUG") == "1"
+		if isDebug || auth.IsValidSession(req) {
+			// Call the next handler
 			next.ServeHTTP(w, req)
 			return
 		}
 
-		session, _ := GetSession(req)
-		if ok, found := session.Values["auth"].(bool); !ok || !found {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-
-		// If the user is authenticated, call the next handler
-		next.ServeHTTP(w, req)
+		w.WriteHeader(http.StatusForbidden)
 	}
 
 	return handler

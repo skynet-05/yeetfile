@@ -55,9 +55,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	session, _ := GetSession(req)
-	session.Values["authenticated"] = true
-	err = session.Save(req, w)
+	err = auth.SetSession(w, req)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -94,7 +92,7 @@ func verify(w http.ResponseWriter, req *http.Request) {
 // logout handles a PUT request to /logout to log the user out of their
 // current session.
 func logout(w http.ResponseWriter, req *http.Request) {
-	session, _ := GetSession(req)
+	session, _ := auth.GetSession(req)
 
 	session.Values["authenticated"] = false
 	err := session.Save(req, w)
