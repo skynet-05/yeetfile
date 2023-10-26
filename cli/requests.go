@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 )
+
+var ServerError = errors.New("server error")
 
 func GetRequest(url string) (*http.Response, error) {
 	return sendRequest(http.MethodGet, url, nil)
@@ -11,6 +14,10 @@ func GetRequest(url string) (*http.Response, error) {
 
 func PostRequest(url string, data []byte) (*http.Response, error) {
 	return sendRequest(http.MethodPost, url, data)
+}
+
+func PutRequest(url string, data []byte) (*http.Response, error) {
+	return sendRequest(http.MethodPut, url, data)
 }
 
 func sendRequest(method string, url string, data []byte) (*http.Response, error) {

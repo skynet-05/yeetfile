@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"io"
 	"log"
 	"net/http"
@@ -89,13 +90,55 @@ func verify(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusForbidden)
 }
 
+// login handles a POST request to /login to log the user in.
+func login(w http.ResponseWriter, req *http.Request) {
+	var loginFields shared.Login
+	err := json.NewDecoder(req.Body).Decode(&loginFields)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	identifier := loginFields.Identifier
+	password := []byte(loginFields.Password)
+
+	if strings.Contains(loginFields.Identifier, "@") {
+		pwHash, err := db.GetUserPasswordHashByEmail(identifier)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if bcrypt.CompareHashAndPassword(pwHash, password) != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	} else {
+		if !db.UserIDExists(identifier) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+
+	_ = auth.SetSession(w, req)
+	//http.Redirect(w, req, "/", http.StatusFound)
+	w.WriteHeader(http.StatusOK)
+}
+
+// checkSession checks to see if the current request has a valid session (return
+// 200) or not (401)
+func checkSession(w http.ResponseWriter, req *http.Request) {
+	if auth.IsValidSession(req) {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+}
+
 // logout handles a PUT request to /logout to log the user out of their
 // current session.
 func logout(w http.ResponseWriter, req *http.Request) {
-	session, _ := auth.GetSession(req)
-
-	session.Values["authenticated"] = false
-	err := session.Save(req, w)
+	err := auth.RemoveSession(w, req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -317,8 +360,8 @@ func Run(port string, files embed.FS) {
 	}] = LimiterMiddleware(signup)
 	r.routes[Route{Path: "/signup", Method: http.MethodGet}] = signupHTML
 	r.routes[Route{Path: "/verify", Method: http.MethodGet}] = verify
+	r.routes[Route{Path: "/login", Method: http.MethodPost}] = login
 	r.routes[Route{Path: "/logout", Method: http.MethodPut}] = logout
-	//r.routes["/login"] = login
 	//r.routes["/account"] = account
 
 	// Misc
@@ -326,6 +369,7 @@ func Run(port string, files embed.FS) {
 	r.routes[Route{Path: "/wordlist", Method: http.MethodGet}] = wordlist
 	r.routes[Route{Path: "/faq", Method: http.MethodGet}] = faqHTML
 	r.routes[Route{Path: "/up", Method: http.MethodGet}] = up
+	r.routes[Route{Path: "/session", Method: http.MethodGet}] = checkSession
 
 	// Payments
 	r.routes[Route{Path: "/stripe", Method: http.MethodPost}] = payments.StripeWebhook

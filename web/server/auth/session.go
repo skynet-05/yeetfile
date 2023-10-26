@@ -7,8 +7,10 @@ import (
 )
 
 var (
-	key   = []byte(utils.GenRandomString(16))
-	store = sessions.NewCookieStore(key)
+	key = utils.GetEnvVar(
+		"YEETFILE_SESSION_KEY",
+		utils.GenRandomString(16))
+	store = sessions.NewFilesystemStore(".", []byte(key))
 )
 
 const ValueKey = "auth"
@@ -29,4 +31,11 @@ func IsValidSession(req *http.Request) bool {
 	ok, found := session.Values[ValueKey].(bool)
 
 	return found && ok
+}
+
+func RemoveSession(w http.ResponseWriter, req *http.Request) error {
+	session, _ := GetSession(req)
+
+	session.Values[ValueKey] = false
+	return session.Save(req, w)
 }

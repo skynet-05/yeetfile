@@ -51,12 +51,12 @@ func createEmailAccount(email string) error {
 		return createEmailAccount(email)
 	}
 
-	signup := shared.Signup{
+	signupData := shared.Signup{
 		Email:    email,
 		Password: string(pw),
 	}
 
-	resp, _ := sendSignup(signup)
+	resp, _ := sendSignup(signupData)
 	fmt.Println(string(resp))
 
 	// TODO: Validate email
@@ -83,9 +83,9 @@ func createNumericAccount() error {
 
 // sendSignup handles signing a user up based on the information provided in the
 // signup struct. Returns the response body if successful.
-func sendSignup(signup shared.Signup) ([]byte, error) {
+func sendSignup(signupData shared.Signup) ([]byte, error) {
 	client := &http.Client{}
-	reqData, err := json.Marshal(signup)
+	reqData, err := json.Marshal(signupData)
 	if err != nil {
 		return nil, err
 	}

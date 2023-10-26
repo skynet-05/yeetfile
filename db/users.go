@@ -7,6 +7,14 @@ import (
 	"yeetfile/utils"
 )
 
+type User struct {
+	Email        string
+	PasswordHash []byte
+	Usage        int
+	ID           string
+	PaymentID    string
+}
+
 var defaultUsage = 1024 * 1024 * 2 // 2mb
 
 var UserAlreadyExists = errors.New("user already exists")
@@ -72,14 +80,12 @@ func RotateUserPaymentID(paymentID string) error {
 	}
 
 	return nil
-
-	return nil
 }
 
 // UserIDExists checks the users table to see if the provided id is already
 // being used for another user.
 func UserIDExists(id string) bool {
-	rows, err := db.Query(`SELECT * FROM users WHERE id = $1`, id)
+	rows, err := db.Query(`SELECT id FROM users WHERE id = $1`, id)
 	if err != nil {
 		log.Fatalf("Error querying user id: %v", err)
 		return true
@@ -91,6 +97,29 @@ func UserIDExists(id string) bool {
 	}
 
 	return false
+}
+
+func GetUserPasswordHashByEmail(email string) ([]byte, error) {
+	rows, err := db.Query(`
+		SELECT pw_hash
+		FROM users 
+		WHERE email = $1`, email)
+	if err != nil {
+		log.Fatalf("Error querying for user by email: %v", err)
+		return nil, err
+	}
+
+	if rows.Next() {
+		var pwHash []byte
+		err = rows.Scan(&pwHash)
+		if err != nil {
+			return nil, err
+		}
+
+		return pwHash, nil
+	}
+
+	return nil, errors.New("unable to find user")
 }
 
 // PaymentIDExists checks the user table to see if the provided payment ID

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"yeetfile/cli/utils"
@@ -15,7 +16,19 @@ import (
 
 // UploadFile is the entrypoint to uploading a file to the server. It receives
 // the filename, number of downloads, and expiration date for a file.
-func UploadFile(path string, downloads int, exp string) {
+func UploadFile(path string, downloads int, exp string) bool {
+	if !hasValidSession() {
+		fmt.Println("Login required")
+
+		// Try logging user in and then repeating the request
+		if LoginUser() {
+			return UploadFile(path, downloads, exp)
+		} else {
+			fmt.Println("You need to log in before uploading")
+			return false
+		}
+	}
+
 	filename := filepath.Base(path)
 
 	fmt.Println("Uploading file:", filename)
@@ -24,7 +37,7 @@ func UploadFile(path string, downloads int, exp string) {
 	pw := utils.RequestPassword()
 	if !utils.ConfirmPassword(pw) {
 		fmt.Println("Passwords do not match")
-		return
+		return false
 	}
 
 	file, err := os.Open(path)
@@ -52,10 +65,15 @@ func UploadFile(path string, downloads int, exp string) {
 
 		if err != nil {
 			fmt.Printf("Error uploading file: %v\n", err)
+			return false
 		} else {
 			fmt.Printf("\nResource: %s#%s\n", path, string(pepper))
 			fmt.Printf("Link: %s/%s#%s\n", userConfig.Server, path, string(pepper))
+			return true
 		}
+	} else {
+		fmt.Println("Server returned an invalid file id")
+		return false
 	}
 }
 
@@ -188,4 +206,15 @@ func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string,
 	fmt.Print("\033[2K\rUploading: DONE")
 	fmt.Println()
 	return string(body), nil
+}
+
+func hasValidSession() bool {
+	url := fmt.Sprintf("%s/session", userConfig.Server)
+	resp, err := GetRequest(url)
+	if err != nil {
+		return false
+	}
+
+	return resp.StatusCode == http.StatusOK
+
 }

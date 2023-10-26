@@ -16,18 +16,24 @@ type Command string
 
 const (
 	Signup   Command = "signup"
+	Login    Command = "login"
+	Logout   Command = "logout"
 	Upload   Command = "upload"
 	Download Command = "download"
 )
 
 var CommandMap = map[Command]func(string){
 	Signup:   signup,
+	Login:    login,
+	Logout:   logout,
 	Upload:   upload,
 	Download: download,
 }
 
 var HelpMap = map[Command]string{
 	Signup:   signupHelp,
+	Login:    loginHelp,
+	Logout:   logoutHelp,
 	Upload:   uploadHelp,
 	Download: downloadHelp,
 }
@@ -69,6 +75,14 @@ func main() {
 
 func signup(_ string) {
 	CreateAccount()
+}
+
+func login(_ string) {
+	LoginUser()
+}
+
+func logout(_ string) {
+	LogoutUser()
 }
 
 func upload(arg string) {

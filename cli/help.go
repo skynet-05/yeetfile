@@ -50,3 +50,17 @@ Args: None
 Examples:
     yeetfile signup
 `
+
+const loginHelp = `yeetfile login
+
+Args: None
+Examples:
+    yeetfile login
+`
+
+const logoutHelp = `yeetfile logout
+
+Args: None
+Examples:
+    yeetfile logout
+`
