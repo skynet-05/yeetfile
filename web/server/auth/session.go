@@ -3,14 +3,14 @@ package auth
 import (
 	"github.com/gorilla/sessions"
 	"net/http"
-	"yeetfile/utils"
+	"yeetfile/web/utils"
 )
 
 var (
 	key = utils.GetEnvVar(
 		"YEETFILE_SESSION_KEY",
 		utils.GenRandomString(16))
-	store = sessions.NewFilesystemStore(".", []byte(key))
+	store = sessions.NewFilesystemStore("", []byte(key))
 )
 
 const ValueKey = "auth"

@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"yeetfile/cli/crypto"
 	"yeetfile/cli/utils"
-	"yeetfile/crypto"
 	"yeetfile/shared"
 )
 

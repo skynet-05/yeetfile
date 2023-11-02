@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"yeetfile/utils"
+	"yeetfile/web/utils"
 )
 
 type Route struct {

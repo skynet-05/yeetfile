@@ -9,7 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"yeetfile/db"
+	"yeetfile/web/db"
 )
 
 // stripeProductAmounts maps product IDs to their respective amounts of storage

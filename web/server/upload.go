@@ -2,9 +2,9 @@ package server
 
 import (
 	"github.com/benbusby/b2"
-	"yeetfile/db"
-	"yeetfile/service"
-	"yeetfile/utils"
+	db "yeetfile/web/db"
+	"yeetfile/web/service"
+	"yeetfile/web/utils"
 )
 
 type FileUpload struct {

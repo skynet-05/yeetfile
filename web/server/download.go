@@ -2,9 +2,9 @@ package server
 
 import (
 	"golang.org/x/crypto/nacl/secretbox"
-	"yeetfile/crypto"
-	"yeetfile/service"
+	"yeetfile/cli/crypto"
 	"yeetfile/shared"
+	"yeetfile/web/service"
 )
 
 type DownloadRequest struct {

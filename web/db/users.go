@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"yeetfile/utils"
+	"yeetfile/web/utils"
 )
 
 type User struct {

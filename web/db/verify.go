@@ -3,7 +3,7 @@ package db
 import (
 	"errors"
 	"time"
-	"yeetfile/utils"
+	"yeetfile/web/utils"
 )
 
 // NewVerification creates a new verification entry for a user

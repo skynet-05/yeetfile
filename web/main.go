@@ -2,9 +2,9 @@ package main
 
 import (
 	"embed"
-	"yeetfile/db"
-	"yeetfile/utils"
+	"yeetfile/web/db"
 	"yeetfile/web/server"
+	"yeetfile/web/utils"
 )
 
 //go:embed static/js/*

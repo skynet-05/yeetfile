@@ -12,12 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"yeetfile/db"
-	"yeetfile/payments"
 	"yeetfile/shared"
-	"yeetfile/utils"
+	"yeetfile/web/db"
+	"yeetfile/web/payments"
 	"yeetfile/web/server/auth"
 	"yeetfile/web/templates"
+	"yeetfile/web/utils"
 )
 
 var staticFiles embed.FS

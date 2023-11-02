@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 	"io"
-	"yeetfile/utils"
+	"yeetfile/web/utils"
 )
 
 const NonceSize int = 24

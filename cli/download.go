@@ -10,8 +10,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"yeetfile/cli/crypto"
 	"yeetfile/cli/utils"
-	"yeetfile/crypto"
 	"yeetfile/shared"
 )
 

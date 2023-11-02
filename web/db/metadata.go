@@ -3,7 +3,7 @@ package db
 import (
 	"database/sql"
 	"log"
-	"yeetfile/utils"
+	"yeetfile/web/utils"
 )
 
 type FileMetadata struct {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
-	"yeetfile/service"
-	"yeetfile/utils"
+	"yeetfile/web/service"
+	"yeetfile/web/utils"
 )
 
 var db *sql.DB
