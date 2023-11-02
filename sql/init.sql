@@ -36,13 +36,11 @@ create table if not exists users
         constraint users_pk2
             unique,
     pw_hash    bytea,
-    usage      bigint,
+    meter      bigint,
     id         text not null
         constraint users_pk
             primary key,
-    payment_id text,
-    token      text,
-    verified   boolean
+    payment_id text
 );
 
 create table if not exists stripe
@@ -56,3 +54,12 @@ create table if not exists stripe
     date       date
 );
 
+create table if not exists verify
+(
+    email   text not null
+        constraint verification_pk
+            primary key,
+    code    text,
+    date    date,
+    pw_hash bytea
+);
