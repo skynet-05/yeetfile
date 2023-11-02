@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"yeetfile/cli/config"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 )
@@ -33,6 +31,8 @@ func CreateAccount() {
 	} else if acct == "2" && createNumericAccount() != nil {
 		fmt.Println("Error creating account #")
 	}
+
+	fmt.Println("Successfully created account! You are now logged in.")
 }
 
 // createEmailAccount creates a new account using an email and password. The
@@ -56,10 +56,25 @@ func createEmailAccount(email string) error {
 		Password: string(pw),
 	}
 
-	resp, _ := sendSignup(signupData)
-	fmt.Println(string(resp))
+	_, err := sendSignup(signupData)
+	if err != nil {
+		return err
+	}
 
-	// TODO: Validate email
+	// Verify user email
+	fmt.Printf("A verification code has been sent to %s, please enter "+
+		"it below to finish signing up.\n", signupData.Email)
+	resp, err := verifyEmail(signupData.Email)
+	if err != nil {
+		return nil
+	}
+
+	// Use verification response to set initial user session
+	err = SetSessionFromCookies(resp)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -83,16 +98,14 @@ func createNumericAccount() error {
 
 // sendSignup handles signing a user up based on the information provided in the
 // signup struct. Returns the response body if successful.
-func sendSignup(signupData shared.Signup) ([]byte, error) {
-	client := &http.Client{}
+func sendSignup(signupData shared.Signup) (*http.Response, error) {
 	reqData, err := json.Marshal(signupData)
 	if err != nil {
 		return nil, err
 	}
 
 	url := fmt.Sprintf("%s/signup", userConfig.Server)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(reqData))
-	resp, err := client.Do(req)
+	resp, err := PostRequest(url, reqData)
 	if err != nil {
 		return nil, err
 	}
@@ -107,15 +120,26 @@ func sendSignup(signupData shared.Signup) ([]byte, error) {
 		return nil, errors.New("error creating account")
 	}
 
-	cookies := resp.Cookies()
-	if len(cookies) > 0 {
-		session = cookies[0].Value
-		err = config.SetSession(configPaths, session)
-		if err != nil {
-			fmt.Printf("Failed to save user session: %v\n", err)
-			return nil, err
-		}
+	return resp, nil
+}
+
+// verifyEmail prompts the user for the code sent to their email and uses it
+// to finish verifying their account.
+func verifyEmail(email string) (*http.Response, error) {
+	code := utils.StringPrompt("Enter Verification Code:")
+	url := fmt.Sprintf(
+		"%s/verify?email=%s&code=%s",
+		userConfig.Server,
+		email,
+		code)
+
+	resp, err := GetRequest(url)
+	if err != nil {
+		return nil, err
+	} else if resp.StatusCode >= http.StatusBadRequest && resp.StatusCode < http.StatusInternalServerError {
+		fmt.Println("Incorrect verification code, please try again.")
+		return verifyEmail(email)
 	}
 
-	return body, nil
+	return resp, nil
 }

@@ -31,3 +31,7 @@ type Login struct {
 	Identifier string `json:"email"`
 	Password   string `json:"password"`
 }
+
+type SessionInfo struct {
+	Meter int `json:"meter"`
+}

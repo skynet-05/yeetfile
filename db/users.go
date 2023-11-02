@@ -8,14 +8,14 @@ import (
 )
 
 type User struct {
+	ID           string
 	Email        string
 	PasswordHash []byte
-	Usage        int
-	ID           string
+	Meter        int
 	PaymentID    string
 }
 
-var defaultUsage = 1024 * 1024 * 2 // 2mb
+var defaultMeter = 1024 * 1024 * 2 // 2mb
 
 var UserAlreadyExists = errors.New("user already exists")
 
@@ -31,17 +31,16 @@ func NewUser(email string, pwHash []byte) (string, error) {
 
 	id := utils.GenRandomNumbers(16)
 	paymentID := utils.GenRandomString(16)
-	verificationToken := utils.GenRandomNumbers(6)
 
 	for UserIDExists(id) {
 		id = utils.GenRandomNumbers(16)
 	}
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, usage, payment_id, token, verified)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	      (id, email, pw_hash, meter, payment_id)
+	      VALUES ($1, $2, $3, $4, $5)`
 
-	_, err = db.Exec(s, id, email, pwHash, defaultUsage, paymentID, verificationToken, false)
+	_, err = db.Exec(s, id, email, pwHash, defaultMeter, paymentID)
 	if err != nil {
 		return "", err
 	}
@@ -122,6 +121,29 @@ func GetUserPasswordHashByEmail(email string) ([]byte, error) {
 	return nil, errors.New("unable to find user")
 }
 
+func GetUserIDByEmail(email string) (string, error) {
+	rows, err := db.Query(`
+		SELECT id
+		FROM users 
+		WHERE email = $1`, email)
+	if err != nil {
+		log.Fatalf("Error querying for user by email: %v", err)
+		return "", err
+	}
+
+	if rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			return "", err
+		}
+
+		return id, nil
+	}
+
+	return "", errors.New("unable to find user")
+}
+
 // PaymentIDExists checks the user table to see if the provided payment ID
 // (for Stripe + BTCPay) already exists for another user.
 func PaymentIDExists(paymentID string) bool {
@@ -139,12 +161,12 @@ func PaymentIDExists(paymentID string) bool {
 	return false
 }
 
-// AddUserStorage adds amount to the usage column for a user with the matching
+// AddUserStorage adds amount to the meter column for a user with the matching
 // payment ID. Once the payment ID is used here, it should be replaced by calling
 // RotateUserPaymentID.
 func AddUserStorage(paymentID string, amount int) error {
 	s := `UPDATE users
-	      SET usage=usage + $1
+	      SET meter=meter + $1
 	      WHERE payment_id=$2`
 
 	_, err := db.Exec(s, amount, paymentID)

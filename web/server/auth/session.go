@@ -15,14 +15,16 @@ var (
 
 const ValueKey = "auth"
 const SessionKey = "session"
+const UserKey = "user"
 
 func GetSession(req *http.Request) (*sessions.Session, error) {
 	return store.Get(req, SessionKey)
 }
 
-func SetSession(w http.ResponseWriter, req *http.Request) error {
+func SetSession(id string, w http.ResponseWriter, req *http.Request) error {
 	session, _ := GetSession(req)
 	session.Values[ValueKey] = true
+	session.Values[UserKey] = id
 	return session.Save(req, w)
 }
 
@@ -37,5 +39,10 @@ func RemoveSession(w http.ResponseWriter, req *http.Request) error {
 	session, _ := GetSession(req)
 
 	session.Values[ValueKey] = false
+	session.Values[UserKey] = ""
 	return session.Save(req, w)
+}
+
+func GetSessionUserID(session *sessions.Session) string {
+	return session.Values[UserKey].(string)
 }

@@ -34,14 +34,29 @@ func home(w http.ResponseWriter, _ *http.Request) {
 // signup uses data from the incoming POST request to create a new user. The
 // data received must match the shared.Signup struct.
 func signup(w http.ResponseWriter, req *http.Request) {
-	var signup shared.Signup
-	err := json.NewDecoder(req.Body).Decode(&signup)
-	if err != nil {
+	var signupData shared.Signup
+	if json.NewDecoder(req.Body).Decode(&signupData) != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	id, err := auth.Signup(signup)
+	var id string
+	var err error
+
+	if utils.IsEitherEmpty(signupData.Email, signupData.Password) {
+		// If email is empty but not the password (or vice versa) the
+		// request is invalid.
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Bad request"))
+		return
+	} else if len(signupData.Email) == 0 {
+		// No email (or password), so this is an account ID only signup
+		id, err = auth.SignupAccountIDOnly()
+	} else {
+		// Need email verification before finishing with signup
+		err = auth.SignupWithEmail(signupData)
+	}
+
 	if err != nil {
 		if errors.Is(err, db.UserAlreadyExists) {
 			w.WriteHeader(http.StatusConflict)
@@ -50,19 +65,20 @@ func signup(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte("Bad request"))
 		} else {
+			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte("Server error"))
 		}
 		return
-	}
+	} else if len(signupData.Email) == 0 {
+		err = auth.SetSession(id, w, req)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	err = auth.SetSession(w, req)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		_, _ = io.WriteString(w, id)
 	}
-
-	_, _ = io.WriteString(w, id)
 }
 
 func signupHTML(w http.ResponseWriter, req *http.Request) {
@@ -73,21 +89,34 @@ func signupHTML(w http.ResponseWriter, req *http.Request) {
 // email immediately after signup.
 func verify(w http.ResponseWriter, req *http.Request) {
 	email := req.URL.Query().Get("email")
-	token := req.URL.Query().Get("token")
+	code := req.URL.Query().Get("code")
 
 	// Ensure the URL has the correct params for validation
-	if len(email) == 0 || len(token) == 0 {
+	if len(email) == 0 || len(code) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	//if db.VerifyUser(email, token) {
-	//	// TODO: Redirect to home/upload page?
-	//	w.WriteHeader(http.StatusOK)
-	//	return
-	//}
+	// Verify user verification code and fetch password hash
+	pwHash, err := db.VerifyUser(email, code)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
-	w.WriteHeader(http.StatusForbidden)
+	// Create new user
+	id, err := db.NewUser(email, pwHash)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Remove verification entry
+	_ = db.DeleteVerification(email)
+
+	_ = auth.SetSession(id, w, req)
+	//http.Redirect(w, req, "/", http.StatusFound)
+	w.WriteHeader(http.StatusOK)
 }
 
 // login handles a POST request to /login to log the user in.
@@ -113,6 +142,12 @@ func login(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+
+		identifier, err = db.GetUserIDByEmail(identifier)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	} else {
 		if !db.UserIDExists(identifier) {
 			w.WriteHeader(http.StatusNotFound)
@@ -120,7 +155,7 @@ func login(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	_ = auth.SetSession(w, req)
+	_ = auth.SetSession(identifier, w, req)
 	//http.Redirect(w, req, "/", http.StatusFound)
 	w.WriteHeader(http.StatusOK)
 }
