@@ -5,6 +5,8 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"os"
+	"path/filepath"
 	"yeetfile/web/service"
 	"yeetfile/web/utils"
 )
@@ -24,10 +26,24 @@ func init() {
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 
+	// Open db connection
 	var err error
 	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+
+	// Init db contents from scripts/init.sql
+	path := filepath.Join("web", "db", "scripts", "init.sql")
+	c, err := os.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
+	sqlScript := string(c)
+	_, err = db.Exec(sqlScript)
+	if err != nil {
+		panic(err)
 	}
 }
 
