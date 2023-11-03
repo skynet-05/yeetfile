@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	_ "github.com/joho/godotenv/autoload"
 	"yeetfile/web/db"
 	"yeetfile/web/server"
 	"yeetfile/web/utils"
