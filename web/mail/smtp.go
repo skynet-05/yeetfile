@@ -1,13 +1,12 @@
 package mail
 
 import (
-	"bytes"
 	"crypto/tls"
 	"gopkg.in/gomail.v2"
 	"log"
 	"os"
 	"strconv"
-	"text/template"
+	"yeetfile/web/utils"
 )
 
 var config SMTPConfig
@@ -20,22 +19,14 @@ type SMTPConfig struct {
 	CallbackDomain string
 }
 
-type VerificationEmail struct {
-	Code   string
-	Email  string
-	Domain string
-}
-
-var verificationSubject = "YeetFile Email Verification"
-var verificationBodyTemplate = template.Must(template.New("").Parse(
-	"Your YeetFile verification code is {{.Code}}.\n\n" +
-		"Enter this code on the verification page, or use the link " +
-		"below to finish verifying your account.\n\n" +
-		"{{.Domain}}/verify?email={{.Email}}&code={{.Code}}"))
-
 // sendEmail sends an email to the address specified in the `to` arg, containing
 // `subject` as the subject and `body` as the body.
 func sendEmail(to string, subject string, body string) {
+	if config == (SMTPConfig{}) {
+		// SMTP hasn't been configured, ignore this request
+		return
+	}
+
 	m := gomail.NewMessage()
 	m.SetHeader("From", config.From)
 	m.SetHeader("To", to)
@@ -51,32 +42,14 @@ func sendEmail(to string, subject string, body string) {
 	}
 }
 
-// SendVerificationEmail formats a standard verification email body using the
-// code generated on signup and sends the email to the user.
-func SendVerificationEmail(code string, to string) error {
-	var buf bytes.Buffer
-
-	verificationEmail := VerificationEmail{
-		Code:   code,
-		Email:  to,
-		Domain: config.CallbackDomain,
-	}
-
-	_ = verificationBodyTemplate.Execute(&buf, verificationEmail)
-	body := buf.String()
-
-	// sendEmail can take a while to return, so we're calling it in the
-	// background here.
-	go sendEmail(to, verificationSubject, body)
-	return nil
-}
-
 func init() {
-	portEnv := os.Getenv("YEETFILE_EMAIL_PORT")
+	portEnv := utils.GetEnvVar("YEETFILE_EMAIL_PORT", "")
 	port, err := strconv.Atoi(portEnv)
 	if err != nil {
-		log.Fatalf("Error reading YEETFILE_EMAIL_PORT "+
+		log.Printf("Unable to read YEETFILE_EMAIL_PORT "+
 			"as int: \"%s\"", portEnv)
+		log.Println("Skipping SMTP setup...")
+		return
 	}
 
 	config = SMTPConfig{

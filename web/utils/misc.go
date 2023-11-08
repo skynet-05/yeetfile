@@ -40,7 +40,8 @@ func GetEnvVar(key, fallback string) string {
 	if !exists {
 		value = fallback
 	}
-	return value
+
+	return strings.TrimSpace(value)
 }
 
 func StrToDuration(str string) time.Duration {
