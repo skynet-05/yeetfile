@@ -4,7 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"net/http"
-	"yeetfile/web/utils"
+	"yeetfile/shared"
 )
 
 // UpHandler is used as the health check endpoint for load balancing, docker, etc.
@@ -16,7 +16,7 @@ func UpHandler(w http.ResponseWriter, _ *http.Request) {
 // secure passwords
 func WordlistHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(utils.EFFWordList); err != nil {
+	if err := json.NewEncoder(w).Encode(shared.EFFWordList); err != nil {
 		http.Error(w, "Error encoding JSON", http.StatusInternalServerError)
 		return
 	}

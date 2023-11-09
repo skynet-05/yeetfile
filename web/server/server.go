@@ -19,8 +19,8 @@ const (
 	DELETE = http.MethodDelete
 )
 
-// Run defines maps URL paths to handlers for the server and begins listening
-// on the configured port.
+// Run maps URL paths to handlers for the server and begins listening on the
+// configured port.
 func Run(port string, files embed.FS) {
 	r := &router{
 		routes: make(map[Route]http.HandlerFunc),
@@ -32,14 +32,14 @@ func Run(port string, files embed.FS) {
 	r.AddRoute(GET, "/d/*", transfer.DownloadHandler)
 	r.AddRoute(GET, "/d/*/*", transfer.DownloadChunkHandler)
 
-	// Auth
+	// Auth (signup, login/logout, account mgmt, etc)
 	r.AddRoute(GET, "/verify", auth.VerifyHandler)
 	r.AddRoute(GET, "/session", auth.SessionHandler)
 	r.AddRoute(PUT, "/logout", auth.LogoutHandler)
 	r.AddRoute(POST, "/login", auth.LoginHandler)
 	r.AddRoute(POST, "/signup", LimiterMiddleware(auth.SignupHandler))
 
-	// Payments
+	// Payments (Stripe, BTCPay)
 	r.AddRoute(POST, "/stripe", payments.StripeWebhook)
 
 	// HTML

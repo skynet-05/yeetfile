@@ -6,21 +6,22 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 	"io"
-	"yeetfile/web/utils"
+	"log"
+	"yeetfile/cli/utils"
+	"yeetfile/shared"
 )
 
-const NonceSize int = 24
-const KeySize int = 32
-
+// DeriveKey derives a key from a password, salt, and pepper. Both the salt and
+// the pepper can be left nil in order to randomly generate both values.
 func DeriveKey(
 	password []byte,
 	salt []byte,
 	pepper []byte,
-) ([KeySize]byte, []byte, []byte, error) {
+) ([shared.KeySize]byte, []byte, []byte, error) {
 	if salt == nil {
-		salt = make([]byte, KeySize)
+		salt = make([]byte, shared.KeySize)
 		if _, err := rand.Read(salt); err != nil {
-			return [KeySize]byte{}, nil, nil, err
+			return [shared.KeySize]byte{}, nil, nil, err
 		}
 	}
 
@@ -30,57 +31,56 @@ func DeriveKey(
 
 	pepperPw := append(password, pepper...)
 
-	key, err := scrypt.Key(pepperPw, salt, 32768, 8, 1, KeySize)
+	key, err := scrypt.Key(pepperPw, salt, 32768, 8, 1, shared.KeySize)
 	if err != nil {
-		return [KeySize]byte{}, nil, nil, err
+		return [shared.KeySize]byte{}, nil, nil, err
 	}
 
-	var keyOut [KeySize]byte
+	var keyOut [shared.KeySize]byte
 	copy(keyOut[:], key)
 
 	return keyOut, salt, pepper, nil
 }
 
-func EncryptChunk(key [KeySize]byte, data []byte) []byte {
-	var nonce [NonceSize]byte
+// EncryptChunk encrypts a chunk of data using a key from DeriveKey. Returns the
+// encrypted chunk of data.
+func EncryptChunk(key [shared.KeySize]byte, data []byte) []byte {
+	var nonce [shared.NonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
-		panic(err)
+		log.Fatalf("Error generating nonce: %v\n", err)
 	}
 
 	return secretbox.Seal(nonce[:], data, &nonce, &key)
 }
 
-func DecryptChunk(key [32]byte, chunk []byte) ([]byte, int, error) {
-	var decryptNonce [NonceSize]byte
-	copy(decryptNonce[:], chunk[:NonceSize])
+// DecryptChunk decrypts an encrypted chunk of data using the provided key. If
+// the key is unable to decrypt the data, an error is returned, otherwise the
+// decrypted data is returned.
+func DecryptChunk(key [32]byte, chunk []byte) ([]byte, error) {
+	var decryptNonce [shared.NonceSize]byte
+	copy(decryptNonce[:], chunk[:shared.NonceSize])
 
 	// Decrypt and append contents to output
 	decrypted, ok := secretbox.Open(
 		nil,
-		chunk[NonceSize:],
+		chunk[shared.NonceSize:],
 		&decryptNonce,
 		&key)
 
 	if !ok {
-		return []byte{}, 0, errors.New("failed to decrypt")
+		return []byte{}, errors.New("failed to decrypt")
 	}
 
-	readLen := NonceSize + len(decrypted) + secretbox.Overhead
-	return decrypted, readLen, nil
+	//readLen := shared.NonceSize + len(decrypted) + secretbox.Overhead
+	return decrypted, nil
 }
 
+// DecryptString decrypts a string using DecryptChunk, but returns a string
+// directly rather than returning a byte slice
 func DecryptString(key [32]byte, byteStr []byte) (string, error) {
-	var decryptNonce [NonceSize]byte
-	copy(decryptNonce[:], byteStr[:NonceSize])
-
-	decrypted, ok := secretbox.Open(
-		nil,
-		byteStr[NonceSize:],
-		&decryptNonce,
-		&key)
-
-	if !ok {
-		return "", errors.New("failed to decrypt")
+	decrypted, err := DecryptChunk(key, byteStr)
+	if err != nil {
+		return "", err
 	}
 
 	return string(decrypted), nil

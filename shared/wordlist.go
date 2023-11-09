@@ -1,4 +1,4 @@
-package utils
+package shared
 
 // EFFWordList is from https://www.eff.org/dice
 var EFFWordList = []string{

@@ -74,7 +74,7 @@ func DownloadFile(d shared.DownloadResponse, key [32]byte) error {
 		resp, _ = client.Do(req)
 		body, _ := io.ReadAll(resp.Body)
 
-		plaintext, _, err := crypto.DecryptChunk(key, body)
+		plaintext, err := crypto.DecryptChunk(key, body)
 		if err != nil {
 			return failedDecrypt
 		}

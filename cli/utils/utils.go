@@ -5,11 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/term"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
+	"yeetfile/shared"
 )
+
+var r = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // StringPrompt prompts the user for string input
 func StringPrompt(label string) string {
@@ -23,6 +28,39 @@ func StringPrompt(label string) string {
 		}
 	}
 	return strings.TrimSpace(s)
+}
+
+// GeneratePassphrase generates a 3 word passphrase with a randomly placed
+// number, and each word separated by a "."
+func GeneratePassphrase() string {
+	min := 0
+	max := len(shared.EFFWordList)
+
+	var words []string
+
+	i := 0
+	randNum := strconv.Itoa(r.Intn(10))
+	numInsert := r.Intn(3)
+	insertBefore := r.Intn(2) != 0
+	for i < 3 {
+		idx := r.Intn(max-min+1) + min
+		word := shared.EFFWordList[idx]
+
+		shouldInsertNum := numInsert == i
+
+		if shouldInsertNum {
+			if insertBefore {
+				word = randNum + word
+			} else {
+				word = word + randNum
+			}
+		}
+
+		words = append(words, word)
+		i++
+	}
+
+	return strings.Join(words, "-")
 }
 
 // ParseDownloadString processes a URL such as "this.example.path#<hex key>" into
