@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
@@ -36,7 +35,10 @@ func DeriveKey(
 		return [KeySize]byte{}, nil, nil, err
 	}
 
-	return [KeySize]byte(key), salt, pepper, nil
+	var keyOut [KeySize]byte
+	copy(keyOut[:], key)
+
+	return keyOut, salt, pepper, nil
 }
 
 func EncryptChunk(key [KeySize]byte, data []byte) []byte {
@@ -82,12 +84,4 @@ func DecryptString(key [32]byte, byteStr []byte) (string, error) {
 	}
 
 	return string(decrypted), nil
-}
-
-func KeyFromHex(key string) [KeySize]byte {
-	decodedKey, _ := hex.DecodeString(key)
-	var keyBytes [KeySize]byte
-	copy(keyBytes[:], decodedKey[:KeySize])
-
-	return keyBytes
 }

@@ -14,8 +14,8 @@ import (
 	"time"
 	"yeetfile/shared"
 	"yeetfile/web/db"
-	"yeetfile/web/payments"
 	"yeetfile/web/server/auth"
+	"yeetfile/web/server/payments"
 	"yeetfile/web/templates"
 	"yeetfile/web/utils"
 )
