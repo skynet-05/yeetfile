@@ -18,6 +18,17 @@ type router struct {
 	reserved []string
 }
 
+func (r *router) AddRoute(method string, path string, handler http.HandlerFunc) {
+	route := Route{Path: path, Method: method}
+	r.routes[route] = handler
+
+	// Reserve endpoint to help pattern matching on new requests
+	endpoint := strings.Split(route.Path, "/")[1]
+	if len(endpoint) > 0 && endpoint != "*" {
+		r.reserved = append(r.reserved, endpoint)
+	}
+}
+
 // ServeHTTP finds the proper routing handler for the provided path.
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for el, handler := range r.routes {

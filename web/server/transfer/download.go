@@ -1,4 +1,4 @@
-package server
+package transfer
 
 import (
 	"golang.org/x/crypto/nacl/secretbox"

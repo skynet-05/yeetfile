@@ -1,4 +1,4 @@
-package server
+package transfer
 
 import (
 	"github.com/benbusby/b2"
