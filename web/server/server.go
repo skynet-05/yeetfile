@@ -20,7 +20,12 @@ import (
 	"yeetfile/web/utils"
 )
 
-var staticFiles embed.FS
+const (
+	POST   = http.MethodPost
+	GET    = http.MethodGet
+	PUT    = http.MethodPut
+	DELETE = http.MethodDelete
+)
 
 // home returns the homepage html if not logged in, otherwise the upload page
 func home(w http.ResponseWriter, _ *http.Request) {
@@ -333,8 +338,10 @@ func downloadChunk(w http.ResponseWriter, req *http.Request) {
 
 // fileHandler uses the embedded files from staticFiles to return a file
 // resource based on its name
-func fileHandler(w http.ResponseWriter, req *http.Request) {
-	http.FileServer(http.FS(staticFiles)).ServeHTTP(w, req)
+func fileHandler(staticFiles embed.FS) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		http.FileServer(http.FS(staticFiles)).ServeHTTP(w, req)
+	}
 }
 
 // wordlist returns the set of words recommended by the EFF for generating
@@ -364,50 +371,39 @@ func up(w http.ResponseWriter, _ *http.Request) {
 // Run defines maps URL paths to handlers for the server and begins listening
 // on the configured port.
 func Run(port string, files embed.FS) {
-	staticFiles = files
-
 	r := &router{
 		routes: make(map[Route]http.HandlerFunc),
 	}
 
-	r.routes[Route{Path: "/", Method: http.MethodGet}] = home
-	r.routes[Route{Path: "/upload", Method: http.MethodGet}] = home
+	r.routes[Route{Path: "/", Method: GET}] = home
+	r.routes[Route{Path: "/upload", Method: GET}] = home
 
 	// Upload
-	r.routes[Route{
-		Path:   "/u",
-		Method: http.MethodPost,
-	}] = AuthMiddleware(uploadInit)
-	r.routes[Route{
-		Path:   "/u/*/*",
-		Method: http.MethodPost,
-	}] = AuthMiddleware(uploadData)
+	r.routes[Route{Path: "/u", Method: POST}] = AuthMiddleware(uploadInit)
+	r.routes[Route{Path: "/u/*/*", Method: POST}] = AuthMiddleware(uploadData)
 
 	// Download
-	r.routes[Route{Path: "/*", Method: http.MethodGet}] = downloadHTML
-	r.routes[Route{Path: "/d/*", Method: http.MethodGet}] = download
-	r.routes[Route{Path: "/d/*/*", Method: http.MethodGet}] = downloadChunk
+	r.routes[Route{Path: "/*", Method: GET}] = downloadHTML
+	r.routes[Route{Path: "/d/*", Method: GET}] = download
+	r.routes[Route{Path: "/d/*/*", Method: GET}] = downloadChunk
 
 	// Account Management
-	r.routes[Route{
-		Path:   "/signup",
-		Method: http.MethodPost,
-	}] = LimiterMiddleware(signup)
-	r.routes[Route{Path: "/signup", Method: http.MethodGet}] = signupHTML
-	r.routes[Route{Path: "/verify", Method: http.MethodGet}] = verify
-	r.routes[Route{Path: "/login", Method: http.MethodPost}] = login
-	r.routes[Route{Path: "/logout", Method: http.MethodPut}] = logout
+	r.routes[Route{Path: "/signup", Method: POST}] = LimiterMiddleware(signup)
+	r.routes[Route{Path: "/signup", Method: GET}] = signupHTML
+	r.routes[Route{Path: "/verify", Method: GET}] = verify
+	r.routes[Route{Path: "/login", Method: POST}] = login
+	r.routes[Route{Path: "/logout", Method: PUT}] = logout
 	//r.routes["/account"] = account
 
 	// Misc
-	r.routes[Route{Path: "/static/*/*", Method: http.MethodGet}] = fileHandler
-	r.routes[Route{Path: "/wordlist", Method: http.MethodGet}] = wordlist
-	r.routes[Route{Path: "/faq", Method: http.MethodGet}] = faqHTML
-	r.routes[Route{Path: "/up", Method: http.MethodGet}] = up
-	r.routes[Route{Path: "/session", Method: http.MethodGet}] = checkSession
+	r.routes[Route{Path: "/static/*/*", Method: GET}] = fileHandler(files)
+	r.routes[Route{Path: "/wordlist", Method: GET}] = wordlist
+	r.routes[Route{Path: "/faq", Method: GET}] = faqHTML
+	r.routes[Route{Path: "/up", Method: GET}] = up
+	r.routes[Route{Path: "/session", Method: GET}] = checkSession
 
 	// Payments
-	r.routes[Route{Path: "/stripe", Method: http.MethodPost}] = payments.StripeWebhook
+	r.routes[Route{Path: "/stripe", Method: POST}] = payments.StripeWebhook
 
 	// Reserve endpoints to protect against bad wildcard matches
 	for route := range r.routes {
