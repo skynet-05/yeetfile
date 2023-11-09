@@ -39,8 +39,7 @@ func SetupConfigDir() (Paths, error) {
 		return Paths{}, err
 	}
 
-	localConfig := filepath.Join(dirname, baseConfigPath)
-	err = os.MkdirAll(localConfig, os.ModePerm)
+	localConfig, err := makeConfigDirectories(dirname)
 	if err != nil {
 		return Paths{}, err
 	}
@@ -50,6 +49,34 @@ func SetupConfigDir() (Paths, error) {
 		gitignore: filepath.Join(localConfig, gitignoreName),
 		session:   filepath.Join(localConfig, sessionName),
 	}, nil
+}
+
+// setupTempConfigDir creates a config directory for the current user in the
+// OS's temporary directory. Used for testing.
+func setupTempConfigDir() (Paths, error) {
+	dirname := os.TempDir()
+	localConfig, err := makeConfigDirectories(dirname)
+	if err != nil {
+		return Paths{}, err
+	}
+
+	return Paths{
+		config:    filepath.Join(localConfig, configFileName),
+		gitignore: filepath.Join(localConfig, gitignoreName),
+		session:   filepath.Join(localConfig, sessionName),
+	}, nil
+}
+
+// makeConfigDirectories creates the necessary directories for storing the
+// user's local yeetfile config
+func makeConfigDirectories(dirname string) (string, error) {
+	localConfig := filepath.Join(dirname, baseConfigPath)
+	err := os.MkdirAll(localConfig, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	return localConfig, nil
 }
 
 // ReadConfig reads the config file (config.yml) for current configuration
@@ -76,7 +103,8 @@ func ReadConfig(paths Paths) (Config, error) {
 	}
 }
 
-// setupDefaultConfig
+// setupDefaultConfig copies default config files from the repo to the user's
+// config directory
 func setupDefaultConfig(paths Paths) error {
 	err := utils.CopyToFile(defaultConfig, paths.config)
 	if err != nil {

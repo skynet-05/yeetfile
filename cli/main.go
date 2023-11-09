@@ -118,7 +118,9 @@ func download(arg string) {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
-	StartDownload(path, pepper)
+
+	pw := utils.RequestPassword()
+	_ = StartDownload(path, pw, pepper)
 }
 
 func init() {

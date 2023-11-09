@@ -14,8 +14,6 @@ import (
 var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var numbers = []rune("1234567890")
 
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 func GenRandomString(n int) string {
 	randStr := GenRandomArray(n, characters)
 	return string(randStr)
@@ -59,37 +57,6 @@ func StrToDuration(str string) time.Duration {
 	}
 
 	return 0
-}
-
-func GeneratePassphrase() string {
-	min := 0
-	max := len(EFFWordList)
-
-	var words []string
-
-	i := 0
-	randNum := strconv.Itoa(r.Intn(10))
-	numInsert := r.Intn(3)
-	insertBefore := r.Intn(2) != 0
-	for i < 3 {
-		idx := r.Intn(max-min+1) + min
-		word := EFFWordList[idx]
-
-		shouldInsertNum := numInsert == i
-
-		if shouldInsertNum {
-			if insertBefore {
-				word = randNum + word
-			} else {
-				word = word + randNum
-			}
-		}
-
-		words = append(words, word)
-		i++
-	}
-
-	return strings.Join(words, "-")
 }
 
 func GenChecksum(data []byte) ([]byte, string) {

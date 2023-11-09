@@ -11,20 +11,18 @@ import (
 	"strconv"
 	"time"
 	"yeetfile/cli/crypto"
-	"yeetfile/cli/utils"
 	"yeetfile/shared"
 )
 
+var failedKeyGen = errors.New("failed to derive key")
 var wrongPassword = errors.New("incorrect password")
 var failedDecrypt = errors.New("failed to decrypt data")
 
 // StartDownload initiates a download of a file using the file's human-readable
 // tag, a 3-word period-separated string such as "machine.delirium.yarn" (which
 // is returned when uploading a file).
-func StartDownload(path string, pepper []byte) {
+func StartDownload(path string, pw []byte, pepper []byte) error {
 	client := &http.Client{}
-
-	pw := utils.RequestPassword()
 
 	url := fmt.Sprintf("%s/d/%s", userConfig.Server, path)
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
@@ -36,15 +34,16 @@ func StartDownload(path string, pepper []byte) {
 
 	key, _, _, err := crypto.DeriveKey(pw, d.Salt, pepper)
 	if err != nil {
-		fmt.Println("Failed to derive key")
-		return
+		return failedKeyGen
 	}
 
 	err = DownloadFile(d, key)
 	if err != nil {
 		fmt.Printf("\nError: %v\n", err)
-		os.Exit(1)
+		return err
 	}
+
+	return nil
 }
 
 // DownloadFile downloads file contents and decrypts them before saving the file
