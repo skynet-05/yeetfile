@@ -409,7 +409,7 @@ func Run(port string, files embed.FS) {
 	for route := range r.routes {
 		endpoint := strings.Split(route.Path, "/")[1]
 		if len(endpoint) > 0 && endpoint != "*" {
-			reservedEndpoints = append(reservedEndpoints, endpoint)
+			r.reserved = append(r.reserved, endpoint)
 		}
 	}
 
