@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 	"yeetfile/cli/crypto"
@@ -120,39 +118,12 @@ func (file FileDownload) DownloadFile() error {
 	_, _ = out.Write(output)
 	_ = out.Close()
 
-	//showDownloadInfo(resp.Header)
-
 	fmt.Printf("\nOutput: %s\n", file.Name)
+
+	if file.Downloads == 1 {
+		// This download was the last one, and the file has been deleted
+		fmt.Println("The file has been deleted from the server")
+	}
+
 	return nil
-}
-
-// showDownloadInfo displays relevant info pertaining to the download to the
-// user. This includes the number of downloads remaining and the expiration date
-// of the file. This information is encapsulated by the "Downloads" and "Date"
-// headers in the download response.
-func showDownloadInfo(header http.Header) {
-	downloads := header.Get("Downloads")
-	date := header.Get("Date")
-	remaining := -1
-
-	if len(downloads) > 0 {
-		remaining, _ = strconv.Atoi(downloads)
-		fmt.Printf("-- Downloads remaining: %d\n", remaining)
-		if remaining == 0 {
-			fmt.Println("   File has been deleted!")
-		}
-	}
-
-	if len(date) > 0 && remaining != 0 {
-		exampleDate := "2006-01-02 15:04:05.999999999 -0700 MST"
-		parse, err := time.Parse(exampleDate, date)
-		diff := time.Now().Sub(parse)
-
-		if err != nil {
-			fmt.Printf("Error parsing exp date: %v\n", err)
-			return
-		}
-
-		fmt.Printf("-- Expires: %s\n   (%s)\n", date, diff)
-	}
 }
