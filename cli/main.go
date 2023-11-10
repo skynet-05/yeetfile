@@ -113,14 +113,37 @@ func upload(arg string) {
 func download(arg string) {
 	// Arg is a URL or tag for a file
 	path, pepper, err := utils.ParseDownloadString(arg)
-
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	pw := utils.RequestPassword()
-	_ = StartDownload(path, pw, pepper)
+	// Fetch file metadata
+	metadata, err := FetchMetadata(path)
+	if err != nil {
+		fmt.Println("Error fetching path")
+		return
+	}
+
+	// Attempt first download without a password
+	download, err := PrepareDownload(metadata, []byte(""), pepper)
+	if err == wrongPassword {
+		pw := utils.RequestPassword()
+		download, err = PrepareDownload(metadata, pw, pepper)
+		if err == wrongPassword {
+			fmt.Println("Incorrect password")
+			return
+		}
+	}
+
+	// Ensure the file is what the user expects
+	if download.VerifyDownload() {
+		// Begin download
+		err = download.DownloadFile()
+		if err != nil {
+			fmt.Printf("Failed to download file: %v\n", err)
+		}
+	}
 }
 
 func init() {
