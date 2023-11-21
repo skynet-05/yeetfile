@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"yeetfile/web/server/auth"
@@ -21,7 +20,7 @@ const (
 
 // Run maps URL paths to handlers for the server and begins listening on the
 // configured port.
-func Run(port string) {
+func Run(addr string) {
 	r := &router{
 		routes: make(map[Route]http.HandlerFunc),
 	}
@@ -54,7 +53,6 @@ func Run(port string) {
 	r.AddRoute(GET, "/wordlist", misc.WordlistHandler)
 	r.AddRoute(GET, "/up", misc.UpHandler)
 
-	addr := fmt.Sprintf("localhost:%s", port)
 	log.Printf("Running on http://%s\n", addr)
 
 	err := http.ListenAndServe(addr, r)
