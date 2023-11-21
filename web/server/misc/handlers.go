@@ -24,8 +24,11 @@ func WordlistHandler(w http.ResponseWriter, _ *http.Request) {
 
 // FileHandler uses the embedded files from staticFiles to return a file
 // resource based on its name
-func FileHandler(staticFiles embed.FS) http.HandlerFunc {
+func FileHandler(files embed.FS) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		http.FileServer(http.FS(staticFiles)).ServeHTTP(w, req)
+		http.StripPrefix(
+			"/static/",
+			http.FileServer(http.FS(files)),
+		).ServeHTTP(w, req)
 	}
 }

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"yeetfile/web/server/misc"
 	"yeetfile/web/server/payments"
 	"yeetfile/web/server/transfer"
+	"yeetfile/web/static"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 
 // Run maps URL paths to handlers for the server and begins listening on the
 // configured port.
-func Run(port string, files embed.FS) {
+func Run(port string) {
 	r := &router{
 		routes: make(map[Route]http.HandlerFunc),
 	}
@@ -50,7 +50,7 @@ func Run(port string, files embed.FS) {
 	r.AddRoute(GET, "/faq", html.FAQPageHandler)
 
 	// Misc
-	r.AddRoute(GET, "/static/*/*", misc.FileHandler(files))
+	r.AddRoute(GET, "/static/*/*", misc.FileHandler(static.Files))
 	r.AddRoute(GET, "/wordlist", misc.WordlistHandler)
 	r.AddRoute(GET, "/up", misc.UpHandler)
 
