@@ -6,6 +6,8 @@ import (
 	"yeetfile/web/utils"
 )
 
+const uploadIDLength = 12
+
 type FileMetadata struct {
 	ID     string
 	Chunks int
@@ -15,12 +17,14 @@ type FileMetadata struct {
 	Length int
 }
 
+// NewMetadata creates a new metadata entry in the db and returns a unique ID for
+// that entry.
 func NewMetadata(chunks int, filename string, salt []byte) (string, error) {
-	id := utils.GenRandomString(32)
+	id := utils.GenRandomString(uploadIDLength)
 
 	// Ensure the id isn't already being used in the table
 	for MetadataIDExists(id) {
-		id = utils.GenRandomString(32)
+		id = utils.GenRandomString(uploadIDLength)
 	}
 
 	s := `INSERT INTO metadata
