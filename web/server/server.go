@@ -47,11 +47,21 @@ func Run(addr string) {
 	r.AddRoute(GET, "/*", html.DownloadPageHandler)
 	r.AddRoute(GET, "/signup", html.SignupPageHandler)
 	r.AddRoute(GET, "/faq", html.FAQPageHandler)
+	r.AddRoute(GET, "/transfer", html.TransferHandler)
 
 	// Misc
-	r.AddRoute(GET, "/static/*/*", misc.FileHandler(static.Files))
+	r.AddRoute(GET, "/static/*/*", misc.FileHandler("/static/", "", static.StaticFiles))
 	r.AddRoute(GET, "/wordlist", misc.WordlistHandler)
 	r.AddRoute(GET, "/up", misc.UpHandler)
+
+	// StreamSaver.js
+	// These serve files directly from the stream_saver submodule
+	r.AddRoute(GET, "/mitm.html", misc.FileHandler(
+		"", "/stream_saver/", static.StreamSaverFiles))
+	r.AddRoute(GET, "/StreamSaver.js", misc.FileHandler(
+		"", "/stream_saver/", static.StreamSaverFiles))
+	r.AddRoute(GET, "/sw.js", misc.FileHandler(
+		"", "/stream_saver/", static.StreamSaverFiles))
 
 	log.Printf("Running on http://%s\n", addr)
 

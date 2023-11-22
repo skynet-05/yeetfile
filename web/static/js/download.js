@@ -189,6 +189,13 @@ const getFileWriter = (name, length) => {
     //     readableStrategy: undefined  // (optional)
     // });
 
+    // StreamSaver's "mitm" technique for downloading large files only works
+    // over https. If served over http, it'll default to:
+    // https://jimmywarting.github.io/StreamSaver.js/mitm.html?version=2.0.0
+    if (location.protocol.includes("https")) {
+        streamSaver.mitm = "/mitm.html";
+    }
+
     let fileStream = streamSaver.createWriteStream(name);
     return fileStream.getWriter();
 }
