@@ -7,14 +7,15 @@
     max-width: 750px;
     max-height: 80%;
     overflow-y: auto;
-    border: 1px solid;
+    border-radius: 1rem;
     padding: 20px;
     box-sizing: border-box;
+    box-shadow: 0 12px 18px 2px rgba(34,0,51,.04),0 6px 22px 4px rgba(7,48,114,.12),0 6px 10px -4px rgba(14,13,26,.12);
 }
 
 * {
-    color: #3e3748;
-    border-color: #C2B9D1 !important;
+    color: #000000;
+    border-color: #ededed !important;
     border-radius: 5px;
 }
 
@@ -61,13 +62,15 @@ input:is([type="button"], [type="submit"]) {
 
 html {
     font-family: Avenir, Helvetica, Arial, sans-serif;
-    background-color: #DFDBE5;
-    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2v2H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2z' fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+    background-color: #EDEDED;
+    background-image: url("/static/img/background.svg");
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
     /*background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");*/
 }
 
 div {
-    background-color: #DFDBE5;
+    background-color: #ffffff;
 }
 
 .footer {
@@ -77,15 +80,21 @@ div {
     z-index: 2;
     display: flex;
     align-items: center;
-    border-top: 1px solid;
     margin-top: 65px;
     width: 100%;
     min-height: 63px;
-    border-radius: 5px 5px 0 0;
+    background-color: transparent;
 }
 
 .footer a {
-    margin-right: 10px;
+    margin-left: 20px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.footer img {
+    width: 50px;
+    height: 50px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -93,6 +102,7 @@ div {
         color: #DFDBE5;
         border-color: #6A6477 !important;
     }
+
     html {
         background-color: #3e3748;
         /*#3e3748*/
@@ -106,5 +116,11 @@ div {
 
     input:is([type="button"], [type="submit"]) {
         background-color: transparent;
+    }
+}
+
+@media (orientation: portrait) {
+    html {
+        background-size: 100vh 100vw;
     }
 }

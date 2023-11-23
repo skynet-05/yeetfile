@@ -47,7 +47,6 @@ func Run(addr string) {
 	r.AddRoute(GET, "/*", html.DownloadPageHandler)
 	r.AddRoute(GET, "/signup", html.SignupPageHandler)
 	r.AddRoute(GET, "/faq", html.FAQPageHandler)
-	r.AddRoute(GET, "/transfer", html.TransferHandler)
 
 	// Misc
 	r.AddRoute(GET, "/static/*/*", misc.FileHandler("/static/", "", static.StaticFiles))
