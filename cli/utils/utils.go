@@ -45,7 +45,7 @@ func GeneratePassphrase() string {
 	numInsert := r.Intn(3)
 	insertBefore := r.Intn(2) != 0
 	for i < 3 {
-		idx := r.Intn(max-min+1) + min
+		idx := r.Intn(max-min) + min
 		word := shared.EFFWordList[idx]
 
 		shouldInsertNum := numInsert == i
