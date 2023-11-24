@@ -1,6 +1,7 @@
 .idea
 notes.txt
-yeetfile*
+yeetfile
+yeetfile-web
 *.enc
 test.sh
 lipsum-big.txt
