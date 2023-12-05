@@ -8,4 +8,4 @@ cli:
 
 clean:
 	rm -f yeetfile-web
-	rm -f yeetfile-cli
+	rm -f yeetfile
