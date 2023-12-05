@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YeetFile | Verify Email</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div id="center-div">
+  <h1>Verify Email</h1>
+  <hr>
+  <p>A verification code has been sent to <b>{{.Email}}</b>, please enter it below.</p>
+  <form action="/verify" method="get">
+    <input hidden id="email" type="text" name="email" value="{{.Email}}">
+    <label for="verify">Code: <input id="verify" type="text"></label>
+    <input type="submit">
+  </form>
+</div>
+</body>
+</html>

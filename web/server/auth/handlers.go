@@ -10,6 +10,7 @@ import (
 	"strings"
 	"yeetfile/shared"
 	"yeetfile/web/db"
+	"yeetfile/web/server/html"
 	"yeetfile/web/utils"
 )
 
@@ -110,9 +111,14 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 	email := req.URL.Query().Get("email")
 	code := req.URL.Query().Get("code")
 
-	// Ensure the URL has the correct params for validation
+	// Ensure the request has the correct params for verification, otherwise
+	// it should return the HTML for the verification page
 	if len(email) == 0 || len(code) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
+		if len(email) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		html.VerifyPageHandler(w, req, email)
 		return
 	}
 
