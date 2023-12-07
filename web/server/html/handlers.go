@@ -63,7 +63,7 @@ func VerifyPageHandler(w http.ResponseWriter, _ *http.Request, email string) {
 	err := templates.ServeTemplate(
 		w,
 		templates.VerificationHTML,
-		templates.VerifyTemplate{
+		templates.VerificationTemplate{
 			Base: templates.BaseTemplate{
 				LoggedIn:   false,
 				Title:      "Verify",
