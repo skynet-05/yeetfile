@@ -1,12 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/faq.css">
-    <title>YeetFile | FAQ</title>
-</head>
+{{ template "head.html" . }}
 <body>
+    {{ template "header.html" . }}
     <div id="center-div">
         <h1>FAQ</h1>
         <hr>
@@ -145,6 +139,5 @@
             </p>
         </details>
     </div>
-    {{ template "footer.html" }}
+    {{ template "footer.html" . }}
 </body>
-</html>

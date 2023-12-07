@@ -3,38 +3,62 @@ package templates
 import (
 	"embed"
 	"html/template"
+	"io/fs"
 	"net/http"
+	"strings"
 )
 
+type BaseTemplate struct {
+	LoggedIn   bool
+	Title      string
+	Javascript []string
+	CSS        []string
+}
+
 type Template struct {
-	LoggedIn bool
+	Base BaseTemplate
 }
 
 type VerifyTemplate struct {
-	LoggedIn bool
-	Email    string
+	Base  BaseTemplate
+	Email string
 }
 
-var UploadHTML = "upload.html"
-var DownloadHTML = "download.html"
-var FaqHTML = "faq.html"
-var VerifyHTML = "verify.html"
-var FooterHTML = "footer.html"
-var HeaderHTML = "header.html"
+const (
+	UploadHTML       = "upload.html"
+	DownloadHTML     = "download.html"
+	VerificationHTML = "verify.html"
+	FaqHTML          = "faq.html"
+	FooterHTML       = "footer.html"
+	HeaderHTML       = "header.html"
+)
 
 //go:embed *.html
 var HTML embed.FS
-var templates = template.Must(template.ParseFS(HTML,
-	UploadHTML,
-	DownloadHTML,
-	FaqHTML,
-	VerifyHTML,
-	FooterHTML,
-	HeaderHTML))
 
-func ServeTemplate[T any](w http.ResponseWriter, name string, template T) {
-	err := templates.ExecuteTemplate(w, name, template)
+var templates *template.Template
+
+func ServeTemplate[T any](w http.ResponseWriter, name string, fields T) error {
+	err := templates.ExecuteTemplate(w, name, fields)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		return err
+	}
+
+	return nil
+}
+
+func init() {
+	// Load templates
+	var templateList []string
+	err := fs.WalkDir(HTML, ".", func(path string, d fs.DirEntry, err error) error {
+		if !d.IsDir() && strings.HasSuffix(path, ".html") {
+			templateList = append(templateList, path)
+		}
+		return err
+	})
+
+	templates = template.Must(template.ParseFS(HTML, templateList...))
+	if err != nil {
+		panic(err)
 	}
 }

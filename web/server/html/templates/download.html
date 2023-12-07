@@ -1,19 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>YeetFile</title>
-    <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/download.css">
-    <script src="/static/js/ponyfill.min.js"></script>
-    <script src="/StreamSaver.js"></script>
-    <script src="/static/js/scrypt.min.js"></script>
-    <script src="/static/js/nacl-fast.min.js"></script>
-    <script src="/static/js/crypto.js"></script>
-    <script src="/static/js/utils.js"></script>
-    <script src="/static/js/download.js"></script>
-</head>
+{{ template "head.html" . }}
 <body>
+<script src="/StreamSaver.js"></script>
 <div id="center-div">
     <h1>Download</h1>
     <hr>
@@ -78,4 +65,3 @@
 </div>
 {{ template "footer.html" }}
 </body>
-</html>

@@ -1,19 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>YeetFile</title>
-    <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/upload.css">
-    <script src="/static/js/jszip.min.js"></script>
-    <script src="/static/js/scrypt.min.js"></script>
-    <script src="/static/js/nacl-fast.min.js"></script>
-    <script src="/static/js/utils.js"></script>
-    <script src="/static/js/crypto.js"></script>
-    <script src="/static/js/upload.js"></script>
-</head>
+{{ template "head.html" . }}
 <body>
-{{ template "header.html" }}
+{{ template "header.html" . }}
 <div id="center-div">
     <h1>Upload</h1>
     <hr>
@@ -98,4 +85,3 @@
 </div>
 {{ template "footer.html" }}
 </body>
-</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    {{ range .Base.CSS }}
+        <link rel="stylesheet" href="/static/css/{{ . }}">
+    {{ end }}
+
+    {{ range .Base.Javascript }}
+        <script src="/static/js/{{ . }}"></script>
+    {{ end }}
+
+    <title>Yeetfile - {{ .Base.Title }}</title>
+</head>
