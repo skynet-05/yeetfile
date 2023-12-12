@@ -28,6 +28,7 @@ const (
 	UploadHTML       = "upload.html"
 	DownloadHTML     = "download.html"
 	VerificationHTML = "verify.html"
+	SignupHTML       = "signup.html"
 	FaqHTML          = "faq.html"
 )
 

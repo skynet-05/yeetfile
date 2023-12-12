@@ -1,6 +1,13 @@
 <div class="header">
-  <a href="/"><img class="yeetfile-logo" src="/static/img/yeetfile-logo.png"></a>
-  {{ if .Base.LoggedIn }}
-    <p>Logged in</p>
-  {{ end }}
+  <div class="left">
+    <a href="/"><img class="yeetfile-logo" src="/static/img/yeetfile-logo.png" alt="yeetfile logo"></a>
+  </div>
+  <div class="right">
+    {{ if .Base.LoggedIn }}
+    <a href="/logout">Log Out</a>
+    {{ else }}
+    <a href="/signup">Sign Up</a>
+    <a href="/login">Log In</a>
+    {{ end }}
+  </div>
 </div>

@@ -49,10 +49,11 @@ input {
     margin: 5px;
 }
 
-input:is([type="number"], [type="password"]) {
+input:is([type="number"], [type="password"], [type="text"]) {
     background-color: transparent;
     border: 1px solid;
     padding: 5px;
+    font-size: medium;
 }
 
 input:is([type="button"], [type="submit"]) {
@@ -77,7 +78,7 @@ div {
     max-width: 200px;
 }
 
-.header {
+.header * {
     background-color: transparent;
     max-height: 63px;
 }
@@ -104,6 +105,20 @@ div {
 .footer img {
     width: 50px;
     height: 50px;
+}
+
+.header a {
+    margin-right: 20px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.left {
+    float: left;
+}
+
+.right {
+    float: right;
 }
 
 @media (prefers-color-scheme: dark) {

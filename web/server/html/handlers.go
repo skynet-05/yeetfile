@@ -55,7 +55,18 @@ func DownloadPageHandler(w http.ResponseWriter, _ *http.Request) {
 
 // SignupPageHandler returns the HTML page for signing up for an account
 func SignupPageHandler(w http.ResponseWriter, _ *http.Request) {
-	// TODO: Signup html
+	err := templates.ServeTemplate(
+		w,
+		templates.SignupHTML,
+		templates.Template{Base: templates.BaseTemplate{
+			LoggedIn:   false,
+			Title:      "Create Account",
+			Javascript: nil,
+			CSS:        []string{"signup.css"},
+		}},
+	)
+
+	handleError(w, err)
 }
 
 // VerifyPageHandler returns the HTML page for verifying the user's email

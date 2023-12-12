@@ -1,0 +1,26 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<div id="center-div">
+    <h1>Create Account</h1>
+    <hr>
+    <input type="radio" id="email-signup" name="signup" checked>
+    <label for="email-signup">Email + Password</label><br>
+    <input type="radio" id="id-signup" name="signup" value="CSS">
+    <label for="id-signup">Account ID Only</label><br>
+    <hr>
+    <div id="email-div">
+<!--            <label for="email">Email:</label>-->
+        <input type="text" id="email" name="email" placeholder="Email"><br>
+<!--            <label for="password">Password:</label>-->
+        <input type="password" id="password" name="password" placeholder="Password"><br>
+<!--            <label for="confirm-passwor&lt;!&ndash;&ndash;&gt;d">Confirm Password:</label>-->
+        <input type="password" id="confirm-password" name="confirm-password" placeholder="Confirm Password"><br>
+    </div>
+    <div id="account-id-div">
+        <p>Note: When signing up with an account number only, you acknowledge that you will be unable to recover
+        your account if you lose your account number.</p>
+    </div>
+</div>
+{{ template "footer.html" . }}
+</body>

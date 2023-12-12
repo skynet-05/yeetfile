@@ -1,0 +1,12 @@
+#account-id-div {
+    display: none;
+}
+
+#email-div {
+    display: inherit;
+}
+
+fieldset {
+    min-width: 100px;
+    display: inline-block;
+}
