@@ -120,11 +120,13 @@ func sendLogin(login shared.Login) error {
 
 func LogoutUser() {
 	url := fmt.Sprintf("%s/logout", userConfig.Server)
-	resp, err := PutRequest(url, nil)
+	resp, err := GetRequest(url)
 	if err != nil {
-		fmt.Println("Error logging out")
+		fmt.Printf("Error logging out: %v\n", err)
+		return
 	} else if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Error %d, could not log out", resp.StatusCode)
+		fmt.Printf("Error %d while logging out", resp.StatusCode)
+		return
 	}
 
 	fmt.Println("Logged out!")

@@ -89,7 +89,8 @@ func createNumericAccount() error {
 		return errors.New("user didn't confirm acct warning")
 	}
 
-	// We can use an empty signup struct here, since we
+	// We can use an empty signup struct here, since we aren't using an
+	// email or password
 	resp, _ := sendSignup(shared.Signup{})
 	fmt.Println(resp)
 
