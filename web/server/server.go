@@ -7,6 +7,7 @@ import (
 	"yeetfile/web/server/html"
 	"yeetfile/web/server/misc"
 	"yeetfile/web/server/payments"
+	"yeetfile/web/server/session"
 	"yeetfile/web/server/transfer"
 	"yeetfile/web/static"
 )
@@ -25,42 +26,59 @@ func Run(addr string) {
 		routes: make(map[Route]http.HandlerFunc),
 	}
 
-	// Transfer (upload/download)
-	r.AddRoute(POST, "/u", AuthMiddleware(transfer.InitUploadHandler))
-	r.AddRoute(POST, "/u/*/*", AuthMiddleware(transfer.UploadDataHandler))
-	r.AddRoute(GET, "/d/*", transfer.DownloadHandler)
-	r.AddRoute(GET, "/d/*/*", transfer.DownloadChunkHandler)
+	r.AddRoutes([]RouteDef{
+		// Transfer (upload/download)
+		{POST, "/u", AuthMiddleware(transfer.InitUploadHandler)},
+		{POST, "/u/*/*", AuthMiddleware(transfer.UploadDataHandler)},
+		{GET, "/d/*", transfer.DownloadHandler},
+		{GET, "/d/*/*", transfer.DownloadChunkHandler},
 
-	// Auth (signup, login/logout, account mgmt, etc)
-	r.AddRoute(GET, "/verify", auth.VerifyHandler)
-	r.AddRoute(GET, "/session", auth.SessionHandler)
-	r.AddRoute(PUT, "/logout", auth.LogoutHandler)
-	r.AddRoute(POST, "/login", auth.LoginHandler)
-	r.AddRoute(POST, "/signup", LimiterMiddleware(auth.SignupHandler))
+		// Auth (signup, login/logout, account mgmt, etc)
+		{GET, "/verify", auth.VerifyHandler},
+		{GET, "/session", session.SessionHandler},
+		{GET, "/logout", auth.LogoutHandler},
+		{POST, "/login", auth.LoginHandler},
+		{POST, "/signup", auth.SignupHandler},
+		{GET, "/account", auth.AccountHandler},
 
-	// Payments (Stripe, BTCPay)
-	r.AddRoute(POST, "/stripe", payments.StripeWebhook)
+		// Payments (Stripe, BTCPay)
+		{POST, "/stripe", payments.StripeWebhook},
 
-	// HTML
-	r.AddRoute(GET, "/", html.HomePageHandler)
-	r.AddRoute(GET, "/upload", html.HomePageHandler)
-	r.AddRoute(GET, "/*", html.DownloadPageHandler)
-	r.AddRoute(GET, "/signup", html.SignupPageHandler)
-	r.AddRoute(GET, "/faq", html.FAQPageHandler)
+		// HTML
+		{GET, "/", html.HomePageHandler},
+		{GET, "/upload", html.HomePageHandler},
+		{GET, "/*", html.DownloadPageHandler},
+		{GET, "/signup", html.SignupPageHandler},
+		{GET, "/login", html.LoginPageHandler},
+		{GET, "/faq", html.FAQPageHandler},
 
-	// Misc
-	r.AddRoute(GET, "/static/*/*", misc.FileHandler("/static/", "", static.StaticFiles))
-	r.AddRoute(GET, "/wordlist", misc.WordlistHandler)
-	r.AddRoute(GET, "/up", misc.UpHandler)
+		// Misc
+		{
+			GET,
+			"/static/*/*",
+			misc.FileHandler("/static/", "", static.StaticFiles),
+		},
+		{GET, "/wordlist", misc.WordlistHandler},
+		{GET, "/up", misc.UpHandler},
 
-	// StreamSaver.js
-	// These serve files directly from the stream_saver submodule
-	r.AddRoute(GET, "/mitm.html", misc.FileHandler(
-		"", "/stream_saver/", static.StreamSaverFiles))
-	r.AddRoute(GET, "/StreamSaver.js", misc.FileHandler(
-		"", "/stream_saver/", static.StreamSaverFiles))
-	r.AddRoute(GET, "/sw.js", misc.FileHandler(
-		"", "/stream_saver/", static.StreamSaverFiles))
+		// StreamSaver.js
+		// These routes serve files directly from the stream_saver submodule
+		{
+			GET,
+			"/mitm.html",
+			misc.FileHandler("", "/stream_saver/", static.StreamSaverFiles),
+		},
+		{
+			GET,
+			"/StreamSaver.js",
+			misc.FileHandler("", "/stream_saver/", static.StreamSaverFiles),
+		},
+		{
+			GET,
+			"/sw.js",
+			misc.FileHandler("", "/stream_saver/", static.StreamSaverFiles),
+		},
+	})
 
 	log.Printf("Running on http://%s\n", addr)
 

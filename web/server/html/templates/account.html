@@ -1,0 +1,12 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<div id="center-div">
+  <h1>Account</h1>
+  <hr>
+  <div>
+    <input type="text" value="{{ .Email }}">
+  </div>
+</div>
+{{ template "footer.html" . }}
+</body>

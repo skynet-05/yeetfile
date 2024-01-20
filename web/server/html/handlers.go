@@ -3,18 +3,23 @@ package html
 import (
 	"fmt"
 	"net/http"
+	"yeetfile/web/db"
 	"yeetfile/web/server/html/templates"
+	"yeetfile/web/server/session"
 )
+
+const ErrorHeader = "ErrorMsg"
 
 // HomePageHandler returns the homepage html if not logged in, otherwise the
 // upload page should be returned
-func HomePageHandler(w http.ResponseWriter, _ *http.Request) {
+func HomePageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.UploadHTML,
 		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn: false,
-			Title:    "Upload",
+			LoggedIn:     session.IsValidSession(req),
+			Title:        "Upload",
+			ErrorMessage: w.Header().Get(ErrorHeader),
 			Javascript: []string{
 				"jszip.min.js",
 				"scrypt.min.js",
@@ -31,13 +36,14 @@ func HomePageHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // DownloadPageHandler returns the HTML page for downloading a file
-func DownloadPageHandler(w http.ResponseWriter, _ *http.Request) {
+func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.DownloadHTML,
 		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn: false,
-			Title:    "Download",
+			LoggedIn:     session.IsValidSession(req),
+			Title:        "Download",
+			ErrorMessage: w.Header().Get(ErrorHeader),
 			Javascript: []string{
 				"ponyfill.min.js",
 				"scrypt.min.js",
@@ -54,32 +60,72 @@ func DownloadPageHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // SignupPageHandler returns the HTML page for signing up for an account
-func SignupPageHandler(w http.ResponseWriter, _ *http.Request) {
+func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.SignupHTML,
 		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn:   false,
-			Title:      "Create Account",
-			Javascript: nil,
-			CSS:        []string{"signup.css"},
+			LoggedIn:     session.IsValidSession(req),
+			Title:        "Create Account",
+			ErrorMessage: w.Header().Get(ErrorHeader),
+			Javascript:   []string{"auth.js", "signup.js"},
+			CSS:          []string{"auth.css"},
 		}},
 	)
 
 	handleError(w, err)
 }
 
+// LoginPageHandler returns the HTML page for logging in
+func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
+	err := templates.ServeTemplate(
+		w,
+		templates.LoginHTML,
+		templates.Template{Base: templates.BaseTemplate{
+			LoggedIn:     session.IsValidSession(req),
+			Title:        "Log In",
+			ErrorMessage: w.Header().Get(ErrorHeader),
+			Javascript:   []string{"auth.js"},
+			CSS:          []string{"auth.css"},
+		}},
+	)
+
+	handleError(w, err)
+}
+
+// AccountPageHandler returns the HTML page for a user managing their account
+func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) {
+	err := templates.ServeTemplate(
+		w,
+		templates.AccountHTML,
+		templates.AccountTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "My Account",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   nil,
+				CSS:          []string{"account.css"},
+			},
+			Email: user.Email,
+			Meter: user.Meter,
+		},
+	)
+
+	handleError(w, err)
+}
+
 // VerifyPageHandler returns the HTML page for verifying the user's email
-func VerifyPageHandler(w http.ResponseWriter, _ *http.Request, email string) {
+func VerifyPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 	err := templates.ServeTemplate(
 		w,
 		templates.VerificationHTML,
 		templates.VerificationTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:   false,
-				Title:      "Verify",
-				Javascript: nil,
-				CSS:        nil,
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "Verify",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   nil,
+				CSS:          nil,
 			},
 			Email: email,
 		},
@@ -89,16 +135,17 @@ func VerifyPageHandler(w http.ResponseWriter, _ *http.Request, email string) {
 }
 
 // FAQPageHandler returns the FAQ HTML page
-func FAQPageHandler(w http.ResponseWriter, _ *http.Request) {
+func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.FaqHTML,
 		templates.Template{
 			Base: templates.BaseTemplate{
-				LoggedIn:   false,
-				Title:      "FAQ",
-				Javascript: nil,
-				CSS:        []string{"faq.css"},
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "FAQ",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   nil,
+				CSS:          []string{"faq.css"},
 			},
 		},
 	)

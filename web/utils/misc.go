@@ -33,13 +33,27 @@ func GenRandomArray(n int, runes []rune) []rune {
 	return b
 }
 
-func GetEnvVar(key, fallback string) string {
+func GetEnvVar(key string, fallback string) string {
 	value, exists := os.LookupEnv(key)
 	if !exists {
 		value = fallback
 	}
 
 	return strings.TrimSpace(value)
+}
+
+func GetEnvVarInt(key string, fallback int) int {
+	value := GetEnvVar(key, "")
+	if value == "" {
+		return fallback
+	}
+
+	num, err := strconv.Atoi(key)
+	if err != nil {
+		return fallback
+	}
+
+	return num
 }
 
 func StrToDuration(str string) time.Duration {
@@ -67,6 +81,7 @@ func GenChecksum(data []byte) ([]byte, string) {
 	return checksum, fmt.Sprintf("%x", checksum)
 }
 
+// IsEitherEmpty returns true if one string is empty ("") but not the other
 func IsEitherEmpty(a string, b string) bool {
 	if (len(a) == 0 && len(b) != 0) || (len(a) != 0 && len(b) == 0) {
 		return true

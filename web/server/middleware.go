@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 	"time"
-	"yeetfile/web/server/auth"
+	"yeetfile/web/server/session"
 )
 
 type Visitor struct {
@@ -75,7 +75,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		// Skip auth if the app is in debug mode, otherwise validate session
 		isDebug := os.Getenv("YEETFILE_DEBUG") == "1"
-		if isDebug || auth.IsValidSession(req) {
+		if isDebug || session.IsValidSession(req) {
 			// Call the next handler
 			next.ServeHTTP(w, req)
 			return

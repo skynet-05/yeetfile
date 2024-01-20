@@ -9,8 +9,14 @@ import (
 )
 
 type Route struct {
-	Path   string
 	Method string
+	Path   string
+}
+
+type RouteDef struct {
+	Method  string
+	Path    string
+	Handler http.HandlerFunc
 }
 
 type router struct {
@@ -26,6 +32,12 @@ func (r *router) AddRoute(method string, path string, handler http.HandlerFunc) 
 	endpoint := strings.Split(route.Path, "/")[1]
 	if len(endpoint) > 0 && endpoint != "*" {
 		r.reserved = append(r.reserved, endpoint)
+	}
+}
+
+func (r *router) AddRoutes(routes []RouteDef) {
+	for _, route := range routes {
+		r.AddRoute(route.Method, route.Path, route.Handler)
 	}
 }
 

@@ -9,14 +9,21 @@ import (
 )
 
 type BaseTemplate struct {
-	LoggedIn   bool
-	Title      string
-	Javascript []string
-	CSS        []string
+	LoggedIn     bool
+	Title        string
+	ErrorMessage string
+	Javascript   []string
+	CSS          []string
 }
 
 type Template struct {
 	Base BaseTemplate
+}
+
+type AccountTemplate struct {
+	Base  BaseTemplate
+	Email string
+	Meter int
 }
 
 type VerificationTemplate struct {
@@ -29,6 +36,8 @@ const (
 	DownloadHTML     = "download.html"
 	VerificationHTML = "verify.html"
 	SignupHTML       = "signup.html"
+	LoginHTML        = "login.html"
+	AccountHTML      = "account.html"
 	FaqHTML          = "faq.html"
 )
 

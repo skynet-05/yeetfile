@@ -11,30 +11,37 @@ import (
 	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/server/html"
+	"yeetfile/web/server/session"
 	"yeetfile/web/utils"
 )
 
 // LoginHandler handles a POST request to /login to log the user in.
 func LoginHandler(w http.ResponseWriter, req *http.Request) {
-	var loginFields shared.Login
-	err := json.NewDecoder(req.Body).Decode(&loginFields)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	var identifier string
+	var password []byte
 
-	identifier := loginFields.Identifier
-	password := []byte(loginFields.Password)
+	_ = req.ParseForm()
 
-	if strings.Contains(loginFields.Identifier, "@") {
-		pwHash, err := db.GetUserPasswordHashByEmail(identifier)
+	if req.FormValue("email") != "" {
+		identifier = req.FormValue("email")
+		password = []byte(req.FormValue("password"))
+	} else {
+		var loginFields shared.Login
+		err := json.NewDecoder(req.Body).Decode(&loginFields)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if bcrypt.CompareHashAndPassword(pwHash, password) != nil {
-			w.WriteHeader(http.StatusUnauthorized)
+		identifier = loginFields.Identifier
+		password = []byte(loginFields.Password)
+	}
+
+	if strings.Contains(identifier, "@") {
+		pwHash, err := db.GetUserPasswordHashByEmail(identifier)
+		if err != nil || bcrypt.CompareHashAndPassword(pwHash, password) != nil {
+			w.Header().Set(html.ErrorHeader, "User not found, or incorrect password")
+			html.LoginPageHandler(w, req)
 			return
 		}
 
@@ -45,14 +52,15 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		if !db.UserIDExists(identifier) {
-			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set(html.ErrorHeader, "Account not found")
+			html.LoginPageHandler(w, req)
 			return
 		}
 	}
 
-	_ = SetSession(identifier, w, req)
-	//http.Redirect(w, req, "/", http.StatusFound)
-	w.WriteHeader(http.StatusOK)
+	_ = session.SetSession(identifier, w, req)
+	req.Method = http.MethodGet
+	http.Redirect(w, req, "/", http.StatusMovedPermanently)
 }
 
 // SignupHandler uses data from the incoming POST request to create a new user.
@@ -61,6 +69,7 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 	var signupData shared.Signup
 	if json.NewDecoder(req.Body).Decode(&signupData) != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Unable to parse request"))
 		return
 	}
 
@@ -95,13 +104,24 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	} else if len(signupData.Email) == 0 {
-		err = SetSession(id, w, req)
+		err = session.SetSession(id, w, req)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		_, _ = io.WriteString(w, id)
+	}
+}
+
+// AccountHandler handles fetching the user's data and displaying a web page for
+// managing their account (web only)
+func AccountHandler(w http.ResponseWriter, req *http.Request) {
+	if !session.IsValidSession(req) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = io.WriteString(w, "Must be logged in")
+	} else {
+
 	}
 }
 
@@ -112,7 +132,7 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 	code := req.URL.Query().Get("code")
 
 	// Ensure the request has the correct params for verification, otherwise
-	// it should return the HTML for the verification page
+	// it should return the HTML verification page
 	if len(email) == 0 || len(code) == 0 {
 		if len(email) == 0 {
 			w.WriteHeader(http.StatusBadRequest)
@@ -125,43 +145,34 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 	// Verify user verification code and fetch password hash
 	pwHash, err := db.VerifyUser(email, code)
 	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
+		w.Header().Set(html.ErrorHeader, "Incorrect verification code")
+		html.VerifyPageHandler(w, req, email)
 		return
 	}
 
 	// Create new user
 	id, err := db.NewUser(email, pwHash)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set(html.ErrorHeader, "Server error")
+		html.VerifyPageHandler(w, req, email)
 		return
 	}
 
 	// Remove verification entry
 	_ = db.DeleteVerification(email)
 
-	_ = SetSession(id, w, req)
-	//http.Redirect(w, req, "/", http.StatusFound)
-	w.WriteHeader(http.StatusOK)
-}
-
-// SessionHandler checks to see if the current request has a valid session
-// Returns OK (200) if the session is valid, otherwise Unauthorized (401)
-func SessionHandler(w http.ResponseWriter, req *http.Request) {
-	if IsValidSession(req) {
-		w.WriteHeader(http.StatusOK)
-	} else {
-		w.WriteHeader(http.StatusUnauthorized)
-	}
+	_ = session.SetSession(id, w, req)
+	http.Redirect(w, req, "/", http.StatusMovedPermanently)
 }
 
 // LogoutHandler handles a PUT request to /logout to log the user out of their
 // current session.
 func LogoutHandler(w http.ResponseWriter, req *http.Request) {
-	err := RemoveSession(w, req)
+	err := session.RemoveSession(w, req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 }

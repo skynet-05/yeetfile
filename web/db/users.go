@@ -15,18 +15,20 @@ type User struct {
 	PaymentID    string
 }
 
-var defaultMeter = 1024 * 1024 * 2 // 2mb
+var defaultMeter = utils.GetEnvVarInt("YEETFILE_METER", 1024*1024*2) // 2mb
 
 var UserAlreadyExists = errors.New("user already exists")
 
 // NewUser creates a new user in the "users" table, ensuring that the email
 // provided is not already in use.
 func NewUser(email string, pwHash []byte) (string, error) {
-	rows, err := db.Query(`SELECT * from users WHERE email = $1`, email)
-	if err != nil {
-		return "", err
-	} else if rows.Next() {
-		return "", UserAlreadyExists
+	if len(email) > 0 {
+		rows, err := db.Query(`SELECT * from users WHERE email = $1`, email)
+		if err != nil {
+			return "", err
+		} else if rows.Next() {
+			return "", UserAlreadyExists
+		}
 	}
 
 	id := utils.GenRandomNumbers(16)
@@ -40,7 +42,7 @@ func NewUser(email string, pwHash []byte) (string, error) {
 	      (id, email, pw_hash, meter, payment_id)
 	      VALUES ($1, $2, $3, $4, $5)`
 
-	_, err = db.Exec(s, id, email, pwHash, defaultMeter, paymentID)
+	_, err := db.Exec(s, id, email, pwHash, defaultMeter, paymentID)
 	if err != nil {
 		return "", err
 	}
