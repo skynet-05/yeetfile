@@ -6,5 +6,7 @@ yeetfile-web
 test.sh
 lipsum-big.txt
 session*
+!session.go
+!web/server/session
 *.env
 tags
