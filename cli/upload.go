@@ -95,6 +95,7 @@ func InitializeUpload(
 	uploadMetadata := shared.UploadMetadata{
 		Name:       hexEncName,
 		Salt:       salt,
+		Size:       int(length),
 		Chunks:     int(numChunks),
 		Downloads:  downloads,
 		Expiration: exp,

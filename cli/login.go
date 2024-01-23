@@ -95,8 +95,8 @@ func sendLogin(login shared.Login) error {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		fallthrough
-	case http.StatusFound:
-		// 200->302 - Successful login
+	case http.StatusMovedPermanently:
+		// 200->301 - Successful login
 		cookies := resp.Cookies()
 		if len(cookies) > 0 {
 			session = cookies[0].Value

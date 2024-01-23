@@ -21,8 +21,6 @@ func PutRequest(url string, data []byte) (*http.Response, error) {
 }
 
 func sendRequest(method string, url string, data []byte) (*http.Response, error) {
-	client := &http.Client{}
-
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -35,7 +33,7 @@ func sendRequest(method string, url string, data []byte) (*http.Response, error)
 		})
 	}
 
-	resp, err := client.Do(req)
+	resp, err := new(http.Transport).RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
