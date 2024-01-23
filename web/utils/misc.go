@@ -25,9 +25,12 @@ func GenRandomNumbers(n int) string {
 }
 
 func GenRandomArray(n int, runes []rune) []rune {
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = runes[rand.Intn(len(runes))]
+		b[i] = runes[r.Intn(len(runes))]
 	}
 
 	return b

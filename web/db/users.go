@@ -146,6 +146,30 @@ func GetUserIDByEmail(email string) (string, error) {
 	return "", errors.New("unable to find user")
 }
 
+func GetUserMeter(id string) (int, error) {
+	rows, err := db.Query(`
+		SELECT meter
+		FROM users
+		WHERE id = $1`, id)
+	if err != nil {
+		log.Printf("Error querying for user by id: %s\n", id)
+		return 0, err
+	}
+
+	if rows.Next() {
+		var meter int
+		err = rows.Scan(&meter)
+		if err != nil {
+			log.Printf("Error reading meter for user %s\n", id)
+			return 0, err
+		}
+
+		return meter, nil
+	}
+
+	return 0, errors.New("unable to find user by id")
+}
+
 // PaymentIDExists checks the user table to see if the provided payment ID
 // (for Stripe + BTCPay) already exists for another user.
 func PaymentIDExists(paymentID string) bool {

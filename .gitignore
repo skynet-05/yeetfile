@@ -10,3 +10,4 @@ session*
 !web/server/session
 *.env
 tags
+init.sql

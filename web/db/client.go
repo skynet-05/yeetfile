@@ -17,19 +17,23 @@ func init() {
 	var (
 		host     = utils.GetEnvVar("YEETFILE_DB_HOST", "localhost")
 		port     = utils.GetEnvVar("YEETFILE_DB_PORT", "5432")
-		user     = utils.GetEnvVar("YEETFILE_DB_USER", "postgres")
+		user     = utils.GetEnvVar("YEETFILE_DB_USER", "yeetfile")
 		password = utils.GetEnvVar("YEETFILE_DB_PASS", "")
-		dbname   = utils.GetEnvVar("YEETFILE_DB_NAME", "yeetfile")
+		dbname   = utils.GetEnvVar("YEETFILE_DB_NAME", "postgres")
 	)
 
-	connStr := fmt.Sprintf("host=%s port=%s user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		user,
+		password,
+		host,
+		port,
+		dbname)
 
 	// Open db connection
 	var err error
 	db, err = sql.Open("postgres", connStr)
-	if err != nil {
+
+	if err != nil || db.Ping() != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
 
@@ -37,6 +41,8 @@ func init() {
 	path := filepath.Join("web", "db", "scripts", "init.sql")
 	c, err := os.ReadFile(path)
 	if err != nil {
+		log.Printf("Error initializing database -- have you generated " +
+			"the sql script (web/db/scripts/init.sh)?")
 		panic(err)
 	}
 
