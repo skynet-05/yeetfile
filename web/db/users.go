@@ -202,3 +202,16 @@ func AddUserStorage(paymentID string, amount int) error {
 
 	return nil
 }
+
+func ReduceUserStorage(id string, size int) error {
+	s := `UPDATE users
+          SET meter=meter - $2
+          WHERE id=$1`
+
+	_, err := db.Exec(s, id, size)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

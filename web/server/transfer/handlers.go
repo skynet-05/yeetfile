@@ -25,6 +25,9 @@ func InitUploadHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Error: %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
+	} else if !UserCanUpload(meta.Size, req) {
+		http.Error(w, "Not enough space available", http.StatusBadRequest)
+		return
 	}
 
 	id, _ := db.NewMetadata(meta.Chunks, meta.Name, meta.Salt)
@@ -83,6 +86,14 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		http.Error(w, "Upload error", http.StatusBadRequest)
+		return
+	}
+
+	// Update user meter
+	err = UpdateUserMeter(len(data)-shared.TotalOverhead, req)
+	if err != nil {
+		// TODO: Maybe just silently accept this? Idk if it's worth an error
+		http.Error(w, "Upload failed", http.StatusInternalServerError)
 		return
 	}
 

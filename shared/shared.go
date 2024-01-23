@@ -5,10 +5,12 @@ import "time"
 const NonceSize int = 24
 const KeySize int = 32
 const ChunkSize int = 5242880 // 5 mb
+const TotalOverhead int = 40  // secretbox overhead (16) + nonce size (24)
 
 type UploadMetadata struct {
 	Name       string `json:"name"`
 	Chunks     int    `json:"chunks"`
+	Size       int    `json:"size"`
 	Salt       []byte `json:"salt"`
 	Downloads  int    `json:"downloads"`
 	Expiration string `json:"expiration"`
