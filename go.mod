@@ -6,7 +6,7 @@ require (
 	github.com/benbusby/b2 v0.0.0-20240119201044-d600ce529f73
 	github.com/gorilla/sessions v1.2.1
 	github.com/lib/pq v1.10.9
-	github.com/stripe/stripe-go/v75 v75.9.0
+	github.com/stripe/stripe-go/v76 v76.13.0
 	golang.org/x/crypto v0.9.0
 	golang.org/x/term v0.10.0
 	golang.org/x/time v0.3.0

@@ -17,8 +17,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/stripe/stripe-go/v75 v75.9.0 h1:RKb7IJlwjKtNId5rRVZL0z0LijKjw0FbuYfDiq4RHgw=
-github.com/stripe/stripe-go/v75 v75.9.0/go.mod h1:wT44gah+eCY8Z0aSpY/vQlYYbicU9uUAbAqdaUxxDqE=
+github.com/stripe/stripe-go/v76 v76.13.0 h1:j1tkBBA2v67yKHg9hj/0c24af8hze1vVVErJC9naT9Q=
+github.com/stripe/stripe-go/v76 v76.13.0/go.mod h1:rw1MxjlAKKcZ+3FOXgTHgwiOa2ya6CPq6ykpJ0Q6Po4=
 golang.org/x/crypto v0.9.0 h1:LF6fAI+IutBocDJ2OT0Q1g8plpYljMZ4+lty+dsqw3g=
 golang.org/x/crypto v0.9.0/go.mod h1:yrmDGqONDYtNj3tH8X9dzUun2m2lzPa9ngI6/RUPGR0=
 golang.org/x/net v0.0.0-20210520170846-37e1c6afe023/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
