@@ -17,7 +17,7 @@ func init() {
 	var (
 		host     = utils.GetEnvVar("YEETFILE_DB_HOST", "localhost")
 		port     = utils.GetEnvVar("YEETFILE_DB_PORT", "5432")
-		user     = utils.GetEnvVar("YEETFILE_DB_USER", "yeetfile")
+		user     = utils.GetEnvVar("YEETFILE_DB_USER", "postgres")
 		password = utils.GetEnvVar("YEETFILE_DB_PASS", "")
 		dbname   = utils.GetEnvVar("YEETFILE_DB_NAME", "postgres")
 	)
@@ -38,6 +38,7 @@ func init() {
 	}
 
 	// Init db contents from scripts/init.sql
+	log.Printf("Initializing DB...")
 	path := filepath.Join("web", "db", "scripts", "init.sql")
 	c, err := os.ReadFile(path)
 	if err != nil {

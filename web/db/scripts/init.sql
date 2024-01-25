@@ -1,19 +1,13 @@
-#!/bin/sh
 
-USER="${YEETFILE_DB_USER:-postgres}"
-PASS="${YEETFILE_DB_PASS:-}"
-DB_NAME="${YEETFILE_DB_NAME:-postgres}"
-
-sql_script="
-DO \$$
+DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_user WHERE usename = '$USER') THEN
-    CREATE USER $USER WITH PASSWORD '$PASS';
+  IF NOT EXISTS (SELECT 1 FROM pg_user WHERE usename = 'postgres') THEN
+    CREATE USER postgres WITH PASSWORD '';
   END IF;
-END \$$;
+END $$;
 
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $USER;
-set role to $USER;
+GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
+set role to postgres;
 
 create table if not exists metadata
 (
@@ -78,6 +72,4 @@ create table if not exists verify
     date    date,
     pw_hash bytea
 );
-"
 
-echo "$sql_script" > init.sql

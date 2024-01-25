@@ -123,13 +123,42 @@ func GetUserPasswordHashByEmail(email string) ([]byte, error) {
 	return nil, errors.New("unable to find user")
 }
 
+func GetUserByID(id string) (User, error) {
+	rows, err := db.Query(`
+		SELECT email, meter, payment_id
+		FROM users
+		WHERE id = $1`, id)
+	if err != nil {
+		log.Printf("Error querying for user by id: %s\n", id)
+		return User{}, err
+	}
+
+	if rows.Next() {
+		var email string
+		var meter int
+		var paymentID string
+		err = rows.Scan(&email, &meter, &paymentID)
+		if err != nil {
+			return User{}, err
+		}
+
+		return User{
+			Email:     email,
+			Meter:     meter,
+			PaymentID: paymentID,
+		}, nil
+	}
+
+	return User{}, errors.New("unexpected error fetching user by id")
+}
+
 func GetUserIDByEmail(email string) (string, error) {
 	rows, err := db.Query(`
 		SELECT id
 		FROM users 
 		WHERE email = $1`, email)
 	if err != nil {
-		log.Fatalf("Error querying for user by email: %v", err)
+		log.Printf("Error querying for user by email: %v", err)
 		return "", err
 	}
 
