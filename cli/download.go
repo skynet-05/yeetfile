@@ -81,7 +81,7 @@ func (file FileDownload) VerifyDownload() bool {
 
 	fmt.Println(utils.LineDecorator)
 	fmt.Printf("Name: %s\n", file.Name)
-	fmt.Printf("Size: %s", utils.ReadableFileSize(file.Size))
+	fmt.Printf("Size: %s", shared.ReadableFileSize(file.Size))
 	fmt.Printf("Downloads Remaining: %d\n", file.Downloads)
 	fmt.Printf("Expires: %s (%s)\n", file.Expiration, timeDiff)
 	fmt.Println(utils.LineDecorator)

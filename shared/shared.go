@@ -1,6 +1,9 @@
 package shared
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 const NonceSize int = 24
 const KeySize int = 32
@@ -38,4 +41,19 @@ type Login struct {
 
 type SessionInfo struct {
 	Meter int `json:"meter"`
+}
+
+func ReadableFileSize(b int) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGT"[exp])
 }
