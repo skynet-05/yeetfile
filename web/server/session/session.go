@@ -29,9 +29,12 @@ func SetSession(id string, w http.ResponseWriter, req *http.Request) error {
 }
 
 func IsValidSession(req *http.Request) bool {
-	session, _ := GetSession(req)
-	ok, found := session.Values[ValueKey].(bool)
+	session, err := GetSession(req)
+	if err != nil {
+		return false
+	}
 
+	ok, found := session.Values[ValueKey].(bool)
 	return found && ok
 }
 

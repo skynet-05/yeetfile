@@ -1,0 +1,33 @@
+#upgrade-div {
+    display: grid;
+    text-align: center;
+}
+
+.pricing-box {
+    background: var(--card-bg-color);
+    border-radius: 5px;
+    margin: 0 5px 5px 5px;
+    padding: 0 5px 5px 5px;
+}
+
+.pricing-box h3 {
+    border-bottom: 1px solid var(--light-border) !important;
+    border-radius: 0 !important;
+    margin-top: 5px;
+}
+
+.col-1 {
+    grid-column-start: 1;
+}
+
+.col-2 {
+    grid-column-start: 2;
+}
+
+.col-3 {
+    grid-column-start: 3;
+}
+
+.btcpay-btn {
+    background-color: #0f3b21;
+}

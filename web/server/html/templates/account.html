@@ -5,8 +5,58 @@
   <h1>Account</h1>
   <hr>
   <div>
-    <input type="text" value="{{ .Email }}">
+    <table>
+      <tr>
+        <td>
+          <label for="email">Email:</label>
+        </td>
+        <td>
+          {{ if ne .Email "" }}
+            <span id="email">{{ .Email }}</span>
+          {{ else }}
+            <span id="email">None</span>
+          {{ end }}
+        </td>
+      </tr>
+      <tr id="meter-div">
+        <td>
+          <label for="meter">Remaining Transfer:</label>
+        </td>
+        <td>
+          <span id="meter">{{ .ReadableMeter }} ({{ .Meter }} bytes)</span>
+        </td>
+      </tr>
+    </table>
   </div>
+  <hr>
+  <h1>Upgrades</h1>
+  <div id="upgrade-div">
+    <div class="pricing-box col-1">
+      <h3>+100GB Transfer</h3>
+      <p>Increase available transfer amount by 100 gigabytes</p>
+      <a href="/checkout?size=100gb&payment_id={{ .PaymentID }}"><button>Checkout │ $19</button></a>
+      <br>or<br>
+      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+    </div>
+
+    <div class="pricing-box col-2">
+      <h3>+500GB Transfer</h3>
+      <p>Increase available transfer amount by 500 gigabytes</p>
+      <a href="/checkout?size=500gb&payment_id={{ .PaymentID }}"><button>Checkout │ $79</button></a>
+      <br>or<br>
+      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+    </div>
+
+    <div class="pricing-box col-3">
+      <h3>+1TB Transfer</h3>
+      <p>Increase available transfer amount by 1 terabyte</p>
+      <a href="/checkout?size=1tb&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
+      <br>or<br>
+      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+    </div>
+  </div>
+  <br>
+  <span class="italic">Note: Transfer upgrades do not expire!</span>
 </div>
 {{ template "footer.html" . }}
 </body>

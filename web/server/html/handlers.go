@@ -3,6 +3,7 @@ package html
 import (
 	"fmt"
 	"net/http"
+	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/server/html/templates"
 	"yeetfile/web/server/session"
@@ -106,8 +107,10 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) 
 				Javascript:   nil,
 				CSS:          []string{"account.css"},
 			},
-			Email: user.Email,
-			Meter: user.Meter,
+			Email:         user.Email,
+			Meter:         user.Meter,
+			PaymentID:     user.PaymentID,
+			ReadableMeter: shared.ReadableFileSize(user.Meter),
 		},
 	)
 

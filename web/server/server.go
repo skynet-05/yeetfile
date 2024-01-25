@@ -12,12 +12,21 @@ import (
 	"yeetfile/web/static"
 )
 
+type HttpMethod int
+
 const (
-	POST   = http.MethodPost
-	GET    = http.MethodGet
-	PUT    = http.MethodPut
-	DELETE = http.MethodDelete
+	GET HttpMethod = 1 << iota
+	PUT
+	POST
+	DELETE
 )
+
+var MethodMap = map[HttpMethod]string{
+	GET:    http.MethodGet,
+	PUT:    http.MethodPut,
+	POST:   http.MethodPost,
+	DELETE: http.MethodDelete,
+}
 
 // Run maps URL paths to handlers for the server and begins listening on the
 // configured port.
@@ -39,10 +48,11 @@ func Run(addr string) {
 		{GET, "/logout", auth.LogoutHandler},
 		{POST, "/login", auth.LoginHandler},
 		{POST, "/signup", auth.SignupHandler},
-		{GET, "/account", auth.AccountHandler},
+		{GET | PUT, "/account", auth.AccountHandler},
 
 		// Payments (Stripe, BTCPay)
 		{POST, "/stripe", payments.StripeWebhook},
+		{GET, "/checkout", payments.StripeCheckout},
 
 		// HTML
 		{GET, "/", html.HomePageHandler},

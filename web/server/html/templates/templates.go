@@ -21,9 +21,11 @@ type Template struct {
 }
 
 type AccountTemplate struct {
-	Base  BaseTemplate
-	Email string
-	Meter int
+	Base          BaseTemplate
+	Email         string
+	Meter         int
+	PaymentID     string
+	ReadableMeter string
 }
 
 type VerificationTemplate struct {

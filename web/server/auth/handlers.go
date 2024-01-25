@@ -118,10 +118,20 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 // managing their account (web only)
 func AccountHandler(w http.ResponseWriter, req *http.Request) {
 	if !session.IsValidSession(req) {
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = io.WriteString(w, "Must be logged in")
+		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
 	} else {
+		s, _ := session.GetSession(req)
+		id := session.GetSessionUserID(s)
+		user, err := db.GetUserByID(id)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
+		if req.Method == http.MethodGet {
+			html.AccountPageHandler(w, req, user)
+			return
+		}
 	}
 }
 

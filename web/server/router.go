@@ -14,7 +14,7 @@ type Route struct {
 }
 
 type RouteDef struct {
-	Method  string
+	Methods HttpMethod
 	Path    string
 	Handler http.HandlerFunc
 }
@@ -37,7 +37,13 @@ func (r *router) AddRoute(method string, path string, handler http.HandlerFunc) 
 
 func (r *router) AddRoutes(routes []RouteDef) {
 	for _, route := range routes {
-		r.AddRoute(route.Method, route.Path, route.Handler)
+		for methodInt, methodStr := range MethodMap {
+			if route.Methods&methodInt == 0 {
+				continue
+			}
+
+			r.AddRoute(methodStr, route.Path, route.Handler)
+		}
 	}
 }
 
