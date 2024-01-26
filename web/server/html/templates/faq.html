@@ -35,12 +35,19 @@
             <p>YeetFile stores:</p>
 
             <ul>
-                <li>The account number</li>
-                <li>The remaining monthly storage for the account</li>
-                <li>The account type (aka which tier)</li>
-                <li>The subscription expiration date (if applicable)</li>
+                <li>The account ID</li>
+                <li>The remaining file transfer amount for the account</li>
+                <li>The membership expiration date (if applicable)</li>
                 <li>The email address (if supplied)</li>
                 <li>The password hash (if supplied)</li>
+                <li>A payment ID
+                    <ul>
+                        <li>Rotated after each purchase</li>
+                        <li>Payment IDs are used to track purchases by an account for 30-days,
+                        and can only be associated with an account if a user reaches out with their
+                        payment ID for the purposes of a refund, billing clarification, etc</li>
+                    </ul>
+                </li>
             </ul>
         </details>
 
@@ -74,8 +81,13 @@
 
         <details>
             <summary>What emails are sent by YeetFile?</summary>
-            <p>The only emails that YeetFile can send are the verification email and the password
-            reset email.</p>
+            <p>The following emails are sent by YeetFile:</p>
+            <ul>
+                <li>Account verification</li>
+                <li>Order confirmation</li>
+                <li>Password reset</li>
+                <li>Membership expiration reminder (1 week prior)</li>
+            </ul>
         </details>
 
         <details>
@@ -97,13 +109,6 @@
             <p>If you want to run an instance of YeetFile yourself, there are instructions in
             <a href="https://github.com/meddlehead/yeetfile">the README</a> for deploying your own
             instance, with configuration options such as max upload size, where to store uploads, and more.</p>
-        </details>
-
-        <details>
-            <summary>Why metered usage? Why not a monthly or yearly subscription?</summary>
-            <p>A subscription model would be unfair to the user, since a user is essentially paying for
-            storage and egress (which are both costs based on usage). Metered usage allows users to use
-            YeetFile however much they need, without worrying about using it within a specific amount of time.</p>
         </details>
 
         <details>
@@ -134,7 +139,7 @@
                 and <a href="https://github.com/benbusby/farside">Farside</a>, and more.
             </p>
             <p>
-                YeetFile was released under Ben Busby's open source software collective,
+                YeetFile was released under Ben Busby's new open source software collective,
                 <a href="https://meddlehead.com">meddlehead</a>.
             </p>
         </details>
