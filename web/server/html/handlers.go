@@ -13,6 +13,11 @@ import (
 const ErrorHeader = "ErrorMsg"
 const SuccessHeader = "SuccessMsg"
 
+const OrderConfMsg = "Your order confirmation code " +
+	"is \"%s\" -- if you don't have an email on file, please " +
+	"write this down in case you need to contact YeetFile " +
+	"about your order!"
+
 // HomePageHandler returns the homepage html if not logged in, otherwise the
 // upload page should be returned
 func HomePageHandler(w http.ResponseWriter, req *http.Request) {
@@ -99,10 +104,19 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 // AccountPageHandler returns the HTML page for a user managing their account
 func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) {
 	success := req.URL.Query().Get("success")
+	conf := req.URL.Query().Get("confirmation")
+	successMsg := ""
+	errorMsg := ""
 	if len(success) > 0 && success == "1" {
-		w.Header().Set(SuccessHeader, "Successfully updated account!")
+		successMsg = "Successfully updated account! "
+		if len(conf) > 0 {
+			paymentID, err := db.GetPaymentIDBySessionID(conf)
+			if err == nil {
+				successMsg += fmt.Sprintf(OrderConfMsg, paymentID)
+			}
+		}
 	} else if len(success) > 0 && success == "0" {
-		w.Header().Set(ErrorHeader, "Failed to update account!")
+		errorMsg = "Failed to update account!"
 	}
 
 	err := templates.ServeTemplate(
@@ -112,8 +126,8 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) 
 			Base: templates.BaseTemplate{
 				LoggedIn:       session.IsValidSession(req),
 				Title:          "My Account",
-				ErrorMessage:   w.Header().Get(ErrorHeader),
-				SuccessMessage: w.Header().Get(SuccessHeader),
+				ErrorMessage:   errorMsg,
+				SuccessMessage: successMsg,
 				Javascript:     nil,
 				CSS:            []string{"account.css"},
 			},

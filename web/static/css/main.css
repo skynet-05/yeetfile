@@ -26,7 +26,7 @@ button {
     transform: translate(-50%, -50%);
     width: 80%;
     max-width: 750px;
-    max-height: 80%;
+    max-height: 85%;
     overflow-y: auto;
     border-radius: 1rem;
     padding: 20px;
@@ -113,6 +113,7 @@ div {
 
 #messages #success-message {
     color: green;
+    font-weight: 500;
 }
 
 input:disabled+label {

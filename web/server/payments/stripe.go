@@ -89,7 +89,10 @@ func processStripeEvent(event stripe.Event) error {
 			return errors.New("unrecognized response from Stripe")
 		}
 
-		productID, err := processOrder(intentID, refID, lineItems.LineItem())
+		sessionID := checkoutSession.ID
+		item := lineItems.LineItem()
+
+		productID, err := processOrder(intentID, refID, sessionID, item)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error w/ stripe order: %v\n", err)
@@ -141,10 +144,11 @@ func validateStripeEvent(payload []byte, sig string) (stripe.Event, error) {
 func processOrder(
 	intentID string,
 	refID string,
+	sessionID string,
 	item *stripe.LineItem,
 ) (string, error) {
 	productID := item.Price.Product.ID
-	err := db.InsertNewOrder(intentID, refID, productID, int(item.Quantity))
+	err := db.InsertNewOrder(intentID, refID, productID, sessionID)
 	if err != nil {
 		return "", err
 	}

@@ -40,33 +40,31 @@
       </tr>
     </table>
   </div>
+  {{ template "messages.html" . }}
   <hr>
   <h1>Memberships</h1>
   <div id="subscription-div">
+    {{ if .IsActive }}
+    <div class="pricing-box">
+      <h3>YeetFile Membership</h3>
+      <p>You're a member! You can renew or update your membership on {{ .ExpString }}.</p>
+    </div>
+    {{ else }}
     <div class="pricing-box col-1">
       <h3>YeetFile 1-Month Membership</h3>
-      {{ if .IsActive }}
-      <p>Send unlimited text and up to 5GB of files for 1 month.</p>
-      <p>You're a member! You can renew/update your membership on {{ .ExpString }}.</p>
-      {{ else }}
       <p>Send unlimited text and up to 5GB of files for 1 month.</p>
       <a href="/checkout?type=sub1m&payment_id={{ .PaymentID }}"><button>Checkout │ $2</button></a>
       or
       <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
-      {{ end }}
     </div>
     <div class="pricing-box col-2">
       <h3>YeetFile 1-Year Membership</h3>
-      {{ if .IsActive }}
-      <p>Send unlimited text and up to 5GB of files each month for less than $1 per month.</p>
-      <p>You're a member! You can renew your membership on {{ .ExpString }}.</p>
-      {{ else }}
       <p>Send unlimited text and up to 5GB of files each month for less than $1 per month.</p>
       <a href="/checkout?type=sub1y&payment_id={{ .PaymentID }}"><button>Checkout │ $9</button></a>
       or
       <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
-      {{ end }}
     </div>
+    {{ end }}
   </div>
   <hr>
   {{ if .IsActive }}
@@ -120,7 +118,6 @@
   <br>
   <span class="italic">Note: Transfer upgrades never expire! Even if your membership expires, you can continue
   using YeetFile until your transfer limit is depleted.</span>
-  {{ template "messages.html" . }}
 </div>
 {{ template "footer.html" . }}
 </body>

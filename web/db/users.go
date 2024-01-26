@@ -54,7 +54,7 @@ func NewUser(email string, pwHash []byte) (string, error) {
 }
 
 // RotateUserPaymentID overwrites the previous payment ID once a transaction is
-// completed and storage has been added to their account.
+// completed.
 func RotateUserPaymentID(paymentID string) error {
 	rows, err := db.Query(`SELECT id from users WHERE payment_id = $1`, paymentID)
 	if err != nil {
