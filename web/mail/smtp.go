@@ -2,6 +2,7 @@ package mail
 
 import (
 	"crypto/tls"
+	"fmt"
 	"gopkg.in/gomail.v2"
 	"log"
 	"os"
@@ -13,6 +14,7 @@ var config SMTPConfig
 
 type SMTPConfig struct {
 	From           string
+	Address        string
 	Host           string
 	Port           int
 	Password       string
@@ -24,6 +26,7 @@ type SMTPConfig struct {
 func sendEmail(to string, subject string, body string) {
 	if config == (SMTPConfig{}) {
 		// SMTP hasn't been configured, ignore this request
+		log.Printf("Attempted to send email, but SMTP hasn't been configured")
 		return
 	}
 
@@ -33,12 +36,13 @@ func sendEmail(to string, subject string, body string) {
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
 
-	d := gomail.NewDialer(config.Host, config.Port, config.From, config.Password)
+	d := gomail.NewDialer(config.Host, config.Port, config.Address, config.Password)
 	d.TLSConfig = &tls.Config{ServerName: config.Host}
 
 	err := d.DialAndSend(m)
 	if err != nil {
-		log.Println("Failed to send verification email")
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		log.Println("Failed to send email")
 	}
 }
 
@@ -52,8 +56,11 @@ func init() {
 		return
 	}
 
+	from := fmt.Sprintf("\"YeetFile\" <%s>", os.Getenv("YEETFILE_EMAIL_ADDR"))
+
 	config = SMTPConfig{
-		From:           os.Getenv("YEETFILE_EMAIL_ADDR"),
+		From:           from,
+		Address:        os.Getenv("YEETFILE_EMAIL_ADDR"),
 		Host:           os.Getenv("YEETFILE_EMAIL_HOST"),
 		Port:           port,
 		Password:       os.Getenv("YEETFILE_EMAIL_PW"),
