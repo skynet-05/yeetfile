@@ -9,11 +9,12 @@ import (
 )
 
 type BaseTemplate struct {
-	LoggedIn     bool
-	Title        string
-	ErrorMessage string
-	Javascript   []string
-	CSS          []string
+	LoggedIn       bool
+	Title          string
+	SuccessMessage string
+	ErrorMessage   string
+	Javascript     []string
+	CSS            []string
 }
 
 type Template struct {
@@ -24,7 +25,9 @@ type AccountTemplate struct {
 	Base          BaseTemplate
 	Email         string
 	Meter         int
+	IsActive      bool
 	PaymentID     string
+	ExpString     string
 	ReadableMeter string
 }
 

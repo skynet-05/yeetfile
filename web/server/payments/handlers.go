@@ -3,7 +3,9 @@ package payments
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"time"
 	"yeetfile/web/db"
 )
 
@@ -40,21 +42,36 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 func StripeCheckout(w http.ResponseWriter, req *http.Request) {
 	// Ensure Stripe has already been set up
 	if !stripeReady {
+		log.Println("Stripe checkout requested, but Stripe has not been set up.")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	size := req.URL.Query().Get("size")
+	itemType := req.URL.Query().Get("type")
 	paymentID := req.URL.Query().Get("payment_id")
-	if len(size) == 0 || len(paymentID) == 0 || !db.PaymentIDExists(paymentID) {
+	if len(itemType) == 0 || len(paymentID) == 0 || !db.PaymentIDExists(paymentID) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	checkoutLink, ok := stripeLinkMapping[size]
+	checkoutLink, ok := stripeLinkMapping[itemType]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	// Make sure the user is a member if adding upgraded storage
+	if itemType != typeSub1Month && itemType != typeSub1Year {
+		user, err := db.GetUserByPaymentID(paymentID)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if user.MemberExp.Before(time.Now()) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 	}
 
 	checkoutParams := fmt.Sprintf("?client_reference_id=%s", paymentID)

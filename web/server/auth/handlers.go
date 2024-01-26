@@ -51,7 +51,8 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	} else {
-		if !db.UserIDExists(identifier) {
+		pwHash, err := db.GetUserPasswordHashByID(identifier)
+		if (pwHash != nil && len(pwHash) != 0) || err != nil || !db.UserIDExists(identifier) {
 			w.Header().Set(html.ErrorHeader, "Account not found")
 			html.LoginPageHandler(w, req)
 			return
@@ -124,6 +125,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request) {
 		id := session.GetSessionUserID(s)
 		user, err := db.GetUserByID(id)
 		if err != nil {
+			log.Printf("Error fetching user by id: %v\n", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -172,7 +174,7 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 	_ = db.DeleteVerification(email)
 
 	_ = session.SetSession(id, w, req)
-	http.Redirect(w, req, "/", http.StatusMovedPermanently)
+	http.Redirect(w, req, "/account", http.StatusMovedPermanently)
 }
 
 // LogoutHandler handles a PUT request to /logout to log the user out of their

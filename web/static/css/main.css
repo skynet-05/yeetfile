@@ -10,6 +10,11 @@
     border-radius: 5px;
 }
 
+a .disabled {
+    pointer-events: none;
+    cursor: default;
+}
+
 button {
     cursor: pointer;
 }
@@ -78,6 +83,7 @@ input[type=submit]:disabled,
 button:disabled {
     background-color: darkgrey;
     color: grey;
+    cursor: default;
 }
 
 input[type='radio'] {
@@ -103,6 +109,10 @@ div {
 
 #messages #error-message {
     color: red;
+}
+
+#messages #success-message {
+    color: green;
 }
 
 input:disabled+label {

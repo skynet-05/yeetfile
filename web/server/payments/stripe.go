@@ -2,32 +2,50 @@ package payments
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/webhook"
 	"os"
+	"time"
 	"yeetfile/web/db"
+	"yeetfile/web/mail"
+	"yeetfile/web/utils"
 )
 
 var stripeReady = true
 
+var stripeSubMonthID = os.Getenv("YEETFILE_STRIPE_SUB_MONTH_ID")
+var stripeSubYearID = os.Getenv("YEETFILE_STRIPE_SUB_YEAR_ID")
 var stripe100GBID = os.Getenv("YEETFILE_STRIPE_100GB_ID")
 var stripe500GBID = os.Getenv("YEETFILE_STRIPE_500GB_ID")
 var stripe1TBID = os.Getenv("YEETFILE_STRIPE_1TB_ID")
+var stripeSubMonthLink = os.Getenv("YEETFILE_STRIPE_SUB_MONTH_LINK")
+var stripeSubYearLink = os.Getenv("YEETFILE_STRIPE_SUB_YEAR_LINK")
 var stripe100GBLink = os.Getenv("YEETFILE_STRIPE_100GB_LINK")
 var stripe500GBLink = os.Getenv("YEETFILE_STRIPE_500GB_LINK")
 var stripe1TBLink = os.Getenv("YEETFILE_STRIPE_1TB_LINK")
 
 var stripeRequirements = []string{
-	stripe100GBID, stripe500GBID, stripe1TBID,
-	stripe100GBLink, stripe500GBLink, stripe1TBLink,
+	stripe100GBID, stripe500GBID, stripe1TBID, stripeSubMonthID, stripeSubYearID,
+	stripe100GBLink, stripe500GBLink, stripe1TBLink, stripeSubMonthLink, stripeSubYearLink,
 }
 
 var stripeLinkMapping = map[string]string{
-	tag100GB: stripe100GBLink,
-	tag500GB: stripe500GBLink,
-	tag1TB:   stripe1TBLink,
+	typeSub1Month: stripeSubMonthLink,
+	typeSub1Year:  stripeSubYearLink,
+	type100gb:     stripe100GBLink,
+	type500gb:     stripe500GBLink,
+	type1tb:       stripe1TBLink,
+}
+
+var stripeDescMap = map[string]string{
+	stripeSubMonthID: "1 Month YeetFile Membership",
+	stripeSubYearID:  "1 Year YeetFile Membership",
+	stripe100GBID:    "YeetFile 100GB Transfer Upgrade",
+	stripe500GBID:    "YeetFile 500GB Transfer Upgrade",
+	stripe1TBID:      "YeetFile 1TB Transfer Upgrade",
 }
 
 // stripeProductAmounts maps product IDs to their respective amounts of storage
@@ -60,23 +78,42 @@ func processStripeEvent(event stripe.Event) error {
 	lineItems := session.ListLineItems(params)
 
 	for lineItems.Next() {
+		utils.PrettyPrintStruct(checkoutSession)
 		refID := checkoutSession.ClientReferenceID
+		var intentID string
+		if checkoutSession.PaymentIntent != nil {
+			intentID = checkoutSession.PaymentIntent.ID
+		} else if checkoutSession.Subscription != nil {
+			intentID = checkoutSession.Subscription.ID
+		} else {
+			return errors.New("unrecognized response from Stripe")
+		}
 
-		err = processOrder(
-			checkoutSession.PaymentIntent.ID,
-			refID,
-			lineItems.LineItem())
+		productID, err := processOrder(intentID, refID, lineItems.LineItem())
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error w/ stripe order: %v\n", err)
 			return err
 		}
 
+		// Send email (if applicable)
+		email, err := db.GetUserEmailByPaymentID(refID)
+		if err == nil && len(email) != 0 {
+			err := mail.CreateOrderEmail(
+				refID,
+				stripeDescMap[productID],
+				email,
+			).Send()
+
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error sending order confirmation email")
+			}
+		}
+
 		// Rotate user payment ID now that it's no longer needed
 		err = db.RotateUserPaymentID(refID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error rotating user payment ID: %v\n", err)
-			return err
 		}
 	}
 	return nil
@@ -99,27 +136,45 @@ func validateStripeEvent(payload []byte, sig string) (stripe.Event, error) {
 
 // processOrder takes a Stripe payment intent ID, a customer reference ID, and
 // an item purchased and updates the user's storage amount using the
-// stripeProductAmounts mapping.
-func processOrder(intentID string, refID string, item *stripe.LineItem) error {
-	fmt.Printf("%s x%d\n", item.Price.Product.ID, item.Quantity)
-
-	err := db.InsertNewOrder(
-		intentID,
-		refID,
-		item.Price.Product.ID,
-		int(item.Quantity))
-
+// stripeProductAmounts mapping. Returns the product ID associated with the
+// purchase and any error encountered.
+func processOrder(
+	intentID string,
+	refID string,
+	item *stripe.LineItem,
+) (string, error) {
+	productID := item.Price.Product.ID
+	err := db.InsertNewOrder(intentID, refID, productID, int(item.Quantity))
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	// Check if this is a subscription vs a transfer upgrade
+	if productID == stripeSubYearID || productID == stripeSubMonthID {
+		var exp time.Time
+		if productID == stripeSubYearID {
+			// Add 1 year to exp
+			exp = time.Now().AddDate(1, 0, 0)
+		} else {
+			// Add 1 month to exp
+			exp = time.Now().AddDate(0, 1, 0)
+		}
+
+		err = db.SetUserMembershipExpiration(refID, exp)
+		if err != nil {
+			return "", err
+		}
+
+		return productID, nil
 	}
 
 	// Update user storage capacity
-	amount, ok := stripeProductAmounts[item.Price.Product.ID]
+	amount, ok := stripeProductAmounts[productID]
 	if ok {
 		// TODO: Should storage be added regardless of db entry success?
 		err = db.AddUserStorage(refID, amount*int(item.Quantity))
 		if err != nil {
-			return err
+			return "", err
 		}
 	} else {
 		_, _ = fmt.Fprintf(
@@ -128,7 +183,7 @@ func processOrder(intentID string, refID string, item *stripe.LineItem) error {
 			item.Price.Product.ID)
 	}
 
-	return nil
+	return productID, nil
 }
 
 // init sets up the Stripe library with the developer's private key

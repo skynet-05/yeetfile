@@ -18,45 +18,109 @@
           {{ end }}
         </td>
       </tr>
-      <tr id="meter-div">
+      <tr>
+        <td>
+          <label for="subscription">Subscription:</label>
+        </td>
+        <td>
+          {{ if .IsActive }}
+          <span id="subscription">Active (expires {{ .ExpString }})</span>
+          {{ else }}
+          <span id="subscription">Inactive</span>
+          {{ end }}
+        </td>
+      </tr>
+      <tr>
         <td>
           <label for="meter">Remaining Transfer:</label>
         </td>
         <td>
-          <span id="meter">{{ .ReadableMeter }} ({{ .Meter }} bytes)</span>
+          <span id="meter">{{ .ReadableMeter }}</span>
         </td>
       </tr>
     </table>
   </div>
   <hr>
+  <h1>Memberships</h1>
+  <div id="subscription-div">
+    <div class="pricing-box col-1">
+      <h3>YeetFile 1-Month Membership</h3>
+      {{ if .IsActive }}
+      <p>Send unlimited text and up to 5GB of files for 1 month.</p>
+      <p>You're a member! You can renew/update your membership on {{ .ExpString }}.</p>
+      {{ else }}
+      <p>Send unlimited text and up to 5GB of files for 1 month.</p>
+      <a href="/checkout?type=sub1m&payment_id={{ .PaymentID }}"><button>Checkout │ $2</button></a>
+      or
+      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      {{ end }}
+    </div>
+    <div class="pricing-box col-2">
+      <h3>YeetFile 1-Year Membership</h3>
+      {{ if .IsActive }}
+      <p>Send unlimited text and up to 5GB of files each month for less than $1 per month.</p>
+      <p>You're a member! You can renew your membership on {{ .ExpString }}.</p>
+      {{ else }}
+      <p>Send unlimited text and up to 5GB of files each month for less than $1 per month.</p>
+      <a href="/checkout?type=sub1y&payment_id={{ .PaymentID }}"><button>Checkout │ $9</button></a>
+      or
+      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      {{ end }}
+    </div>
+  </div>
+  <hr>
+  {{ if .IsActive }}
   <h1>Upgrades</h1>
+  {{ else }}
+  <h1>Upgrades (requires membership)</h1>
+  {{ end }}
   <div id="upgrade-div">
     <div class="pricing-box col-1">
       <h3>+100GB Transfer</h3>
       <p>Increase available transfer amount by 100 gigabytes</p>
-      <a href="/checkout?size=100gb&payment_id={{ .PaymentID }}"><button>Checkout │ $19</button></a>
+      {{ if .IsActive }}
+      <a href="/checkout?type=100gb&payment_id={{ .PaymentID }}"><button>Checkout │ $19</button></a>
       <br>or<br>
       <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      {{ else }}
+      <button disabled>Checkout │ $19</button>
+      <br>or<br>
+      <button class="btcpay-btn" disabled>Use BTCPay</button>
+      {{ end }}
     </div>
 
     <div class="pricing-box col-2">
       <h3>+500GB Transfer</h3>
       <p>Increase available transfer amount by 500 gigabytes</p>
-      <a href="/checkout?size=500gb&payment_id={{ .PaymentID }}"><button>Checkout │ $79</button></a>
+      {{ if .IsActive }}
+      <a href="/checkout?type=500gb&payment_id={{ .PaymentID }}"><button>Checkout │ $79</button></a>
       <br>or<br>
       <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      {{ else }}
+      <button disabled>Checkout │ $79</button>
+      <br>or<br>
+      <button class="btcpay-btn" disabled>Use BTCPay</button>
+      {{ end }}
     </div>
 
     <div class="pricing-box col-3">
       <h3>+1TB Transfer</h3>
       <p>Increase available transfer amount by 1 terabyte</p>
-      <a href="/checkout?size=1tb&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
+      {{ if .IsActive }}
+      <a href="/checkout?type=1tb&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
       <br>or<br>
       <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      {{ else }}
+      <button disabled>Checkout │ $149</button>
+      <br>or<br>
+      <button class="btcpay-btn" disabled>Use BTCPay</button>
+      {{ end }}
     </div>
   </div>
   <br>
-  <span class="italic">Note: Transfer upgrades do not expire!</span>
+  <span class="italic">Note: Transfer upgrades never expire! Even if your membership expires, you can continue
+  using YeetFile until your transfer limit is depleted.</span>
+  {{ template "messages.html" . }}
 </div>
 {{ template "footer.html" . }}
 </body>

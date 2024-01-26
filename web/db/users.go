@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 	"yeetfile/web/utils"
 )
 
@@ -13,9 +14,11 @@ type User struct {
 	PasswordHash []byte
 	Meter        int
 	PaymentID    string
+	MemberExp    time.Time
 }
 
-var defaultMeter = utils.GetEnvVarInt("YEETFILE_METER", 1024*1024*2) // 2mb
+var defaultExp time.Time
+var defaultMeter = utils.GetEnvVarInt("YEETFILE_METER", 1024*1024*1024*5) // 5gb
 
 var UserAlreadyExists = errors.New("user already exists")
 
@@ -39,10 +42,10 @@ func NewUser(email string, pwHash []byte) (string, error) {
 	}
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, meter, payment_id)
-	      VALUES ($1, $2, $3, $4, $5)`
+	      (id, email, pw_hash, payment_id, meter, member_expiration)
+	      VALUES ($1, $2, $3, $4, $5, $6)`
 
-	_, err := db.Exec(s, id, email, pwHash, defaultMeter, paymentID)
+	_, err := db.Exec(s, id, email, pwHash, paymentID, 0, defaultExp)
 	if err != nil {
 		return "", err
 	}
@@ -100,13 +103,15 @@ func UserIDExists(id string) bool {
 	return false
 }
 
+// GetUserPasswordHashByEmail retrieves the password hash for a user with the
+// provided email address.
 func GetUserPasswordHashByEmail(email string) ([]byte, error) {
 	rows, err := db.Query(`
 		SELECT pw_hash
 		FROM users 
 		WHERE email = $1`, email)
 	if err != nil {
-		log.Fatalf("Error querying for user by email: %v", err)
+		log.Printf("Error querying for user by email: %v", err)
 		return nil, err
 	}
 
@@ -123,9 +128,35 @@ func GetUserPasswordHashByEmail(email string) ([]byte, error) {
 	return nil, errors.New("unable to find user")
 }
 
+// GetUserPasswordHashByID retrieves the password hash for a user with the
+// provided ID.
+func GetUserPasswordHashByID(id string) ([]byte, error) {
+	rows, err := db.Query(`
+		SELECT pw_hash
+		FROM users 
+		WHERE id = $1`, id)
+	if err != nil {
+		log.Printf("Error querying for user by id: %v", err)
+		return nil, err
+	}
+
+	if rows.Next() {
+		var pwHash []byte
+		err = rows.Scan(&pwHash)
+		if err != nil {
+			return nil, err
+		}
+
+		return pwHash, nil
+	}
+
+	return nil, errors.New("unable to find user")
+}
+
+// GetUserByID retrieves a User struct for given user ID.
 func GetUserByID(id string) (User, error) {
 	rows, err := db.Query(`
-		SELECT email, meter, payment_id
+		SELECT email, meter, payment_id, member_expiration
 		FROM users
 		WHERE id = $1`, id)
 	if err != nil {
@@ -137,7 +168,8 @@ func GetUserByID(id string) (User, error) {
 		var email string
 		var meter int
 		var paymentID string
-		err = rows.Scan(&email, &meter, &paymentID)
+		var expiration time.Time
+		err = rows.Scan(&email, &meter, &paymentID, &expiration)
 		if err != nil {
 			return User{}, err
 		}
@@ -146,12 +178,44 @@ func GetUserByID(id string) (User, error) {
 			Email:     email,
 			Meter:     meter,
 			PaymentID: paymentID,
+			MemberExp: expiration,
 		}, nil
 	}
 
 	return User{}, errors.New("unexpected error fetching user by id")
 }
 
+func GetUserByPaymentID(paymentID string) (User, error) {
+	rows, err := db.Query(`
+		SELECT email, meter, member_expiration
+		FROM users
+		WHERE payment_id = $1`, paymentID)
+	if err != nil {
+		log.Printf("Error querying for user by payment_id: %s\n", paymentID)
+		return User{}, err
+	}
+
+	if rows.Next() {
+		var email string
+		var meter int
+		var expiration time.Time
+		err = rows.Scan(&email, &meter, &expiration)
+		if err != nil {
+			return User{}, err
+		}
+
+		return User{
+			Email:     email,
+			Meter:     meter,
+			PaymentID: paymentID,
+			MemberExp: expiration,
+		}, nil
+	}
+
+	return User{}, errors.New("unexpected error fetching user by payment_id")
+}
+
+// GetUserIDByEmail returns a user's ID given their email address.
 func GetUserIDByEmail(email string) (string, error) {
 	rows, err := db.Query(`
 		SELECT id
@@ -175,6 +239,7 @@ func GetUserIDByEmail(email string) (string, error) {
 	return "", errors.New("unable to find user")
 }
 
+// GetUserMeter returns a user's meter given their user ID.
 func GetUserMeter(id string) (int, error) {
 	rows, err := db.Query(`
 		SELECT meter
@@ -199,6 +264,30 @@ func GetUserMeter(id string) (int, error) {
 	return 0, errors.New("unable to find user by id")
 }
 
+func GetUserEmailByPaymentID(paymentID string) (string, error) {
+	rows, err := db.Query(`
+		SELECT email
+		FROM users
+		WHERE payment_id = $1`, paymentID)
+	if err != nil {
+		log.Printf("Error querying for user by payment_id: %s\n", paymentID)
+		return "", err
+	}
+
+	if rows.Next() {
+		var email string
+		err = rows.Scan(&email)
+		if err != nil {
+			log.Printf("Error fetching email for user with payment id %s\n", paymentID)
+			return "", err
+		}
+
+		return email, nil
+	}
+
+	return "", errors.New("unable to find user by payment id")
+}
+
 // PaymentIDExists checks the user table to see if the provided payment ID
 // (for Stripe + BTCPay) already exists for another user.
 func PaymentIDExists(paymentID string) bool {
@@ -214,6 +303,22 @@ func PaymentIDExists(paymentID string) bool {
 	}
 
 	return false
+}
+
+// SetUserMembershipExpiration updates a user's membership expiration to be
+// one year from the current payment time.
+func SetUserMembershipExpiration(paymentID string, exp time.Time) error {
+	s := `UPDATE users
+              SET member_expiration=$1,
+                  meter=CASE WHEN meter < $2 THEN $2 ELSE meter END
+              WHERE payment_id=$3`
+
+	_, err := db.Exec(s, exp, defaultMeter, paymentID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // AddUserStorage adds amount to the meter column for a user with the matching
@@ -232,6 +337,8 @@ func AddUserStorage(paymentID string, amount int) error {
 	return nil
 }
 
+// ReduceUserStorage subtracts an amount of bytes (size) from a user's meter
+// given their user ID.
 func ReduceUserStorage(id string, size int) error {
 	s := `UPDATE users
           SET meter=meter - $2
@@ -243,4 +350,12 @@ func ReduceUserStorage(id string, size int) error {
 	}
 
 	return nil
+}
+
+func init() {
+	var err error
+	defaultExp, err = time.Parse(time.RFC1123, time.RFC1123)
+	if err != nil {
+		panic(err)
+	}
 }

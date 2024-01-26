@@ -52,7 +52,7 @@ func Run(addr string) {
 
 		// Payments (Stripe, BTCPay)
 		{POST, "/stripe", payments.StripeWebhook},
-		{GET, "/checkout", payments.StripeCheckout},
+		{GET, "/checkout", AuthMiddleware(payments.StripeCheckout)},
 
 		// HTML
 		{GET, "/", html.HomePageHandler},

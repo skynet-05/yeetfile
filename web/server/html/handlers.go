@@ -3,6 +3,7 @@ package html
 import (
 	"fmt"
 	"net/http"
+	"time"
 	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/server/html/templates"
@@ -10,6 +11,7 @@ import (
 )
 
 const ErrorHeader = "ErrorMsg"
+const SuccessHeader = "SuccessMsg"
 
 // HomePageHandler returns the homepage html if not logged in, otherwise the
 // upload page should be returned
@@ -96,20 +98,30 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 
 // AccountPageHandler returns the HTML page for a user managing their account
 func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) {
+	success := req.URL.Query().Get("success")
+	if len(success) > 0 && success == "1" {
+		w.Header().Set(SuccessHeader, "Successfully updated account!")
+	} else if len(success) > 0 && success == "0" {
+		w.Header().Set(ErrorHeader, "Failed to update account!")
+	}
+
 	err := templates.ServeTemplate(
 		w,
 		templates.AccountHTML,
 		templates.AccountTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:     session.IsValidSession(req),
-				Title:        "My Account",
-				ErrorMessage: w.Header().Get(ErrorHeader),
-				Javascript:   nil,
-				CSS:          []string{"account.css"},
+				LoggedIn:       session.IsValidSession(req),
+				Title:          "My Account",
+				ErrorMessage:   w.Header().Get(ErrorHeader),
+				SuccessMessage: w.Header().Get(SuccessHeader),
+				Javascript:     nil,
+				CSS:            []string{"account.css"},
 			},
 			Email:         user.Email,
 			Meter:         user.Meter,
 			PaymentID:     user.PaymentID,
+			ExpString:     user.MemberExp.Format("2 Jan 2006"),
+			IsActive:      time.Now().Before(user.MemberExp),
 			ReadableMeter: shared.ReadableFileSize(user.Meter),
 		},
 	)

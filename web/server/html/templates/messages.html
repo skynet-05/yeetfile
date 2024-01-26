@@ -4,10 +4,16 @@
         <p id="error-message">{{ .Base.ErrorMessage }}</p>
         <p id="success-message"></p>
     </div>
+{{ else if ne .Base.SuccessMessage "" }}
+    <div style="display: inherit !important" id="messages">
+        <hr>
+        <p id="error-message"></p>
+        <p id="success-message">{{ .Base.SuccessMessage }}</p>
+    </div>
 {{ else }}
     <div id="messages">
         <hr>
-        <p id="error-message">{{ .Base.ErrorMessage }}</p>
+        <p id="error-message"></p>
         <p id="success-message"></p>
     </div>
 {{ end }}
