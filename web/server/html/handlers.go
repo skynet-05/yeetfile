@@ -24,20 +24,23 @@ func HomePageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.UploadHTML,
-		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn:     session.IsValidSession(req),
-			Title:        "Upload",
-			ErrorMessage: w.Header().Get(ErrorHeader),
-			Javascript: []string{
-				"jszip.min.js",
-				"scrypt.min.js",
-				"nacl-fast.min.js",
-				"utils.js",
-				"crypto.js",
-				"upload.js",
+		templates.LoginTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "Upload",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript: []string{
+					"jszip.min.js",
+					"scrypt.min.js",
+					"nacl-fast.min.js",
+					"utils.js",
+					"crypto.js",
+					"upload.js",
+				},
+				CSS: []string{"upload.css"},
 			},
-			CSS: []string{"upload.css"},
-		}},
+			Meter: 0,
+		},
 	)
 
 	handleError(w, err)

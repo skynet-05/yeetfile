@@ -6,8 +6,33 @@
     <hr>
     <form id="upload-form">
         <fieldset id="form-fieldset">
-            <table>
-                <tr>
+            <div id="upload-type-div">
+                <input type="radio" id="upload-text-btn" name="signup" checked>
+                <label for="upload-text-btn">Upload Text</label><br>
+                {{ if .Base.LoggedIn }}
+                <input type="radio" id="upload-file-btn" name="signup">
+                <label for="upload-file-btn">Upload File(s)</label><br>
+                {{ else }}
+                <input type="radio" id="upload-file-btn" name="signup" disabled>
+                <label for="upload-file-btn">Upload File (<a href="/signup">sign up</a>
+                    or <a href="/login">log in</a>)</label><br>
+                {{ end }}
+            </div>
+
+            <table class="full-width">
+                <tr id="upload-text-row">
+                    <td>
+                        {{ if .Base.LoggedIn }}
+                        <label for="upload-text-content">Text:</label>
+                        {{ else }}
+                        <label id="upload-text-label" for="upload-text-content">Text (0/1000):</label>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <textarea id="upload-text-content" class="full-width" maxlength="1000"></textarea>
+                    </td>
+                </tr>
+                <tr id="upload-file-row">
                     <td>
                         <label for="upload">File(s):</label>
                     </td>
@@ -44,9 +69,16 @@
                         </select>
                     </td>
                 </tr>
+                <tr>
+                    <td>
+                        <label for="use-password">Protect with password:</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" id="use-password" role="button">
+                    </td>
+                </tr>
             </table>
-            <label for="use-password">Protect with password:</label>
-            <input type="checkbox" id="use-password" role="button">
+
             <div id="password-div">
                 <hr>
                 <table>
@@ -59,15 +91,16 @@
                         </td>
                     </tr>
                     <tr>
-                       <td>
-                           <label for="confirm-password">Confirm Password:</label>
-                       </td>
+                        <td>
+                            <label for="confirm-password">Confirm Password:</label>
+                        </td>
                         <td>
                             <input id="confirm-password" autocomplete="off" type="password">
                         </td>
                     </tr>
                 </table>
             </div>
+
         </fieldset>
 
         <input id="submit" type="submit" value="Upload"/>

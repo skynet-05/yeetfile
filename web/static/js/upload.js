@@ -7,6 +7,26 @@ const expUnits = {
 let pepper = "";
 
 document.addEventListener("DOMContentLoaded", () => {
+    setupTypeToggles();
+
+    let usePasswordCB = document.getElementById("use-password");
+    let passwordDiv = document.getElementById("password-div");
+    usePasswordCB.addEventListener("change", (event) => {
+        if (event.currentTarget.checked) {
+            passwordDiv.style.display = "inherit";
+        } else {
+            passwordDiv.style.display = "none";
+        }
+    });
+
+    let uploadTextContent = document.getElementById("upload-text-content");
+    let uploadTextLabel = document.getElementById("upload-text-label");
+    uploadTextContent.addEventListener("input", () => {
+        if (uploadTextLabel) {
+            uploadTextLabel.innerText=`Text (${uploadTextContent.value.length}/1000):`;
+        }
+    });
+
     let form = document.getElementById("upload-form");
     let nameDiv = document.getElementById("name-div");
     let filePicker = document.getElementById("upload");
@@ -318,4 +338,22 @@ const showFileTag = (tag) => {
     fileTag.textContent = `${tag}#${pepper}`;
     fileLink.textContent = link;
     fileLink.href = link;
+}
+
+const setupTypeToggles = () => {
+    let uploadTextBtn = document.getElementById("upload-text-btn");
+    let uploadTextRow = document.getElementById("upload-text-row");
+
+    let uploadFileBtn = document.getElementById("upload-file-btn");
+    let uploadFileRow = document.getElementById("upload-file-row");
+
+    uploadTextBtn.addEventListener("click", () => {
+        uploadTextRow.style.display = "contents";
+        uploadFileRow.style.display = "none";
+    });
+
+    uploadFileBtn.addEventListener("click", () => {
+        uploadTextRow.style.display = "none";
+        uploadFileRow.style.display = "contents";
+    });
 }

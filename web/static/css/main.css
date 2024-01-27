@@ -10,6 +10,10 @@
     border-radius: 5px;
 }
 
+.full-width {
+    width: 100%;
+}
+
 a .disabled {
     pointer-events: none;
     cursor: default;
@@ -17,6 +21,10 @@ a .disabled {
 
 button {
     cursor: pointer;
+}
+
+textarea {
+    min-height: 50px;
 }
 
 #center-div {

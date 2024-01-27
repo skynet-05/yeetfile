@@ -21,6 +21,11 @@ type Template struct {
 	Base BaseTemplate
 }
 
+type LoginTemplate struct {
+	Base  BaseTemplate
+	Meter int
+}
+
 type AccountTemplate struct {
 	Base          BaseTemplate
 	Email         string

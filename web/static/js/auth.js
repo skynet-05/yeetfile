@@ -1,8 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    let messagesDiv = document.getElementById("messages");
-    let errorMsg = document.getElementById("error-message");
-    let successMsg = document.getElementById("success-message");
-
     setupToggles();
 });
 

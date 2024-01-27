@@ -17,3 +17,14 @@
 #form-fieldset {
     border: none;
 }
+
+#upload-type-div {
+    border-bottom: 2px dotted gray !important;
+    border-radius: 0 !important;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+#upload-file-row {
+    display: none;
+}
