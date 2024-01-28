@@ -33,11 +33,11 @@ var stripeRequirements = []string{
 }
 
 var stripeLinkMapping = map[string]string{
-	typeSub1Month: stripeSubMonthLink,
-	typeSub1Year:  stripeSubYearLink,
-	type100gb:     stripe100GBLink,
-	type500gb:     stripe500GBLink,
-	type1tb:       stripe1TBLink,
+	TypeSub1Month: stripeSubMonthLink,
+	TypeSub1Year:  stripeSubYearLink,
+	Type100GB:     stripe100GBLink,
+	Type500GB:     stripe500GBLink,
+	Type1TB:       stripe1TBLink,
 }
 
 var stripeDescMap = map[string]string{

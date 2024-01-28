@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 	"yeetfile/web/db"
+	"yeetfile/web/server/payments/btcpay"
 )
 
 // StripeWebhook handles relevant incoming webhook events from Stripe related
@@ -61,7 +62,7 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Make sure the user is a member if adding upgraded storage
-	if itemType != typeSub1Month && itemType != typeSub1Year {
+	if itemType != TypeSub1Month && itemType != TypeSub1Year {
 		user, err := db.GetUserByPaymentID(paymentID)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -76,4 +77,47 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request) {
 
 	checkoutParams := fmt.Sprintf("?client_reference_id=%s", paymentID)
 	http.Redirect(w, req, checkoutLink+checkoutParams, http.StatusTemporaryRedirect)
+}
+
+// BTCPayWebhook handles relevant incoming webhook events from BTCPay
+func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
+	if !btcpay.IsValidRequest(req) {
+		log.Printf("Invalid BTCPay webhook event, ignoring")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err := io.ReadAll(req.Body)
+	if err != nil {
+		return
+	}
+
+	// TODO
+	w.WriteHeader(http.StatusOK)
+}
+
+// BTCPayCheckout generates an invoice for the requested product/upgrade
+func BTCPayCheckout(w http.ResponseWriter, req *http.Request) {
+	// Ensure Stripe has already been set up
+	if !btcpay.Ready {
+		log.Println("BTCPay checkout requested, but it has not been set up.")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	itemType := req.URL.Query().Get("type")
+	paymentID := req.URL.Query().Get("payment_id")
+
+	if len(itemType) == 0 || len(paymentID) == 0 || !db.PaymentIDExists(paymentID) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	checkoutLink, err := btcpay.GenerateBTCPayInvoice(itemType, paymentID)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+
+	http.Redirect(w, req, checkoutLink, http.StatusTemporaryRedirect)
 }

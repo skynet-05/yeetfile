@@ -1,7 +1,7 @@
 package payments
 
-var typeSub1Month = "sub1m"
-var typeSub1Year = "sub1y"
-var type100gb = "100gb"
-var type500gb = "500gb"
-var type1tb = "1tb"
+var TypeSub1Month = "sub1m"
+var TypeSub1Year = "sub1y"
+var Type100GB = "100gb"
+var Type500GB = "500gb"
+var Type1TB = "1tb"
