@@ -56,23 +56,19 @@ type NewInvoiceRequest struct {
 
 // GenerateBTCPayInvoice creates an invoice through BTCPay server and returns
 // the checkout link for that invoice.
-func GenerateBTCPayInvoice(itemType string, paymentID string) (string, error) {
+func GenerateBTCPayInvoice(paymentID string, price float32) (string, error) {
 	if !Ready {
 		return "", errors.New("BTCPay server not set up")
 	}
 
-	price, ok := btcPayPriceMapping[itemType]
-	if !ok {
-		return "", errors.New("invalid BTCPay checkout item tag")
-	}
-
+	strPrice := fmt.Sprintf("%f", price)
 	orderID := fmt.Sprintf("btcpay_%s", paymentID)
 
 	newInvoice := NewInvoiceRequest{
 		Metadata: struct {
 			OrderID string `json:"orderId"`
 		}(struct{ OrderID string }{OrderID: orderID}),
-		Amount:   price,
+		Amount:   strPrice,
 		Currency: "USD",
 	}
 

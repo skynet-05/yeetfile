@@ -113,7 +113,14 @@ func BTCPayCheckout(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	checkoutLink, err := btcpay.GenerateBTCPayInvoice(itemType, paymentID)
+	// Fetch price of item being purchased
+	price, ok := priceMapping[itemType]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	checkoutLink, err := btcpay.GenerateBTCPayInvoice(paymentID, price)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return

@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"yeetfile/web/server/payments"
 )
 
 var apiKey = os.Getenv("YEETFILE_BTCPAY_API_KEY")
@@ -18,15 +17,6 @@ var storeID = os.Getenv("YEETFILE_BTCPAY_STORE_ID")
 var serverURL = os.Getenv("YEETFILE_BTCPAY_SERVER_URL")
 
 var Ready = true
-
-// FIXME: Test values, needs updating for prod
-var btcPayPriceMapping = map[string]string{
-	payments.TypeSub1Month: "0.01",
-	payments.TypeSub1Year:  "0.01",
-	payments.Type100GB:     "0.01",
-	payments.Type500GB:     "0.01",
-	payments.Type1TB:       "0.01",
-}
 
 // IsValidRequest validates incoming webhook events from BTCPay Server
 func IsValidRequest(req *http.Request) bool {
