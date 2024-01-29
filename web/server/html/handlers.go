@@ -106,21 +106,7 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 
 // AccountPageHandler returns the HTML page for a user managing their account
 func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) {
-	success := req.URL.Query().Get("success")
-	conf := req.URL.Query().Get("confirmation")
-	successMsg := ""
-	errorMsg := ""
-	if len(success) > 0 && success == "1" {
-		successMsg = "Successfully updated account! "
-		if len(conf) > 0 {
-			paymentID, err := db.GetPaymentIDBySessionID(conf)
-			if err == nil {
-				successMsg += fmt.Sprintf(OrderConfMsg, paymentID)
-			}
-		}
-	} else if len(success) > 0 && success == "0" {
-		errorMsg = "Failed to update account!"
-	}
+	successMsg, errorMsg := generateAccountMessages(req)
 
 	err := templates.ServeTemplate(
 		w,
@@ -183,6 +169,37 @@ func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 	)
 
 	handleError(w, err)
+}
+
+// generateAccountMessages takes a request and generates success and error messages from
+// the data contained in the request.
+func generateAccountMessages(req *http.Request) (string, string) {
+	success := req.URL.Query().Get("success")
+	conf := req.URL.Query().Get("confirmation")
+	fromBTC := req.URL.Query().Get("btcpay")
+
+	successMsg := ""
+	errorMsg := ""
+	if len(success) > 0 && success == "1" {
+		successMsg = "Successfully updated account! "
+
+		if len(fromBTC) > 0 && fromBTC == "1" {
+			successMsg += "BTCPay orders can take up to 5 minutes " +
+				"to finalize. Your account will be updated once " +
+				"your transaction has been validated. "
+		}
+
+		if len(conf) > 0 {
+			paymentID, err := db.GetStripePaymentIDBySessionID(conf)
+			if err == nil {
+				successMsg += fmt.Sprintf(OrderConfMsg, paymentID)
+			}
+		}
+	} else if len(success) > 0 && success == "0" {
+		errorMsg = "Failed to update account!"
+	}
+
+	return successMsg, errorMsg
 }
 
 func handleError(w http.ResponseWriter, err error) {

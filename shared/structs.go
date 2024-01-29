@@ -1,14 +1,6 @@
 package shared
 
-import (
-	"fmt"
-	"time"
-)
-
-const NonceSize int = 24
-const KeySize int = 32
-const ChunkSize int = 5242880 // 5 mb
-const TotalOverhead int = 40  // secretbox overhead (16) + nonce size (24)
+import "time"
 
 type UploadMetadata struct {
 	Name       string `json:"name"`
@@ -41,19 +33,4 @@ type Login struct {
 
 type SessionInfo struct {
 	Meter int `json:"meter"`
-}
-
-func ReadableFileSize(b int) string {
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGT"[exp])
 }

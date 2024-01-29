@@ -64,6 +64,6 @@ func init() {
 		Host:           os.Getenv("YEETFILE_EMAIL_HOST"),
 		Port:           port,
 		Password:       os.Getenv("YEETFILE_EMAIL_PW"),
-		CallbackDomain: os.Getenv("YEETFILE_EMAIL_CALLBACK_DOMAIN"),
+		CallbackDomain: os.Getenv("YEETFILE_CALLBACK_DOMAIN"),
 	}
 }

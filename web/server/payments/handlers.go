@@ -1,13 +1,16 @@
 package payments
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"time"
+	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/server/payments/btcpay"
+	"yeetfile/web/server/payments/stripe"
 )
 
 // StripeWebhook handles relevant incoming webhook events from Stripe related
@@ -22,14 +25,15 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Validate the incoming event against the signature header
-	event, err := validateStripeEvent(payload, req.Header.Get("Stripe-Signature"))
+	signature := req.Header.Get("Stripe-Signature")
+	event, err := stripe.ValidateEvent(payload, signature)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Process the event received from stripe
-	err = processStripeEvent(event)
+	err = stripe.ProcessEvent(event)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -42,7 +46,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 // using Stripe Checkout
 func StripeCheckout(w http.ResponseWriter, req *http.Request) {
 	// Ensure Stripe has already been set up
-	if !stripeReady {
+	if !stripe.Ready {
 		log.Println("Stripe checkout requested, but Stripe has not been set up.")
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -55,24 +59,10 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	checkoutLink, ok := stripeLinkMapping[itemType]
+	checkoutLink, ok := stripe.LinkMapping[itemType]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	}
-
-	// Make sure the user is a member if adding upgraded storage
-	if itemType != TypeSub1Month && itemType != TypeSub1Year {
-		user, err := db.GetUserByPaymentID(paymentID)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		if user.MemberExp.Before(time.Now()) {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
 	}
 
 	checkoutParams := fmt.Sprintf("?client_reference_id=%s", paymentID)
@@ -81,24 +71,35 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request) {
 
 // BTCPayWebhook handles relevant incoming webhook events from BTCPay
 func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
-	if !btcpay.IsValidRequest(req) {
-		log.Printf("Invalid BTCPay webhook event, ignoring")
+	bodyBytes, isValid := btcpay.IsValidRequest(req)
+	if !isValid {
+		log.Printf("Error validating BTCPay webhook event, ignoring")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	_, err := io.ReadAll(req.Body)
+	reader := bytes.NewReader(bodyBytes)
+	decoder := json.NewDecoder(reader)
+	var settledPayment btcpay.SettledPayment
+	err := decoder.Decode(&settledPayment)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// TODO
+	err = btcpay.FinalizeInvoice(settledPayment)
+	if err != nil {
+		log.Printf("Error finalizing BTCPay invoice: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
 // BTCPayCheckout generates an invoice for the requested product/upgrade
 func BTCPayCheckout(w http.ResponseWriter, req *http.Request) {
-	// Ensure Stripe has already been set up
+	// Ensure BTCPay has already been set up
 	if !btcpay.Ready {
 		log.Println("BTCPay checkout requested, but it has not been set up.")
 		w.WriteHeader(http.StatusNotFound)
@@ -108,23 +109,38 @@ func BTCPayCheckout(w http.ResponseWriter, req *http.Request) {
 	itemType := req.URL.Query().Get("type")
 	paymentID := req.URL.Query().Get("payment_id")
 
-	if len(itemType) == 0 || len(paymentID) == 0 || !db.PaymentIDExists(paymentID) {
+	isValidID := false
+	if len(paymentID) > 0 {
+		isValidID = db.PaymentIDExists(paymentID)
+	}
+
+	if len(itemType) == 0 || len(paymentID) == 0 || !isValidID {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Fetch price of item being purchased
-	price, ok := priceMapping[itemType]
+	price, ok := shared.PriceMapping[itemType]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	checkoutLink, err := btcpay.GenerateBTCPayInvoice(paymentID, price)
+	// Generate BTCPay invoice w/ checkout link
+	invoice, err := btcpay.GenerateBTCPayInvoice(paymentID, price)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Printf("Error generating BTCPay invoice: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, req, checkoutLink, http.StatusTemporaryRedirect)
+	// Add payment ID to database
+	err = db.InsertNewBTCPayOrder(paymentID, invoice.ID, itemType)
+	if err != nil {
+		fmt.Printf("Error inserting new BTCPay order: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, req, invoice.CheckoutLink, http.StatusTemporaryRedirect)
 }

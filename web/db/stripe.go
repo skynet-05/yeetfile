@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func InsertNewOrder(
+func InsertNewStripeOrder(
 	intentID string,
 	paymentID string,
 	productID string,
@@ -19,7 +19,7 @@ func InsertNewOrder(
 	return err
 }
 
-func GetPaymentIDBySessionID(sessionID string) (string, error) {
+func GetStripePaymentIDBySessionID(sessionID string) (string, error) {
 	rows, err := db.Query(`
 		SELECT payment_id
 		FROM stripe

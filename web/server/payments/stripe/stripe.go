@@ -1,4 +1,4 @@
-package payments
+package stripe
 
 import (
 	"encoding/json"
@@ -9,12 +9,13 @@ import (
 	"github.com/stripe/stripe-go/v76/webhook"
 	"os"
 	"time"
+	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/mail"
 	"yeetfile/web/utils"
 )
 
-var stripeReady = true
+var Ready = true
 
 var stripeSubMonthID = os.Getenv("YEETFILE_STRIPE_SUB_MONTH_ID")
 var stripeSubYearID = os.Getenv("YEETFILE_STRIPE_SUB_YEAR_ID")
@@ -32,33 +33,33 @@ var stripeRequirements = []string{
 	stripe100GBLink, stripe500GBLink, stripe1TBLink, stripeSubMonthLink, stripeSubYearLink,
 }
 
-var stripeLinkMapping = map[string]string{
-	TypeSub1Month: stripeSubMonthLink,
-	TypeSub1Year:  stripeSubYearLink,
-	Type100GB:     stripe100GBLink,
-	Type500GB:     stripe500GBLink,
-	Type1TB:       stripe1TBLink,
+var LinkMapping = map[string]string{
+	shared.TypeSub1Month: stripeSubMonthLink,
+	shared.TypeSub1Year:  stripeSubYearLink,
+	shared.Type100GB:     stripe100GBLink,
+	shared.Type500GB:     stripe500GBLink,
+	shared.Type1TB:       stripe1TBLink,
 }
 
 var stripeDescMap = map[string]string{
-	stripeSubMonthID: "1 Month YeetFile Membership",
-	stripeSubYearID:  "1 Year YeetFile Membership",
-	stripe100GBID:    "YeetFile 100GB Transfer Upgrade",
-	stripe500GBID:    "YeetFile 500GB Transfer Upgrade",
-	stripe1TBID:      "YeetFile 1TB Transfer Upgrade",
+	stripeSubMonthID: shared.DescriptionMap[shared.TypeSub1Month],
+	stripeSubYearID:  shared.DescriptionMap[shared.TypeSub1Year],
+	stripe100GBID:    shared.DescriptionMap[shared.Type100GB],
+	stripe500GBID:    shared.DescriptionMap[shared.Type500GB],
+	stripe1TBID:      shared.DescriptionMap[shared.Type1TB],
 }
 
 // stripeProductAmounts maps product IDs to their respective amounts of storage
 // that they grant a user
 var stripeProductAmounts = map[string]int{
-	os.Getenv("YEETFILE_STRIPE_100GB_ID"): 107_374_182_400,   // 100GB
-	os.Getenv("YEETFILE_STRIPE_500GB_ID"): 536_870_912_000,   // 500GB
-	os.Getenv("YEETFILE_STRIPE_1TB_ID"):   1_073_741_824_000, // 1TB
+	os.Getenv("YEETFILE_STRIPE_100GB_ID"): shared.UpgradeMap[shared.Type100GB], // 100GB
+	os.Getenv("YEETFILE_STRIPE_500GB_ID"): shared.UpgradeMap[shared.Type500GB], // 500GB
+	os.Getenv("YEETFILE_STRIPE_1TB_ID"):   shared.UpgradeMap[shared.Type1TB],   // 1TB
 }
 
-// processStripeEvent receives an input stripe.Event and determines if/how a
+// ProcessEvent receives an input stripe.Event and determines if/how a
 // user's meter should be updated depending on the product they purchased.
-func processStripeEvent(event stripe.Event) error {
+func ProcessEvent(event stripe.Event) error {
 	// Currently only successful checkouts are handled by the webhook
 	if event.Type != "checkout.session.completed" {
 		return nil
@@ -122,10 +123,10 @@ func processStripeEvent(event stripe.Event) error {
 	return nil
 }
 
-// validateStripeEvent reads the request body and validates the contents of the
+// ValidateEvent reads the request body and validates the contents of the
 // request against the signature from the header. It returns the full Stripe
 // event (if valid) and an error or nil.
-func validateStripeEvent(payload []byte, sig string) (stripe.Event, error) {
+func ValidateEvent(payload []byte, sig string) (stripe.Event, error) {
 	endpointSecret := os.Getenv("YEETFILE_STRIPE_WEBHOOK_SECRET")
 	event, err := webhook.ConstructEvent(payload, sig, endpointSecret)
 
@@ -148,7 +149,7 @@ func processOrder(
 	item *stripe.LineItem,
 ) (string, error) {
 	productID := item.Price.Product.ID
-	err := db.InsertNewOrder(intentID, refID, productID, sessionID)
+	err := db.InsertNewStripeOrder(intentID, refID, productID, sessionID)
 	if err != nil {
 		return "", err
 	}
@@ -194,12 +195,12 @@ func processOrder(
 func init() {
 	stripe.Key = os.Getenv("YEETFILE_STRIPE_KEY")
 	if len(stripe.Key) == 0 {
-		stripeReady = false
+		Ready = false
 	}
 
 	for _, str := range stripeRequirements {
 		if len(str) == 0 {
-			stripeReady = false
+			Ready = false
 			break
 		}
 	}

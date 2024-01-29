@@ -19,23 +19,23 @@ var serverURL = os.Getenv("YEETFILE_BTCPAY_SERVER_URL")
 var Ready = true
 
 // IsValidRequest validates incoming webhook events from BTCPay Server
-func IsValidRequest(req *http.Request) bool {
+func IsValidRequest(req *http.Request) ([]byte, bool) {
 	secret := os.Getenv("YEETFILE_BTCPAY_WEBHOOK_SECRET")
 	sig := req.Header.Get("BTCPAY-SIG")
 	if len(sig) == 0 || len(secret) == 0 {
-		return false
+		return nil, false
 	}
 
 	reqBody, err := io.ReadAll(req.Body)
 	if err != nil {
 		log.Printf("Error reading BTCPay webhook body")
-		return false
+		return nil, false
 	}
 
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(reqBody)
 	expectedMAC := fmt.Sprintf("sha256=%s", hex.EncodeToString(mac.Sum(nil)))
-	return sig == expectedMAC
+	return reqBody, sig == expectedMAC
 }
 
 // sendRequest sends a request to BTCPay Server with the correct authentication

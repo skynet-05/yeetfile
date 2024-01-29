@@ -104,20 +104,13 @@
     <div class="pricing-box col-3">
       <h3>+1TB Transfer</h3>
       <p>Increase available transfer amount by 1 terabyte</p>
-      {{ if .IsActive }}
       <a href="/checkout?type=1tb&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
       <br>or<br>
       <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
-      {{ else }}
-      <button disabled>Checkout │ $149</button>
-      <br>or<br>
-      <button class="btcpay-btn" disabled>Use BTCPay</button>
-      {{ end }}
     </div>
   </div>
   <br>
-  <span class="italic">Note: Transfer upgrades never expire! Even if your membership expires, you can continue
-  using YeetFile until your transfer limit is depleted.</span>
+  <span class="italic">Note: Transfer upgrades don't require a membership, and they never expire.</span>
 </div>
 {{ template "footer.html" . }}
 </body>
