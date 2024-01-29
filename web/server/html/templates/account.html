@@ -20,7 +20,7 @@
       </tr>
       <tr>
         <td>
-          <label for="subscription">Subscription:</label>
+          <label for="subscription">Membership:</label>
         </td>
         <td>
           {{ if .IsActive }}
@@ -53,60 +53,44 @@
     <div class="pricing-box col-1">
       <h3>YeetFile 1-Month Membership</h3>
       <p>Send unlimited text and up to 5GB of files for 1 month.</p>
-      <a href="/checkout?type=sub1m&payment_id={{ .PaymentID }}"><button>Checkout │ $2</button></a>
+      <a href="/checkout?type={{ .Membership1Month }}&payment_id={{ .PaymentID }}"><button>Checkout │ $2</button></a>
       or
-      <a href="/checkout-btc?type=sub1m&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
+      <a href="/checkout-btc?type={{ .Membership1Month }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
     <div class="pricing-box col-2">
       <h3>YeetFile 1-Year Membership</h3>
       <p>Send unlimited text and up to 5GB of files each month for less than $1 per month.</p>
-      <a href="/checkout?type=sub1y&payment_id={{ .PaymentID }}"><button>Checkout │ $9</button></a>
+      <a href="/checkout?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button>Checkout │ $9</button></a>
       or
-      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      <a href="/checkout-btc?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
     {{ end }}
   </div>
   <hr>
-  {{ if .IsActive }}
   <h1>Upgrades</h1>
-  {{ else }}
-  <h1>Upgrades (requires membership)</h1>
-  {{ end }}
   <div id="upgrade-div">
     <div class="pricing-box col-1">
       <h3>+100GB Transfer</h3>
       <p>Increase available transfer amount by 100 gigabytes</p>
-      {{ if .IsActive }}
-      <a href="/checkout?type=100gb&payment_id={{ .PaymentID }}"><button>Checkout │ $19</button></a>
+      <a href="/checkout?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button>Checkout │ $19</button></a>
       <br>or<br>
-      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
-      {{ else }}
-      <button disabled>Checkout │ $19</button>
-      <br>or<br>
-      <button class="btcpay-btn" disabled>Use BTCPay</button>
-      {{ end }}
+      <a href="/checkout-btc?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
 
     <div class="pricing-box col-2">
       <h3>+500GB Transfer</h3>
       <p>Increase available transfer amount by 500 gigabytes</p>
-      {{ if .IsActive }}
-      <a href="/checkout?type=500gb&payment_id={{ .PaymentID }}"><button>Checkout │ $79</button></a>
+      <a href="/checkout?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button>Checkout │ $79</button></a>
       <br>or<br>
-      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
-      {{ else }}
-      <button disabled>Checkout │ $79</button>
-      <br>or<br>
-      <button class="btcpay-btn" disabled>Use BTCPay</button>
-      {{ end }}
+      <a href="/checkout-btc?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
 
     <div class="pricing-box col-3">
       <h3>+1TB Transfer</h3>
       <p>Increase available transfer amount by 1 terabyte</p>
-      <a href="/checkout?type=1tb&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
+      <a href="/checkout?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
       <br>or<br>
-      <a href="/"><button class="btcpay-btn">Use BTCPay</button></a>
+      <a href="/checkout-btc?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
   </div>
   <br>

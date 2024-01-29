@@ -27,13 +27,18 @@ type LoginTemplate struct {
 }
 
 type AccountTemplate struct {
-	Base          BaseTemplate
-	Email         string
-	Meter         int
-	IsActive      bool
-	PaymentID     string
-	ExpString     string
-	ReadableMeter string
+	Base             BaseTemplate
+	Email            string
+	Meter            int
+	IsActive         bool
+	PaymentID        string
+	ExpString        string
+	ReadableMeter    string
+	Membership1Month string
+	Membership1Year  string
+	Upgrade100GB     string
+	Upgrade500GB     string
+	Upgrade1TB       string
 }
 
 type VerificationTemplate struct {
