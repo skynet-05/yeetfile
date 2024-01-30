@@ -93,11 +93,12 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 		w,
 		templates.LoginHTML,
 		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn:     session.IsValidSession(req),
-			Title:        "Log In",
-			ErrorMessage: w.Header().Get(ErrorHeader),
-			Javascript:   []string{"auth.js"},
-			CSS:          []string{"auth.css"},
+			LoggedIn:       session.IsValidSession(req),
+			Title:          "Log In",
+			SuccessMessage: w.Header().Get(SuccessHeader),
+			ErrorMessage:   w.Header().Get(ErrorHeader),
+			Javascript:     []string{"auth.js"},
+			CSS:            []string{"auth.css"},
 		}},
 	)
 
@@ -170,6 +171,31 @@ func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 				Javascript:   nil,
 				CSS:          []string{"faq.css"},
 			},
+		},
+	)
+
+	handleError(w, err)
+}
+
+// ForgotPageHandler returns the HTML page for resetting a user's password
+func ForgotPageHandler(w http.ResponseWriter, req *http.Request, email string) {
+	if len(email) == 0 {
+		email = req.URL.Query().Get("email")
+	}
+
+	err := templates.ServeTemplate(
+		w,
+		templates.ForgotHTML,
+		templates.ForgotPasswordTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:     false,
+				Title:        "Forgot Password",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   nil,
+				CSS:          nil,
+			},
+			Email: email,
+			Code:  req.URL.Query().Get("code"),
 		},
 	)
 

@@ -46,6 +46,12 @@ type VerificationTemplate struct {
 	Email string
 }
 
+type ForgotPasswordTemplate struct {
+	Base  BaseTemplate
+	Email string
+	Code  string
+}
+
 const (
 	UploadHTML       = "upload.html"
 	DownloadHTML     = "download.html"
@@ -53,6 +59,7 @@ const (
 	SignupHTML       = "signup.html"
 	LoginHTML        = "login.html"
 	AccountHTML      = "account.html"
+	ForgotHTML       = "forgot.html"
 	FaqHTML          = "faq.html"
 )
 

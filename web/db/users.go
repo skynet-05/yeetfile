@@ -86,6 +86,32 @@ func RotateUserPaymentID(paymentID string) error {
 	return nil
 }
 
+func SetNewPassword(email string, pwHash []byte) error {
+	rows, err := db.Query(`SELECT id from users WHERE email = $1`, email)
+	if err != nil {
+		return err
+	} else if !rows.Next() {
+		errorStr := fmt.Sprintf("unable to find user with email '%s'", email)
+		return errors.New(errorStr)
+	}
+
+	// Read in account ID for the user
+	var accountID string
+	err = rows.Scan(&accountID)
+
+	// Replace payment ID
+	s := `UPDATE users
+	      SET pw_hash=$1
+	      WHERE id=$2`
+
+	_, err = db.Exec(s, pwHash, accountID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // UserIDExists checks the users table to see if the provided id is already
 // being used for another user.
 func UserIDExists(id string) bool {

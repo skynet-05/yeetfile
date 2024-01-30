@@ -34,3 +34,14 @@ type Login struct {
 type SessionInfo struct {
 	Meter int `json:"meter"`
 }
+
+type ForgotPassword struct {
+	Email string `json:"email"`
+}
+
+type ResetPassword struct {
+	Email           string `json:"email"`
+	Code            string `json:"code"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm-password"`
+}

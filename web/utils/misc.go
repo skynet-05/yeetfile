@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -105,4 +107,54 @@ func Contains(items []string, target string) bool {
 func PrettyPrintStruct(v any) {
 	s, _ := json.MarshalIndent(v, "", "\t")
 	fmt.Println(string(s))
+}
+
+// GetStructFromFormOrJSON takes a struct and an http request and pulls out
+// values from either an http form or a json request body.
+func GetStructFromFormOrJSON[T any](t *T, req *http.Request) (T, error) {
+	_ = req.ParseForm()
+	hasForm := false
+
+	val := reflect.ValueOf(t).Elem()
+	for i := 0; i < val.Type().NumField(); i++ {
+		// Skip fields without json tag
+		if tag, ok := val.Type().Field(i).Tag.Lookup("json"); ok {
+			formVal := req.FormValue(tag)
+			if len(formVal) == 0 {
+				fmt.Println("Missing tag: " + tag)
+				break
+			}
+
+			hasForm = true
+			switch val.Field(i).Type().Kind() {
+			case reflect.String:
+				val.Field(i).SetString(formVal)
+				break
+			case reflect.Int:
+				intVal, _ := strconv.Atoi(formVal)
+				val.Field(i).SetInt(int64(intVal))
+				break
+			case reflect.Bool:
+				boolVal, _ := strconv.ParseBool(formVal)
+				val.Field(i).SetBool(boolVal)
+				break
+			case reflect.Float32:
+				fallthrough
+			case reflect.Float64:
+				floatVal, _ := strconv.ParseFloat(formVal, 64)
+				val.Field(i).SetFloat(floatVal)
+				break
+			}
+		}
+	}
+
+	if !hasForm {
+		fmt.Println("Trying to decode")
+		err := json.NewDecoder(req.Body).Decode(&t)
+		if err != nil {
+			return *t, err
+		}
+	}
+
+	return *t, nil
 }

@@ -7,19 +7,21 @@ import (
 )
 
 // NewVerification creates a new verification entry for a user
-func NewVerification(email string, pwHash []byte) (string, error) {
-	rows, err := db.Query(`SELECT * FROM users WHERE email = $1`, email)
+func NewVerification(email string, pwHash []byte, reset bool) (string, error) {
+	if !reset {
+		r, e := db.Query(`SELECT * FROM users WHERE email = $1`, email)
 
-	if err != nil {
-		return "", err
-	} else if rows.Next() {
-		return "", UserAlreadyExists
+		if e != nil {
+			return "", e
+		} else if r.Next() {
+			return "", UserAlreadyExists
+		}
 	}
 
 	// Generate verification code to be sent to the user's email
 	code := utils.GenRandomNumbers(6)
 
-	rows, err = db.Query(`SELECT * FROM verify WHERE email = $1`, email)
+	rows, err := db.Query(`SELECT * FROM verify WHERE email = $1`, email)
 	if rows.Next() {
 		// This user already has a verification entry -- update the
 		// code before resending the email

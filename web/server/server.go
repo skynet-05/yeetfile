@@ -49,6 +49,8 @@ func Run(addr string) {
 		{POST, "/login", auth.LoginHandler},
 		{POST, "/signup", auth.SignupHandler},
 		{GET | PUT, "/account", auth.AccountHandler},
+		{GET | POST, "/forgot", auth.ForgotPasswordHandler},
+		{POST, "/reset", auth.ResetPasswordHandler},
 
 		// Payments (Stripe, BTCPay)
 		{POST, "/stripe", payments.StripeWebhook},

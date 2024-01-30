@@ -24,7 +24,7 @@ func SignupWithEmail(signup shared.Signup) error {
 		return err
 	}
 
-	code, err := db.NewVerification(signup.Email, hash)
+	code, err := db.NewVerification(signup.Email, hash, false)
 	if err != nil {
 		return err
 	}

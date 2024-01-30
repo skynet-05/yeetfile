@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"strings"
 	"yeetfile/shared"
 	"yeetfile/web/db"
+	"yeetfile/web/mail"
 	"yeetfile/web/server/html"
 	"yeetfile/web/server/session"
 	"yeetfile/web/utils"
@@ -120,20 +122,21 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 func AccountHandler(w http.ResponseWriter, req *http.Request) {
 	if !session.IsValidSession(req) {
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
-	} else {
-		s, _ := session.GetSession(req)
-		id := session.GetSessionUserID(s)
-		user, err := db.GetUserByID(id)
-		if err != nil {
-			log.Printf("Error fetching user by id: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+		return
+	}
 
-		if req.Method == http.MethodGet {
-			html.AccountPageHandler(w, req, user)
-			return
-		}
+	s, _ := session.GetSession(req)
+	id := session.GetSessionUserID(s)
+	user, err := db.GetUserByID(id)
+	if err != nil {
+		log.Printf("Error fetching user by id: %v\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if req.Method == http.MethodGet {
+		html.AccountPageHandler(w, req, user)
+		return
 	}
 }
 
@@ -187,4 +190,67 @@ func LogoutHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+}
+
+// ForgotPasswordHandler handles a GET request for returning a form for the user
+// to fill out to recover their password, or a POST request for submitting the
+// request to reset their password.
+func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
+	if session.IsValidSession(req) {
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	if req.Method == http.MethodGet {
+		html.ForgotPageHandler(w, req, "")
+		return
+	} else if req.Method == http.MethodPost {
+		_ = req.ParseForm()
+
+		var forgot shared.ForgotPassword
+		forgot, err := utils.GetStructFromFormOrJSON(&forgot, req)
+
+		id, err := db.GetUserIDByEmail(forgot.Email)
+		if err == nil && len(id) > 0 && len(forgot.Email) > 0 {
+			code, _ := db.NewVerification(forgot.Email, []byte(""), true)
+			_ = mail.SendResetEmail(code, forgot.Email)
+		}
+
+		redirect := fmt.Sprintf("/forgot?email=%s", forgot.Email)
+		http.Redirect(w, req, redirect, http.StatusSeeOther)
+	}
+}
+
+// ResetPasswordHandler receives a request with a verification code, email,
+// and new password to reset a user's password.
+func ResetPasswordHandler(w http.ResponseWriter, req *http.Request) {
+	var reset shared.ResetPassword
+	reset, err := utils.GetStructFromFormOrJSON(&reset, req)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	errorMsg := ""
+	_, err = db.VerifyUser(reset.Email, reset.Code)
+	if err != nil {
+		errorMsg = "Incorrect verification code"
+	} else if reset.Password != reset.ConfirmPassword {
+		errorMsg = "Passwords don't match"
+	}
+
+	if len(errorMsg) > 0 {
+		w.WriteHeader(http.StatusForbidden)
+		w.Header().Set(html.ErrorHeader, errorMsg)
+		html.ForgotPageHandler(w, req, reset.Email)
+		return
+	}
+
+	_ = db.DeleteVerification(reset.Email)
+	hash, _ := bcrypt.GenerateFromPassword([]byte(reset.Password), 8)
+	_ = db.SetNewPassword(reset.Email, hash)
+
+	w.Header().Set(html.SuccessHeader, "Password successfully reset!")
+	html.LoginPageHandler(w, req)
 }
