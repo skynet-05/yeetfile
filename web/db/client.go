@@ -19,7 +19,7 @@ func init() {
 		port     = utils.GetEnvVar("YEETFILE_DB_PORT", "5432")
 		user     = utils.GetEnvVar("YEETFILE_DB_USER", "postgres")
 		password = utils.GetEnvVar("YEETFILE_DB_PASS", "")
-		dbname   = utils.GetEnvVar("YEETFILE_DB_NAME", "postgres")
+		dbname   = utils.GetEnvVar("YEETFILE_DB_NAME", "yeetfile")
 	)
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
