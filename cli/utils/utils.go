@@ -65,11 +65,13 @@ func GeneratePassphrase() string {
 	return strings.Join(words, separator)
 }
 
-// ParseDownloadString processes a URL such as "this.example.path#<hex key>" into
-// separate usable components: the path to the file (this.example.path), and
-// a [32]byte key to use for decrypting the encrypted salt from the server.
+// ParseDownloadString processes a URL such as
+// "[http(s)://...]this.example.path#<hex key>"
+// into separate usable components: the path to the file (this.example.path),
+// and a [32]byte key to use for decrypting the encrypted salt from the server.
 func ParseDownloadString(tag string) (string, []byte, error) {
-	splitTag := strings.Split(tag, "#")
+	splitURL := strings.Split(tag, "/")
+	splitTag := strings.Split(splitURL[len(splitURL)-1], "#")
 
 	if len(splitTag) != 2 {
 		return "", nil, errors.New("invalid download string")

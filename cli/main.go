@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"yeetfile/cli/config"
 	"yeetfile/cli/utils"
+	"yeetfile/shared"
 )
 
 var userConfig config.Config
@@ -78,7 +80,7 @@ func signup(_ string) {
 }
 
 func login(_ string) {
-	LoginUser()
+	LoginUser(false)
 }
 
 func logout(_ string) {
@@ -92,21 +94,38 @@ func upload(arg string) {
 	var expiration string
 	utils.StrFlag(&expiration, "expiration", "", os.Args)
 
+	var isPlaintext bool
+	utils.BoolFlag(&isPlaintext, "is-plaintext", false, os.Args)
+
+	if len(expiration) == 0 {
+		fmt.Println("Missing expiration argument ('-e'), " +
+			"see '-h' for help with uploading.")
+		return
+	} else if downloads < 1 {
+		fmt.Println("Downloads ('-d') must be set to a number " +
+			"greater than 0 and less than or equal to 10.")
+		return
+	}
+
 	if _, err := os.Stat(arg); err == nil {
-		// Arg is a file that we should upload
-		if len(expiration) == 0 {
-			fmt.Println("Missing expiration argument ('-e'), " +
-				"see '-h' for help with uploading.")
-			return
-		} else if downloads < 1 {
-			fmt.Println("Downloads ('-d') must be set to a number " +
-				"greater than 0 and less than or equal to 10.")
-			return
+		// Arg is a file
+		if !hasValidSession() {
+			fmt.Println("-- Login required")
+
+			// Try logging user in and then repeating the request
+			if LoginUser(true) {
+				upload(arg)
+				return
+			} else {
+				fmt.Println("You need to log in before uploading a file")
+				return
+			}
 		}
 
-		UploadFile(arg, downloads, expiration)
+		StartFileUpload(arg, downloads, expiration)
 	} else {
-		fmt.Printf("Unable to open file: '%s'", arg)
+		// Arg is a string
+		StartPlaintextUpload(arg, downloads, expiration)
 	}
 }
 
@@ -134,14 +153,23 @@ func download(arg string) {
 			fmt.Println("Incorrect password")
 			return
 		}
+	} else {
+		fmt.Println("Failed to derive key to decrypt contents")
+		return
 	}
 
 	// Ensure the file is what the user expects
-	if download.VerifyDownload() {
+	isPlaintext := strings.HasPrefix(path, shared.PlaintextIDPrefix)
+	if !isPlaintext && download.VerifyDownload() {
 		// Begin download
 		err = download.DownloadFile()
 		if err != nil {
 			fmt.Printf("Failed to download file: %v\n", err)
+		}
+	} else if isPlaintext {
+		err = download.DownloadPlaintext()
+		if err != nil {
+			fmt.Printf("Failed to download plaintext: %v\n", err)
 		}
 	}
 }

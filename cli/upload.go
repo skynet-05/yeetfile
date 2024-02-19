@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,36 +10,19 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 )
 
-// UploadFile is the entrypoint to uploading a file to the server. It receives
-// the filename, number of downloads, and expiration date for a file.
-func UploadFile(path string, downloads int, exp string) bool {
-	if !hasValidSession() {
-		fmt.Println("Login required")
-
-		// Try logging user in and then repeating the request
-		if LoginUser() {
-			return UploadFile(path, downloads, exp)
-		} else {
-			fmt.Println("You need to log in before uploading")
-			return false
-		}
-	}
-
+// StartFileUpload is the entrypoint to uploading a file to the server. It
+// receives the filename, number of downloads, and expiration date for a file.
+func StartFileUpload(path string, downloads int, exp string) bool {
 	filename := filepath.Base(path)
 
 	fmt.Println("Uploading file:", filename)
 	fmt.Println("==========")
-
-	pw := utils.RequestPassword()
-	if !utils.ConfirmPassword(pw) {
-		fmt.Println("Passwords do not match")
-		return false
-	}
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -47,20 +31,33 @@ func UploadFile(path string, downloads int, exp string) bool {
 
 	stat, err := file.Stat()
 
-	key, salt, pepper, err := crypto.DeriveKey(pw, nil, nil)
+	key, salt, pepper, err := generateKey()
 
 	// Encrypt and encode the file name (encoding required for upload to B3)
 	encName := crypto.EncryptChunk(key, []byte(filename))
 	hexEncName := hex.EncodeToString(encName)
 
-	id, err := InitializeUpload(hexEncName, salt, stat.Size(), downloads, exp)
+	numChunks := math.Ceil(float64(stat.Size()) / float64(shared.ChunkSize))
+
+	metadata := shared.UploadMetadata{
+		Name:       hexEncName,
+		Salt:       salt,
+		Size:       int(stat.Size()),
+		Chunks:     int(numChunks),
+		Downloads:  downloads,
+		Expiration: exp,
+	}
+
+	id, err := uploadMetadata(metadata)
 
 	if len(id) > 0 {
 		var path string
 		if stat.Size() > int64(shared.ChunkSize) {
-			path, err = MultiPartUpload(id, file, stat.Size(), key)
+			path, err = UploadMultiChunk(id, file, stat.Size(), key)
 		} else {
-			path, err = SingleUpload(id, file, stat.Size(), key)
+			content := make([]byte, stat.Size())
+			_, err = file.Read(content)
+			path, err = UploadSingleChunk(id, content, key)
 		}
 
 		if err != nil {
@@ -77,31 +74,63 @@ func UploadFile(path string, downloads int, exp string) bool {
 	}
 }
 
-// InitializeUpload begins the upload process by sending the server metadata
-// about the file. This includes the name of the file (encrypted and hex
-// encoded), the salt, the length, the number of downloads allowed, and the
-// date that the file should expire.
-func InitializeUpload(
-	hexEncName string,
-	salt []byte,
-	length int64,
-	downloads int,
-	exp string,
-) (string, error) {
-	fmt.Print("\033[2K\rInitializing upload...")
+// StartPlaintextUpload uploads ASCII text to the server. This is distinct from
+// uploading a file, since it doesn't affect the user's transfer limit, but is
+// limited to shared.MaxPlaintextLen characters.
+func StartPlaintextUpload(text string, downloads int, exp string) bool {
+	if len(text) > shared.MaxPlaintextLen {
+		fmt.Println("Error: Text exceeds 5K characters and must be uploaded as a file")
+		return false
+	}
 
-	numChunks := math.Ceil(float64(length) / float64(shared.ChunkSize))
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	if !shared.IsPlaintext(scanner) {
+		fmt.Println("Error: Text contains non-ASCII characters and must be uploaded as a file")
+		return false
+	}
 
-	uploadMetadata := shared.UploadMetadata{
+	key, salt, pepper, err := generateKey()
+	encName := crypto.EncryptChunk(key, []byte("plaintext"))
+	hexEncName := hex.EncodeToString(encName)
+	plaintextUpload := shared.PlaintextUpload{
 		Name:       hexEncName,
 		Salt:       salt,
-		Size:       int(length),
-		Chunks:     int(numChunks),
 		Downloads:  downloads,
 		Expiration: exp,
 	}
 
-	reqData, err := json.Marshal(uploadMetadata)
+	path, err := UploadPlaintext([]byte(text), key, plaintextUpload)
+
+	if err != nil {
+		fmt.Printf("Error uploading text: %v\n", err)
+		return false
+	} else {
+		fmt.Printf("\nResource: %s#%s\n", path, string(pepper))
+		fmt.Printf("Link: %s/%s#%s\n", userConfig.Server, path, string(pepper))
+		return true
+	}
+}
+
+// generateKey prompts the user for a password (blank pw is ok) and uses that to
+// derive a key for the content that is being uploaded
+func generateKey() ([shared.KeySize]byte, []byte, []byte, error) {
+	pw := utils.RequestPassword()
+	if !utils.ConfirmPassword(pw) {
+		fmt.Printf("\nError: passwords do not match!\n\n")
+		return generateKey()
+	}
+
+	return crypto.DeriveKey(pw, nil, nil)
+}
+
+// uploadMetadata begins the upload process by sending the server metadata
+// about the file. This includes the name of the file (encrypted and hex
+// encoded), the salt, the length, the number of downloads allowed, and the
+// date that the file should expire.
+func uploadMetadata(meta shared.UploadMetadata) (string, error) {
+	fmt.Print("\033[2K\rInitializing upload...")
+
+	reqData, err := json.Marshal(meta)
 	if err != nil {
 		return "", err
 	}
@@ -129,10 +158,10 @@ func InitializeUpload(
 	return string(body), nil
 }
 
-// MultiPartUpload uploads a file in multiple chunks, with each chunk containing
+// UploadMultiChunk uploads a file in multiple chunks, with each chunk containing
 // at most the value of shared.ChunkSize (5mb). The function requires an ID from
 // InitializeUpload, the file pointer, the file size, and the key for encryption
-func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string, error) {
+func UploadMultiChunk(id string, file *os.File, size int64, key [32]byte) (string, error) {
 	fmt.Print("\033[2K\rUploading...")
 
 	var path string
@@ -176,18 +205,11 @@ func MultiPartUpload(id string, file *os.File, size int64, key [32]byte) (string
 	return path, nil
 }
 
-// SingleUpload uploads a file's contents in one chunk. This can only be done if
-// the total file size is less than the chunk size (5mb). The function requires
-// an ID, the file pointer, the file length, and the key for encryption.
-func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string, error) {
+// UploadSingleChunk uploads a file's contents in one chunk. This can only be
+// done if the total file size is less than the chunk size (5mb). The function
+// requires an ID, the file content, and the key for encryption.
+func UploadSingleChunk(id string, content []byte, key [shared.KeySize]byte) (string, error) {
 	fmt.Print("\033[2K\rUploading...")
-
-	content := make([]byte, length)
-	size, err := file.Read(content)
-	if err != nil || int64(size) != length {
-		fmt.Println("Error reading file")
-		return "", err
-	}
 
 	data := crypto.EncryptChunk(key, content)
 
@@ -197,6 +219,35 @@ func SingleUpload(id string, file *os.File, length int64, key [32]byte) (string,
 		fmt.Println("Error sending data")
 		return "", err
 	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error fetching response")
+		return "", err
+	}
+
+	fmt.Print("\033[2K\rUploading: DONE")
+	fmt.Println()
+	return string(body), nil
+}
+
+// UploadPlaintext uploads ASCII text to the server in a single chunk. The
+// endpoint for this request doesn't require authentication, but is limited to
+// 5K characters (shared.MaxPlaintextLen).
+func UploadPlaintext(
+	content []byte,
+	key [shared.KeySize]byte,
+	info shared.PlaintextUpload,
+) (string, error) {
+	info.Text = crypto.EncryptChunk(key, content)
+
+	reqData, err := json.Marshal(info)
+	if err != nil {
+		return "", err
+	}
+
+	url := fmt.Sprintf("%s/plaintext", userConfig.Server)
+	resp, err := PostRequest(url, reqData)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

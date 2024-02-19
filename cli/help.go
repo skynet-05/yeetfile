@@ -20,8 +20,8 @@ yeetfile download unique.file.tag
 const uploadHelp = `yeetfile upload
 
 Args:
--d, --downloads  : Set # of times a file can be downloaded
--e, --expiration : Set the lifetime of the file, using the format
+-d, --downloads  : Set # of times a file/text can be downloaded
+-e, --expiration : Set the lifetime of the file/text, using the format
    <value><unit>, where value is a numeric and unit is one of
    the following:
        s (seconds)

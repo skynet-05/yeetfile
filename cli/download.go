@@ -71,6 +71,7 @@ func PrepareDownload(
 		ID:     d.ID,
 		Name:   decName,
 		Chunks: d.Chunks,
+		Key:    key,
 	}, nil
 }
 
@@ -88,6 +89,26 @@ func (file FileDownload) VerifyDownload() bool {
 
 	shouldDownload := utils.StringPrompt("Download? (y/n)")
 	return strings.ToLower(shouldDownload) == "y"
+}
+
+// DownloadPlaintext downloads plaintext content and decrypts them before
+// printing them to the console
+func (file FileDownload) DownloadPlaintext() error {
+	fmt.Print("\033[2K\rDownloading...")
+
+	url := fmt.Sprintf("%s/d/%s/1", userConfig.Server, file.ID)
+	resp, err := GetRequest(url)
+	body, _ := io.ReadAll(resp.Body)
+
+	plaintext, err := crypto.DecryptChunk(file.Key, body)
+	if err != nil {
+		return err
+	}
+
+	fmt.Print("\u001B[2K\nDownload finished! Output below:\n\n")
+	fmt.Println(string(plaintext))
+
+	return nil
 }
 
 // DownloadFile downloads file contents and decrypts them before saving the file

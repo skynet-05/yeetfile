@@ -13,13 +13,13 @@ import (
 var ErrorAccountDoesNotExist = errors.New("account does not exist")
 var ErrorIncorrectPassword = errors.New("incorrect password")
 
-func LoginUser() bool {
+func LoginUser(loop bool) bool {
 	fmt.Println("1) Email + password")
 	fmt.Println("2) Account # only")
 	loginOpt := utils.StringPrompt("How do you want to login? (1 or 2):")
 
 	if loginOpt != "1" && loginOpt != "2" {
-		return LoginUser()
+		return LoginUser(loop)
 	}
 
 	var err error
@@ -27,6 +27,10 @@ func LoginUser() bool {
 		err = loginWithEmail("")
 	} else {
 		err = loginWithAccountID()
+	}
+
+	if loop && err != nil {
+		return LoginUser(loop)
 	}
 
 	return err == nil
@@ -45,8 +49,10 @@ func loginWithEmail(email string) error {
 
 	if err != nil {
 		if errors.Is(err, ErrorAccountDoesNotExist) {
+			fmt.Println("Error: Account does not exist or incorrect password")
 			return loginWithEmail("")
 		} else if errors.Is(err, ErrorIncorrectPassword) {
+			fmt.Println("Error: Account does not exist or incorrect password")
 			return loginWithEmail(email)
 		} else {
 			return errors.New("failed to log in")
@@ -66,6 +72,7 @@ func loginWithAccountID() error {
 
 	if err != nil {
 		if errors.Is(err, ErrorAccountDoesNotExist) {
+			fmt.Println("Error: Account does not exist")
 			return loginWithAccountID()
 		} else {
 			return errors.New("failed to log in")
