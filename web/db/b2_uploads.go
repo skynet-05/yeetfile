@@ -13,7 +13,7 @@ type B2Upload struct {
 	Checksums  []string
 }
 
-func InsertNewUpload(id string) B2Upload {
+func CreateNewUpload(id string) B2Upload {
 	s := `INSERT INTO b2_uploads (metadata_id)
 	      VALUES ($1)`
 	_, err := db.Exec(s, id)

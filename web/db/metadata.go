@@ -2,7 +2,9 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"log"
+	"yeetfile/shared"
 	"yeetfile/web/utils"
 )
 
@@ -17,20 +19,25 @@ type FileMetadata struct {
 	Length int
 }
 
-// NewMetadata creates a new metadata entry in the db and returns a unique ID for
+// InsertMetadata creates a new metadata entry in the db and returns a unique ID for
 // that entry.
-func NewMetadata(chunks int, filename string, salt []byte) (string, error) {
-	id := utils.GenRandomString(uploadIDLength)
+func InsertMetadata(chunks int, name string, salt []byte, plaintext bool) (string, error) {
+	prefix := ""
+	if plaintext {
+		prefix = shared.PlaintextIDPrefix
+	}
+
+	id := utils.GenRandomStringWithPrefix(uploadIDLength, prefix)
 
 	// Ensure the id isn't already being used in the table
 	for MetadataIDExists(id) {
-		id = utils.GenRandomString(uploadIDLength)
+		id = utils.GenRandomStringWithPrefix(uploadIDLength, prefix)
 	}
 
 	s := `INSERT INTO metadata
 	      (id, chunks, filename, salt, b2_id, length)
 	      VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := db.Exec(s, id, chunks, filename, salt, "", -1)
+	_, err := db.Exec(s, id, chunks, name, salt, "", -1)
 	if err != nil {
 		panic(err)
 	}
@@ -53,20 +60,20 @@ func MetadataIDExists(id string) bool {
 	return false
 }
 
-func RetrieveMetadata(id string) FileMetadata {
+func RetrieveMetadata(id string) (FileMetadata, error) {
 	s := `SELECT * FROM metadata WHERE id = $1`
 	rows, err := db.Query(s, id)
 	if err != nil {
 		log.Fatalf("Error retrieving metadata: %v", err)
-		return FileMetadata{}
+		return FileMetadata{}, err
 	}
 
 	if rows.Next() {
-		return ParseMetadata(rows)
+		return ParseMetadata(rows), nil
 	}
 
-	log.Fatalf("No metadata found for id: %s", id)
-	return FileMetadata{}
+	log.Printf("No metadata found for id: %s", id)
+	return FileMetadata{}, errors.New("no metadata found")
 }
 
 func UpdateB2Metadata(id string, b2ID string, length int) bool {

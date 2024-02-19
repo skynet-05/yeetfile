@@ -1,6 +1,9 @@
 package shared
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+)
 
 func ReadableFileSize(b int) string {
 	const unit = 1024
@@ -15,4 +18,18 @@ func ReadableFileSize(b int) string {
 	}
 
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGT"[exp])
+}
+
+// IsPlaintext checks the scanner of either a raw string or file contents
+// and determines if the file is contains non-ascii characters
+func IsPlaintext(scanner *bufio.Scanner) bool {
+	for scanner.Scan() {
+		for _, r := range scanner.Text() {
+			if r > 127 {
+				return false // Non-ASCII character found
+			}
+		}
+	}
+
+	return true
 }

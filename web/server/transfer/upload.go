@@ -24,11 +24,15 @@ func PrepareUpload(
 	id string,
 	chunk int,
 	data []byte,
-) (FileUpload, db.B2Upload) {
+) (FileUpload, db.B2Upload, error) {
 	_, checksum := utils.GenChecksum(data)
 	db.UpdateChecksums(id, checksum)
 
-	metadata := db.RetrieveMetadata(id)
+	metadata, err := db.RetrieveMetadata(id)
+	if err != nil {
+		return FileUpload{}, db.B2Upload{}, err
+	}
+
 	b2Values := db.GetB2UploadValues(id)
 
 	upload := FileUpload{
@@ -40,7 +44,7 @@ func PrepareUpload(
 		chunks:   metadata.Chunks,
 	}
 
-	return upload, b2Values
+	return upload, b2Values, nil
 }
 
 func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {

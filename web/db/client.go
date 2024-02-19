@@ -75,7 +75,10 @@ func clearDatabase(id string) {
 }
 
 func DeleteFileByID(id string) {
-	metadata := RetrieveMetadata(id)
+	metadata, err := RetrieveMetadata(id)
+	if err != nil {
+		log.Printf("Error fetching metadata: %v", err)
+	}
 
 	// File must be deleted from B2 before removing from the database
 	if service.B2.DeleteFile(metadata.B2ID, metadata.Name) {

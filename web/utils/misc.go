@@ -16,6 +16,16 @@ import (
 var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var numbers = []rune("1234567890")
 
+func GenRandomStringWithPrefix(n int, prefix string) string {
+	randStr := GenRandomArray(n, characters)
+
+	if len(prefix) == 0 {
+		return string(randStr)
+	}
+
+	return fmt.Sprintf("%s_%s", prefix, string(randStr))
+}
+
 func GenRandomString(n int) string {
 	randStr := GenRandomArray(n, characters)
 	return string(randStr)

@@ -30,8 +30,8 @@ func InitUploadHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, _ := db.NewMetadata(meta.Chunks, meta.Name, meta.Salt)
-	b2Upload := db.InsertNewUpload(id)
+	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, meta.Salt, false)
+	b2Upload := db.CreateNewUpload(id)
 
 	exp := utils.StrToDuration(meta.Expiration)
 	db.SetFileExpiry(id, meta.Downloads, time.Now().Add(exp).UTC())
@@ -81,7 +81,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	upload, b2Values := PrepareUpload(id, chunkNum, data)
+	upload, b2Values, err := PrepareUpload(id, chunkNum, data)
 	done, err := upload.Upload(b2Values)
 
 	if err != nil {
@@ -102,13 +102,64 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// UploadPlaintextHandler handles uploading plaintext with a max size of
+// shared.MaxPlaintextLen (5K characters).
+func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
+	decoder := json.NewDecoder(req.Body)
+	var plaintextUpload shared.PlaintextUpload
+	err := decoder.Decode(&plaintextUpload)
+	if err != nil {
+		log.Printf("%v\n", req.Body)
+		log.Printf("Error: %v\n", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(plaintextUpload.Text) > shared.MaxPlaintextLen {
+		http.Error(w, "Invalid upload size", http.StatusBadRequest)
+		return
+	}
+
+	id, _ := db.InsertMetadata(1, plaintextUpload.Name, plaintextUpload.Salt, true)
+	b2Upload := db.CreateNewUpload(id)
+
+	exp := utils.StrToDuration(plaintextUpload.Expiration)
+	db.SetFileExpiry(id, plaintextUpload.Downloads, time.Now().Add(exp).UTC())
+
+	info, err := InitB2Upload()
+	if err != nil {
+		http.Error(w, "Unable to init file", http.StatusBadRequest)
+		return
+	}
+
+	b2Upload.UpdateUploadValues(
+		info.UploadURL,
+		info.AuthorizationToken,
+		info.BucketID)
+
+	upload, b2Values, err := PrepareUpload(id, 1, plaintextUpload.Text)
+	_, err = upload.Upload(b2Values)
+
+	if err != nil {
+		http.Error(w, "Upload error", http.StatusBadRequest)
+		return
+	}
+
+	_, _ = io.WriteString(w, id)
+}
+
 // DownloadHandler fetches metadata for downloading a file, such as the name of
 // the file, the number of chunks, and the key for decrypting each chunk.
 func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
 
-	metadata := db.RetrieveMetadata(id)
+	metadata, err := db.RetrieveMetadata(id)
+	if err != nil {
+		http.Error(w, "No metadata found", http.StatusBadRequest)
+		return
+	}
+
 	expiry := db.GetFileExpiry(id)
 
 	response := shared.DownloadResponse{
@@ -141,7 +192,11 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request) {
 	id := segments[len(segments)-2]
 	chunk, _ := strconv.Atoi(segments[len(segments)-1])
 
-	metadata := db.RetrieveMetadata(id)
+	metadata, err := db.RetrieveMetadata(id)
+	if err != nil {
+		http.Error(w, "No metadata found", http.StatusBadRequest)
+		return
+	}
 
 	eof, bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk)
 

@@ -39,6 +39,7 @@ func Run(addr string) {
 		// Transfer (upload/download)
 		{POST, "/u", AuthMiddleware(transfer.InitUploadHandler)},
 		{POST, "/u/*/*", AuthMiddleware(transfer.UploadDataHandler)},
+		{POST, "/plaintext", LimiterMiddleware(transfer.UploadPlaintextHandler)},
 		{GET, "/d/*", transfer.DownloadHandler},
 		{GET, "/d/*/*", transfer.DownloadChunkHandler},
 

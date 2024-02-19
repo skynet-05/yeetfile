@@ -11,6 +11,14 @@ type UploadMetadata struct {
 	Expiration string `json:"expiration"`
 }
 
+type PlaintextUpload struct {
+	Name       string `json:"name"`
+	Salt       []byte `json:"salt"`
+	Downloads  int    `json:"downloads"`
+	Expiration string `json:"expiration"`
+	Text       []byte `json:"text"`
+}
+
 type DownloadResponse struct {
 	Name       string    `json:"name"`
 	ID         string    `json:"id"`
