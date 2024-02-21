@@ -24,7 +24,7 @@ func DownloadFile(
 		secretbox.Overhead +
 		start - 1
 
-	if end > length-1 {
+	if end >= length-1 {
 		end = length - 1
 		eof = true
 	}

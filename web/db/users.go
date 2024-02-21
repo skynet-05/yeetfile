@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"yeetfile/shared"
 	"yeetfile/web/utils"
 )
 
@@ -34,11 +35,11 @@ func NewUser(email string, pwHash []byte) (string, error) {
 		}
 	}
 
-	id := utils.GenRandomNumbers(16)
-	paymentID := utils.GenRandomString(16)
+	id := shared.GenRandomNumbers(16)
+	paymentID := shared.GenRandomString(16)
 
 	for UserIDExists(id) {
-		id = utils.GenRandomNumbers(16)
+		id = shared.GenRandomNumbers(16)
 	}
 
 	s := `INSERT INTO users
@@ -64,9 +65,9 @@ func RotateUserPaymentID(paymentID string) error {
 		return errors.New(errorStr)
 	}
 
-	newID := utils.GenRandomString(16)
+	newID := shared.GenRandomString(16)
 	for PaymentIDExists(newID) {
-		newID = utils.GenRandomString(16)
+		newID = shared.GenRandomString(16)
 	}
 
 	// Read in account ID for the user

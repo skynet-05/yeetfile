@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
@@ -12,41 +11,6 @@ import (
 	"strings"
 	"time"
 )
-
-var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-var numbers = []rune("1234567890")
-
-func GenRandomStringWithPrefix(n int, prefix string) string {
-	randStr := GenRandomArray(n, characters)
-
-	if len(prefix) == 0 {
-		return string(randStr)
-	}
-
-	return fmt.Sprintf("%s_%s", prefix, string(randStr))
-}
-
-func GenRandomString(n int) string {
-	randStr := GenRandomArray(n, characters)
-	return string(randStr)
-}
-
-func GenRandomNumbers(n int) string {
-	randNums := GenRandomArray(n, numbers)
-	return string(randNums)
-}
-
-func GenRandomArray(n int, runes []rune) []rune {
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = runes[r.Intn(len(runes))]
-	}
-
-	return b
-}
 
 func GetEnvVar(key string, fallback string) string {
 	value, exists := os.LookupEnv(key)

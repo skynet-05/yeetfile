@@ -3,13 +3,14 @@ package session
 import (
 	"github.com/gorilla/sessions"
 	"net/http"
+	"yeetfile/shared"
 	"yeetfile/web/utils"
 )
 
 var (
 	key = utils.GetEnvVar(
 		"YEETFILE_SESSION_KEY",
-		utils.GenRandomString(16))
+		shared.GenRandomString(16))
 	store = sessions.NewFilesystemStore("", []byte(key))
 )
 

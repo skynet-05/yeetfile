@@ -103,7 +103,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // UploadPlaintextHandler handles uploading plaintext with a max size of
-// shared.MaxPlaintextLen (5K characters).
+// shared.MaxPlaintextLen characters (shared/constants.go).
 func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var plaintextUpload shared.PlaintextUpload
@@ -115,7 +115,7 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if len(plaintextUpload.Text) > shared.MaxPlaintextLen {
+	if len(plaintextUpload.Text) > shared.MaxPlaintextLen+shared.TotalOverhead {
 		http.Error(w, "Invalid upload size", http.StatusBadRequest)
 		return
 	}
@@ -191,6 +191,9 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request) {
 
 	id := segments[len(segments)-2]
 	chunk, _ := strconv.Atoi(segments[len(segments)-1])
+	if chunk <= 0 {
+		chunk = 1 // Downloads begin with chunk #1
+	}
 
 	metadata, err := db.RetrieveMetadata(id)
 	if err != nil {

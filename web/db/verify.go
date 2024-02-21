@@ -3,7 +3,7 @@ package db
 import (
 	"errors"
 	"time"
-	"yeetfile/web/utils"
+	"yeetfile/shared"
 )
 
 // NewVerification creates a new verification entry for a user
@@ -19,7 +19,7 @@ func NewVerification(email string, pwHash []byte, reset bool) (string, error) {
 	}
 
 	// Generate verification code to be sent to the user's email
-	code := utils.GenRandomNumbers(6)
+	code := shared.GenRandomNumbers(6)
 
 	rows, err := db.Query(`SELECT * FROM verify WHERE email = $1`, email)
 	if rows.Next() {
