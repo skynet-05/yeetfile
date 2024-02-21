@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
@@ -79,18 +77,17 @@ func StartFileUpload(path string, downloads int, exp string) bool {
 // limited to shared.MaxPlaintextLen characters.
 func StartPlaintextUpload(text string, downloads int, exp string) bool {
 	if len(text) > shared.MaxPlaintextLen {
-		fmt.Println("Error: Text exceeds 5K characters and must be uploaded as a file")
+		fmt.Printf("Error: Text exceeds %d characters and should "+
+			"be uploaded as a file", shared.MaxPlaintextLen)
 		return false
-	}
-
-	scanner := bufio.NewScanner(strings.NewReader(text))
-	if !shared.IsPlaintext(scanner) {
-		fmt.Println("Error: Text contains non-ASCII characters and must be uploaded as a file")
+	} else if !shared.IsPlaintext(text) {
+		fmt.Println("Error: Text contains non-ASCII characters and should " +
+			"be uploaded as a file")
 		return false
 	}
 
 	key, salt, pepper, err := generateKey()
-	encName := crypto.EncryptChunk(key, []byte("plaintext"))
+	encName := crypto.EncryptChunk(key, []byte(shared.GenRandomString(10)))
 	hexEncName := hex.EncodeToString(encName)
 	plaintextUpload := shared.PlaintextUpload{
 		Name:       hexEncName,
@@ -233,7 +230,7 @@ func UploadSingleChunk(id string, content []byte, key [shared.KeySize]byte) (str
 
 // UploadPlaintext uploads ASCII text to the server in a single chunk. The
 // endpoint for this request doesn't require authentication, but is limited to
-// 5K characters (shared.MaxPlaintextLen).
+// shared.MaxPlaintextLen characters (shared/constants.go).
 func UploadPlaintext(
 	content []byte,
 	key [shared.KeySize]byte,

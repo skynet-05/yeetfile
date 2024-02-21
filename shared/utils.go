@@ -3,7 +3,13 @@ package shared
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
+	"strings"
+	"time"
 )
+
+var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var numbers = []rune("1234567890")
 
 func ReadableFileSize(b int) string {
 	const unit = 1024
@@ -20,11 +26,12 @@ func ReadableFileSize(b int) string {
 	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGT"[exp])
 }
 
-// IsPlaintext checks the scanner of either a raw string or file contents
-// and determines if the file is contains non-ascii characters
-func IsPlaintext(scanner *bufio.Scanner) bool {
+// IsPlaintext takes a string determines if it contains non-ascii characters
+func IsPlaintext(text string) bool {
+	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
 		for _, r := range scanner.Text() {
+			fmt.Println(r)
 			if r > 127 {
 				return false // Non-ASCII character found
 			}
@@ -32,4 +39,36 @@ func IsPlaintext(scanner *bufio.Scanner) bool {
 	}
 
 	return true
+}
+
+func GenRandomStringWithPrefix(n int, prefix string) string {
+	randStr := GenRandomArray(n, characters)
+
+	if len(prefix) == 0 {
+		return string(randStr)
+	}
+
+	return fmt.Sprintf("%s_%s", prefix, string(randStr))
+}
+
+func GenRandomString(n int) string {
+	randStr := GenRandomArray(n, characters)
+	return string(randStr)
+}
+
+func GenRandomNumbers(n int) string {
+	randNums := GenRandomArray(n, numbers)
+	return string(randNums)
+}
+
+func GenRandomArray(n int, runes []rune) []rune {
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = runes[r.Intn(len(runes))]
+	}
+
+	return b
 }
