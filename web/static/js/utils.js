@@ -9,6 +9,8 @@ const toHexString = (bytes) =>
 const getNumChunks = (size) =>
     Math.ceil(size / chunkSize);
 
+const genRandomString = (size) =>
+    (Math.random().toString(36)+'00000000000000000').slice(2, size+2)
 
 const concatTypedArrays = (a, b) => {
     let c = new (a.constructor)(a.length + b.length);

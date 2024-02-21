@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let uploadTextLabel = document.getElementById("upload-text-label");
     uploadTextContent.addEventListener("input", () => {
         if (uploadTextLabel) {
-            uploadTextLabel.innerText=`Text (${uploadTextContent.value.length}/1000):`;
+            uploadTextLabel.innerText=`Text (${uploadTextContent.value.length}/2000):`;
         }
     });
 
@@ -54,10 +54,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 deriveKey(formValues.pw, undefined, passphrase, () => {
                     updateProgress("Initializing...")
                 }, (key, salt) => {
-                    if (formValues.files.length > 1) {
-                        submitFormMulti(formValues, key, salt, allowReset);
+                    if (isFileUpload()) {
+                        if (formValues.files.length > 1) {
+                            submitFormMulti(formValues, key, salt, allowReset);
+                        } else {
+                            submitFormSingle(formValues, key, salt, allowReset);
+                        }
                     } else {
-                        submitFormSingle(formValues, key, salt, allowReset);
+                        submitFormText(formValues, key, salt, allowReset);
                     }
                 });
             });
@@ -100,6 +104,7 @@ const getFormValues = () => {
     let downloads = document.getElementById("downloads").value;
     let exp = document.getElementById("expiration").value;
     let unit = document.getElementById("duration-unit").selectedIndex;
+    let plaintext = document.getElementById("upload-text-content").value;
 
     // If the password checkbox isn't checked, unset password
     let usePassword = document.getElementById("use-password").checked;
@@ -107,13 +112,13 @@ const getFormValues = () => {
         pw = pwConfirm = "";
     }
 
-    return { files, pw, pwConfirm, downloads, exp, unit };
+    return { files, pw, pwConfirm, downloads, exp, unit, plaintext };
 }
 
 const validateForm = (form) => {
     let files = form.files;
 
-    if (!files || files.length === 0) {
+    if (isFileUpload() && (!files || files.length === 0)) {
         alert("Select at least one file to upload");
         return false;
     }
@@ -197,6 +202,26 @@ const submitFormSingle = (form, key, salt, callback) => {
                 callback();
             });
         });
+}
+
+const submitFormText = (form, key, salt, callback) => {
+    let encryptedText = encryptString(key, form.plaintext);
+    let encryptedName = encryptString(key, genRandomString(10));
+    let hexName = toHexString(encryptedName);
+    let expString = getExpString(form.exp, form.unit);
+    let downloads = parseInt(form.downloads);
+
+    console.log(typeof(salt));
+    console.log(salt);
+
+    uploadPlaintext(hexName, encryptedText, salt, downloads, expString, (tag) => {
+        if (tag) {
+            showFileTag(tag);
+            callback();
+        } else {
+            resetForm();
+        }
+    });
 }
 
 const sendChunk = (blob, id, chunkNum, callback) => {
@@ -284,6 +309,29 @@ const uploadMetadata = (name, chunks, salt, downloads, exp, callback) => {
     }));
 }
 
+const uploadPlaintext = (name, text, salt, downloads, exp, callback) => {
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "/plaintext", false);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            callback(xhr.responseText);
+        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+            alert(`Error ${xhr.status}: ${xhr.responseText}`);
+            callback();
+        }
+    };
+
+    xhr.send(JSON.stringify({
+        name: name,
+        salt: Array.from(salt),
+        downloads: downloads,
+        expiration: exp,
+        text: Array.from(text)
+    }));
+}
+
 const validatePassword = (pwInput, pwConfirm) => {
     return (pwInput.length === 0 || pwConfirm === pwInput);
 }
@@ -356,4 +404,9 @@ const setupTypeToggles = () => {
         uploadTextRow.style.display = "none";
         uploadFileRow.style.display = "contents";
     });
+}
+
+const isFileUpload = () => {
+    let uploadFileBtn = document.getElementById("upload-file-btn");
+    return uploadFileBtn.checked;
 }

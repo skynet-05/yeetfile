@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
             handleMetadata(download);
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             alert(`Error ${xhr.status}: ${xhr.responseText}`);
+            window.location = "/";
         }
     };
 
@@ -41,7 +42,11 @@ const showDownload = (name, download, key) => {
     passwordPrompt.style.display = "none";
 
     let nameSpan = document.getElementById("name");
-    nameSpan.textContent = name;
+    if (download.id.startsWith("text_")) {
+        nameSpan.textContent = "N/A (text-only)";
+    } else {
+        nameSpan.textContent = name;
+    }
 
     let expiration = document.getElementById("expiration");
     expiration.textContent = calcTimeRemaining(download.expiration);
@@ -57,7 +62,28 @@ const showDownload = (name, download, key) => {
 
     let downloadBtn = document.getElementById("download-nopass");
     downloadBtn.addEventListener("click", () => {
-        downloadFile(name, download, key);
+        downloadBtn.disabled = true;
+        downloadBtn.innerText = "Downloading...";
+
+        const downloadCallback = success => {
+            if (success) {
+                let newDownloadCount = parseInt(download.downloads) - 1;
+                downloadBtn.style.display = "none";
+                downloads.textContent = String(newDownloadCount);
+
+                if (newDownloadCount === 0) {
+                    downloads.textContent += " (deleted)";
+                }
+            } else {
+                downloadBtn.disabled = false;
+            }
+        }
+
+        if (download.id.startsWith("text_")) {
+            downloadText(download, key, downloadCallback);
+        } else {
+            downloadFile(name, download, key, downloadCallback);
+        }
     })
 }
 
@@ -149,13 +175,46 @@ const promptPassword = (download) => {
     });
 }
 
-const downloadFile = (name, download, key) => {
+const downloadText = (download, key, callback) => {
+    const fetch = () => {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", `/d/${download.id}/1`, true);
+        xhr.responseType = "blob";
+
+        xhr.onreadystatechange = async () => {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                let data = new Uint8Array(await xhr.response.arrayBuffer());
+                let decryptedChunk = decryptChunk(key, data);
+                let decryptedText = new TextDecoder().decode(decryptedChunk);
+                displayText(decryptedText);
+                callback(true);
+            } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                alert(`Error ${xhr.status}: ${xhr.responseText}`);
+                callback(false);
+            }
+        };
+
+        xhr.send();
+    }
+
+    fetch();
+}
+
+const displayText = (text) => {
+    let plaintextDiv = document.getElementById("plaintext-div");
+    let plaintextContent = document.getElementById("plaintext-content");
+
+    plaintextDiv.style.display = "initial";
+    plaintextContent.innerText = text;
+}
+
+const downloadFile = (name, download, key, callback) => {
     let writer = getFileWriter(name);
 
     const fetch = (chunkNum) => {
         let xhr = new XMLHttpRequest();
         xhr.open("GET", `/d/${download.id}/${chunkNum}`, true);
-        xhr.responseType = 'blob';
+        xhr.responseType = "blob";
 
         xhr.onreadystatechange = async () => {
             if (xhr.readyState === 4 && xhr.status === 200) {
@@ -164,6 +223,7 @@ const downloadFile = (name, download, key) => {
                 writer.write(decryptedChunk).then(() => {
                     if (chunkNum === download.chunks) {
                         writer.close().then(r => console.log(r));
+                        callback(true);
                     } else {
                         // Fetch next chunk
                         fetch(chunkNum + 1);
@@ -171,6 +231,7 @@ const downloadFile = (name, download, key) => {
                 });
             } else if (xhr.readyState === 4 && xhr.status !== 200) {
                 alert(`Error ${xhr.status}: ${xhr.responseText}`);
+                callback(false);
             }
         };
 
@@ -193,9 +254,9 @@ const getFileWriter = (name, length) => {
     // over https. If served over http, it'll default to:
     // https://jimmywarting.github.io/StreamSaver.js/mitm.html?version=2.0.0
     if (location.protocol.includes("https")) {
-        streamSaver.mitm = "/mitm.html";
+        window.streamSaver.mitm = "/mitm.html";
     }
 
-    let fileStream = streamSaver.createWriteStream(name);
+    let fileStream = window.streamSaver.createWriteStream(name);
     return fileStream.getWriter();
 }

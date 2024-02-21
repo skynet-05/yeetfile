@@ -19,3 +19,7 @@
 #download-prompt-div table span {
     font-style: italic;
 }
+
+#plaintext-div {
+    display: none;
+}

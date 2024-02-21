@@ -22,14 +22,10 @@
             <table class="full-width">
                 <tr id="upload-text-row">
                     <td>
-                        {{ if .Base.LoggedIn }}
-                        <label for="upload-text-content">Text:</label>
-                        {{ else }}
-                        <label id="upload-text-label" for="upload-text-content">Text (0/1000):</label>
-                        {{ end }}
+                        <label id="upload-text-label" for="upload-text-content">Text (0/2000):</label>
                     </td>
                     <td>
-                        <textarea id="upload-text-content" class="full-width" maxlength="1000"></textarea>
+                        <textarea id="upload-text-content" class="full-width" maxlength="2000"></textarea>
                     </td>
                 </tr>
                 <tr id="upload-file-row">
