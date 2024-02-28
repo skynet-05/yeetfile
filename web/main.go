@@ -10,6 +10,7 @@ import (
 
 func main() {
 	go db.CheckExpiry()
+	go db.CheckMemberships()
 
 	host := utils.GetEnvVar("YEETFILE_HOST", "localhost")
 	port := utils.GetEnvVar("YEETFILE_PORT", "8090")

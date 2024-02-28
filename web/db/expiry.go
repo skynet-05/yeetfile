@@ -86,6 +86,9 @@ func DeleteExpiry(id string) bool {
 	return true
 }
 
+// CheckExpiry inspects each entry in the expiry table to see if a file's
+// expiration date has been surpassed. If it has, the file is deleted. Runs
+// recursively once per second and should be called in a background thread.
 func CheckExpiry() {
 	s := `SELECT id, date FROM expiry`
 	rows, err := db.Query(s)

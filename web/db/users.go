@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 	"yeetfile/shared"
 	"yeetfile/web/utils"
@@ -43,10 +44,10 @@ func NewUser(email string, pwHash []byte) (string, error) {
 	}
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, payment_id, meter, member_expiration)
-	      VALUES ($1, $2, $3, $4, $5, $6)`
+	      (id, email, pw_hash, payment_id, meter, member_expiration, last_upgraded_month)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	_, err := db.Exec(s, id, email, pwHash, paymentID, 0, defaultExp)
+	_, err := db.Exec(s, id, email, pwHash, paymentID, 0, defaultExp, -1)
 	if err != nil {
 		return "", err
 	}
@@ -337,10 +338,11 @@ func PaymentIDExists(paymentID string) bool {
 func SetUserMembershipExpiration(paymentID string, exp time.Time) error {
 	s := `UPDATE users
               SET member_expiration=$1,
-                  meter=CASE WHEN meter < $2 THEN $2 ELSE meter END
+                  meter=CASE WHEN meter < $2 THEN $2 ELSE meter END,
+                  last_upgraded_month=$3
               WHERE payment_id=$3`
 
-	_, err := db.Exec(s, exp, defaultMeter, paymentID)
+	_, err := db.Exec(s, exp, defaultMeter, paymentID, time.Now().Month())
 	if err != nil {
 		return err
 	}
@@ -377,6 +379,82 @@ func ReduceUserStorage(id string, size int) error {
 	}
 
 	return nil
+}
+
+// CheckMemberships inspects each user's membership and updates their available
+// transfer if their membership is still valid
+func CheckMemberships() {
+	s := `SELECT id, member_expiration, last_upgraded_month FROM users
+              WHERE member_expiration >= $1::date`
+	rows, err := db.Query(s, time.Now())
+	if err != nil {
+		log.Printf("Error retrieving user memberships: %v", err)
+		return
+	}
+
+	var upgradeIDs []string
+	now := time.Now()
+
+	for rows.Next() {
+		var id string
+		var exp time.Time
+		var lastUpgradedMonth int
+
+		err = rows.Scan(&id, &exp, &lastUpgradedMonth)
+
+		if err != nil {
+			log.Printf("Error scanning user rows: %v", err)
+			return
+		}
+
+		if int(exp.Month()) == lastUpgradedMonth {
+			// User has already had their transfer limit upgraded
+			// this month
+			continue
+		}
+
+		if now.Day() == exp.Day() || ExpDateRollover(now, exp) {
+			// User
+			upgradeIDs = append(upgradeIDs, id)
+		}
+	}
+
+	if len(upgradeIDs) > 0 {
+		// Add the default meter amount to all users whose memberships
+		// are still active
+		u := `UPDATE users
+		      SET meter=meter + $1,
+		          last_upgraded_month=$2
+		      WHERE id=ANY($3)`
+
+		ids := fmt.Sprintf("{%s}", strings.Join(upgradeIDs, ","))
+		_, err = db.Exec(u, defaultMeter, int(now.Month()), ids)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	time.Sleep(3600 * time.Second)
+	CheckMemberships()
+}
+
+// ExpDateRollover checks to see if the user's membership expiration date takes
+// place on a day that doesn't exist in other months. If so, the user's transfer
+// limit should be upgraded "early". For example:
+//
+// - Expiration: Dec 31
+// - Today: June 30
+//
+// In this scenario, the membership should be upgraded today. The 31st will
+// never occur in June, but the following day would be a new month.
+func ExpDateRollover(now time.Time, exp time.Time) bool {
+	if exp.Day() <= 28 {
+		// Skip check, the expiration date is within the bounds of all
+		// monthly days
+		return false
+	}
+
+	return exp.Day() > now.Day() && now.AddDate(0, 0, 1).Month() > now.Month()
 }
 
 func init() {

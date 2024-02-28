@@ -54,6 +54,7 @@ func init() {
 	}
 }
 
+// clearDatabase removes all instances of a file ID from all tables in the database
 func clearDatabase(id string) {
 	if DeleteMetadata(id) {
 		log.Printf("%s metadata deleted\n", id)
@@ -74,6 +75,7 @@ func clearDatabase(id string) {
 	}
 }
 
+// DeleteFileByID removes a file from B2 matching the provided file ID
 func DeleteFileByID(id string) {
 	metadata, err := RetrieveMetadata(id)
 	if err != nil {

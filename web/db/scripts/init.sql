@@ -43,13 +43,14 @@ create table if not exists expiry
 
 create table if not exists users
 (
-    email      text,
-    pw_hash    bytea,
-    meter      bigint,
     id         text not null
         constraint users_pk
             primary key,
-    payment_id text
+    email      text,
+    pw_hash    bytea,
+    meter      bigint,
+    payment_id text,
+    member_expiration timestamp
 );
 
 create table if not exists stripe
