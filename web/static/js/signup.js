@@ -1,6 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    setupTypeToggles();
-
     // Email signup fields
     let emailInput = document.getElementById("email");
     let passwordInput = document.getElementById("password");
