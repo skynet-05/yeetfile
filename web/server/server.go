@@ -37,7 +37,7 @@ func Run(addr string) {
 
 	r.AddRoutes([]RouteDef{
 		// Transfer (upload/download)
-		{POST, "/u", AuthMiddleware(transfer.InitUploadHandler)},
+		{POST, "/u", AuthMiddleware(transfer.UploadMetadataHandler)},
 		{POST, "/u/*/*", AuthMiddleware(transfer.UploadDataHandler)},
 		{POST, "/plaintext", LimiterMiddleware(transfer.UploadPlaintextHandler)},
 		{GET, "/d/*", transfer.DownloadHandler},

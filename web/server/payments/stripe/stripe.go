@@ -8,7 +8,6 @@ import (
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/webhook"
 	"os"
-	"time"
 	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/mail"
@@ -17,36 +16,41 @@ import (
 
 var Ready = true
 
-var stripeSubMonthID = os.Getenv("YEETFILE_STRIPE_SUB_MONTH_ID")
-var stripeSubYearID = os.Getenv("YEETFILE_STRIPE_SUB_YEAR_ID")
+var stripeSub3MonthID = os.Getenv("YEETFILE_STRIPE_SUB_3_MONTH_ID")
+var stripeSub1YearID = os.Getenv("YEETFILE_STRIPE_SUB_1_YEAR_ID")
 var stripe100GBID = os.Getenv("YEETFILE_STRIPE_100GB_ID")
 var stripe500GBID = os.Getenv("YEETFILE_STRIPE_500GB_ID")
 var stripe1TBID = os.Getenv("YEETFILE_STRIPE_1TB_ID")
-var stripeSubMonthLink = os.Getenv("YEETFILE_STRIPE_SUB_MONTH_LINK")
-var stripeSubYearLink = os.Getenv("YEETFILE_STRIPE_SUB_YEAR_LINK")
+var stripeSub3MonthLink = os.Getenv("YEETFILE_STRIPE_SUB_3_MONTH_LINK")
+var stripeSub1YearLink = os.Getenv("YEETFILE_STRIPE_SUB_1_YEAR_LINK")
 var stripe100GBLink = os.Getenv("YEETFILE_STRIPE_100GB_LINK")
 var stripe500GBLink = os.Getenv("YEETFILE_STRIPE_500GB_LINK")
 var stripe1TBLink = os.Getenv("YEETFILE_STRIPE_1TB_LINK")
 
 var stripeRequirements = []string{
-	stripe100GBID, stripe500GBID, stripe1TBID, stripeSubMonthID, stripeSubYearID,
-	stripe100GBLink, stripe500GBLink, stripe1TBLink, stripeSubMonthLink, stripeSubYearLink,
+	stripe100GBID, stripe500GBID, stripe1TBID, stripeSub3MonthID, stripeSub1YearID,
+	stripe100GBLink, stripe500GBLink, stripe1TBLink, stripeSub3MonthLink, stripeSub1YearLink,
 }
 
 var LinkMapping = map[string]string{
-	shared.TypeSub1Month: stripeSubMonthLink,
-	shared.TypeSub1Year:  stripeSubYearLink,
-	shared.Type100GB:     stripe100GBLink,
-	shared.Type500GB:     stripe500GBLink,
-	shared.Type1TB:       stripe1TBLink,
+	shared.TypeSub3Months: stripeSub3MonthLink,
+	shared.TypeSub1Year:   stripeSub1YearLink,
+	shared.Type100GB:      stripe100GBLink,
+	shared.Type500GB:      stripe500GBLink,
+	shared.Type1TB:        stripe1TBLink,
 }
 
 var stripeDescMap = map[string]string{
-	stripeSubMonthID: shared.DescriptionMap[shared.TypeSub1Month],
-	stripeSubYearID:  shared.DescriptionMap[shared.TypeSub1Year],
-	stripe100GBID:    shared.DescriptionMap[shared.Type100GB],
-	stripe500GBID:    shared.DescriptionMap[shared.Type500GB],
-	stripe1TBID:      shared.DescriptionMap[shared.Type1TB],
+	stripeSub3MonthID: shared.DescriptionMap[shared.TypeSub3Months],
+	stripeSub1YearID:  shared.DescriptionMap[shared.TypeSub1Year],
+	stripe100GBID:     shared.DescriptionMap[shared.Type100GB],
+	stripe500GBID:     shared.DescriptionMap[shared.Type500GB],
+	stripe1TBID:       shared.DescriptionMap[shared.Type1TB],
+}
+
+var stripeOrderTypeMap = map[string]string{
+	stripeSub3MonthID: shared.TypeSub3Months,
+	stripeSub1YearID:  shared.TypeSub1Year,
 }
 
 // stripeProductAmounts maps product IDs to their respective amounts of storage
@@ -155,16 +159,9 @@ func processOrder(
 	}
 
 	// Check if this is a subscription vs a transfer upgrade
-	if productID == stripeSubYearID || productID == stripeSubMonthID {
-		var exp time.Time
-		if productID == stripeSubYearID {
-			// Add 1 year to exp
-			exp = time.Now().AddDate(1, 0, 0)
-		} else {
-			// Add 1 month to exp
-			exp = time.Now().AddDate(0, 1, 0)
-		}
-
+	if productID == stripeSub1YearID || productID == stripeSub3MonthID {
+		orderType := stripeOrderTypeMap[productID]
+		exp := shared.MembershipDurationFunctionMap[orderType]()
 		err = db.SetUserMembershipExpiration(refID, exp)
 		if err != nil {
 			return "", err

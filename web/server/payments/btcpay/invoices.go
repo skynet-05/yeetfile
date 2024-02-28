@@ -144,8 +144,8 @@ func FinalizeInvoice(payment SettledPayment) error {
 	}
 
 	// Check if the order is for a membership
-	if orderType == shared.TypeSub1Month || orderType == shared.TypeSub1Year {
-		exp := shared.MembershipMap[orderType]()
+	if orderType == shared.TypeSub3Months || orderType == shared.TypeSub1Year {
+		exp := shared.MembershipDurationFunctionMap[orderType]()
 		err = db.SetUserMembershipExpiration(orderID, exp)
 		if err != nil {
 			fmt.Printf("Error updating user expiration: %v\n", err)
@@ -167,7 +167,11 @@ func FinalizeInvoice(payment SettledPayment) error {
 	// Send an order confirmation email, if the user has an email registered
 	email, _ := db.GetUserEmailByPaymentID(orderID)
 	if len(email) > 0 {
-		err := mail.CreateOrderEmail(orderID, shared.DescriptionMap[orderType], email).Send()
+		err := mail.CreateOrderEmail(
+			orderID,
+			shared.DescriptionMap[orderType],
+			email,
+		).Send()
 		if err != nil {
 			return err
 		}

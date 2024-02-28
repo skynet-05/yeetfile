@@ -14,9 +14,9 @@ import (
 	"yeetfile/web/utils"
 )
 
-// InitUploadHandler handles a POST request to /u with the metadata required to set
+// UploadMetadataHandler handles a POST request to /u with the metadata required to set
 // up a file for uploading. This is defined in the UploadMetadata struct.
-func InitUploadHandler(w http.ResponseWriter, req *http.Request) {
+func UploadMetadataHandler(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var meta shared.UploadMetadata
 	err := decoder.Decode(&meta)
