@@ -153,7 +153,8 @@ func download(arg string) {
 			fmt.Println("Incorrect password")
 			return
 		}
-	} else {
+	} else if err != nil {
+		fmt.Printf("Error: %v\n", err)
 		fmt.Println("Failed to derive key to decrypt contents")
 		return
 	}

@@ -11,12 +11,13 @@ type B2Upload struct {
 	Token      string
 	UploadID   string
 	Checksums  []string
+	Local      bool
 }
 
-func CreateNewUpload(id string) B2Upload {
-	s := `INSERT INTO b2_uploads (metadata_id)
-	      VALUES ($1)`
-	_, err := db.Exec(s, id)
+func CreateNewUpload(id string, name string) B2Upload {
+	s := `INSERT INTO b2_uploads (metadata_id, upload_id)
+	      VALUES ($1, $2)`
+	_, err := db.Exec(s, id, name)
 	if err != nil {
 		panic(err)
 	}
@@ -28,13 +29,29 @@ func (b2Upload B2Upload) UpdateUploadValues(
 	uploadURL string,
 	token string,
 	uploadID string,
+	local bool,
 ) bool {
 	s := `UPDATE b2_uploads
-	      SET upload_url=$1, token=$2, upload_id=$3
-	      WHERE metadata_id=$4`
-	_, err := db.Exec(s, uploadURL, token, uploadID, b2Upload.MetadataID)
+	      SET upload_url=$1, 
+	          token=$2, 
+	          upload_id=CASE WHEN $3 = '' THEN upload_id ELSE $3 END, 
+	          local=$4
+	      WHERE metadata_id=$5`
+	_, err := db.Exec(s, uploadURL, token, uploadID, local, b2Upload.MetadataID)
 	if err != nil {
-		panic(err)
+		log.Printf("Error updating b2 upload values: %v\n", err)
+		return false
+	}
+
+	return true
+}
+
+func UpdateUploadID(id string, metadataID string) bool {
+	s := `UPDATE b2_uploads SET upload_id=$1 WHERE metadata_id=$2`
+	_, err := db.Exec(s, id, metadataID)
+	if err != nil {
+		log.Printf("Error updating b2 upload id: %v\n", err)
+		return false
 	}
 
 	return true
@@ -69,13 +86,15 @@ func GetB2UploadValues(id string) B2Upload {
 		var token string
 		var uploadID string
 		var checksums []string
+		var local bool
 
 		err = rows.Scan(
 			&metadataID,
 			&uploadURL,
 			&token,
 			&uploadID,
-			pq.Array(&checksums))
+			pq.Array(&checksums),
+			&local)
 
 		return B2Upload{
 			MetadataID: metadataID,
@@ -83,6 +102,7 @@ func GetB2UploadValues(id string) B2Upload {
 			Token:      token,
 			UploadID:   uploadID,
 			Checksums:  checksums,
+			Local:      local,
 		}
 	}
 

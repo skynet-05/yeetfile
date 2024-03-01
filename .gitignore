@@ -11,3 +11,4 @@ session*
 *.env
 tags
 init.sql
+uploads/

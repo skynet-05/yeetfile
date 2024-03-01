@@ -3,7 +3,7 @@ module yeetfile
 go 1.20
 
 require (
-	github.com/benbusby/b2 v1.1.1
+	github.com/benbusby/b2 v1.2.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/lib/pq v1.10.9
 	github.com/stripe/stripe-go/v76 v76.13.0

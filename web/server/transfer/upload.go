@@ -55,6 +55,7 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 			FileID:             b2Values.UploadID,
 			AuthorizationToken: b2Values.Token,
 			UploadURL:          b2Values.UploadURL,
+			Dummy:              b2Values.Local,
 		}
 
 		err = b2.UploadFilePart(
@@ -81,6 +82,7 @@ func (upload FileUpload) Upload(b2Values db.B2Upload) (bool, error) {
 			BucketID:           b2Values.UploadID,
 			AuthorizationToken: b2Values.Token,
 			UploadURL:          b2Values.UploadURL,
+			Dummy:              b2Values.Local,
 		}
 
 		resp, err := b2.UploadFile(

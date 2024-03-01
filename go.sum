@@ -4,6 +4,8 @@ github.com/benbusby/b2 v0.0.0-20240119201044-d600ce529f73 h1:TOawhPvtIHVc9iG3bEX
 github.com/benbusby/b2 v0.0.0-20240119201044-d600ce529f73/go.mod h1:33DCcJUrJLjGlFT1wLIxzg+/oVv4TlYBnbdlfazKnTg=
 github.com/benbusby/b2 v1.1.1 h1:viGF76b4nU52gi4UkbLgTJUf0u1pj6vK/QXVh5LdBac=
 github.com/benbusby/b2 v1.1.1/go.mod h1:33DCcJUrJLjGlFT1wLIxzg+/oVv4TlYBnbdlfazKnTg=
+github.com/benbusby/b2 v1.2.0 h1:ughK6osgrGGlVZEKtOGFbj3lZXSPGzeFJ+XIII27b0A=
+github.com/benbusby/b2 v1.2.0/go.mod h1:33DCcJUrJLjGlFT1wLIxzg+/oVv4TlYBnbdlfazKnTg=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gorilla/securecookie v1.1.1 h1:miw7JPhV+b/lAHSXz4qd/nN9jRiAFV5FwjeKyCS8BvQ=

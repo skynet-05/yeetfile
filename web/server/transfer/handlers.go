@@ -31,7 +31,7 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, meta.Salt, false)
-	b2Upload := db.CreateNewUpload(id)
+	b2Upload := db.CreateNewUpload(id, meta.Name)
 
 	exp := utils.StrToDuration(meta.Expiration)
 	db.SetFileExpiry(id, meta.Downloads, time.Now().Add(exp).UTC())
@@ -46,7 +46,8 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request) {
 		b2Upload.UpdateUploadValues(
 			info.UploadURL,
 			info.AuthorizationToken,
-			info.BucketID)
+			info.BucketID, // Single chunk files use the bucket ID for uploading
+			info.Dummy)
 	} else {
 		info, err := InitLargeB2Upload(meta.Name)
 		if err != nil {
@@ -57,7 +58,8 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request) {
 		b2Upload.UpdateUploadValues(
 			info.UploadURL,
 			info.AuthorizationToken,
-			info.FileID)
+			info.FileID, // Multi-chunk files use the file ID for uploading
+			info.Dummy)
 	}
 
 	// Return ID to user
@@ -121,7 +123,7 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	id, _ := db.InsertMetadata(1, plaintextUpload.Name, plaintextUpload.Salt, true)
-	b2Upload := db.CreateNewUpload(id)
+	b2Upload := db.CreateNewUpload(id, plaintextUpload.Name)
 
 	exp := utils.StrToDuration(plaintextUpload.Expiration)
 	db.SetFileExpiry(id, plaintextUpload.Downloads, time.Now().Add(exp).UTC())
@@ -135,7 +137,8 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	b2Upload.UpdateUploadValues(
 		info.UploadURL,
 		info.AuthorizationToken,
-		info.BucketID)
+		info.BucketID,
+		info.Dummy)
 
 	upload, b2Values, err := PrepareUpload(id, 1, plaintextUpload.Text)
 	_, err = upload.Upload(b2Values)

@@ -68,21 +68,24 @@ func PrepareDownload(
 	}
 
 	return FileDownload{
-		ID:     d.ID,
-		Name:   decName,
-		Chunks: d.Chunks,
-		Key:    key,
+		ID:         d.ID,
+		Name:       decName,
+		Chunks:     d.Chunks,
+		Size:       d.Size,
+		Expiration: d.Expiration,
+		Downloads:  d.Downloads,
+		Key:        key,
 	}, nil
 }
 
 // VerifyDownload displays file metadata to the user to ensure that the file
 // is what they're expecting.
 func (file FileDownload) VerifyDownload() bool {
-	timeDiff := time.Now().Sub(file.Expiration)
+	timeDiff := file.Expiration.Sub(time.Now())
 
 	fmt.Println(utils.LineDecorator)
 	fmt.Printf("Name: %s\n", file.Name)
-	fmt.Printf("Size: %s", shared.ReadableFileSize(file.Size))
+	fmt.Printf("Size: %s\n", shared.ReadableFileSize(file.Size))
 	fmt.Printf("Downloads Remaining: %d\n", file.Downloads)
 	fmt.Printf("Expires: %s (%s)\n", file.Expiration, timeDiff)
 	fmt.Println(utils.LineDecorator)
