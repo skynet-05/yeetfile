@@ -2,16 +2,18 @@ package db
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
-	"os"
-	"path/filepath"
 	"yeetfile/web/service"
 	"yeetfile/web/utils"
 )
 
 var db *sql.DB
+
+//go:embed scripts/create_tables.sql
+var createTablesSQL string
 
 func init() {
 	var (
@@ -33,24 +35,18 @@ func init() {
 	var err error
 	db, err = sql.Open("postgres", connStr)
 
-	if err != nil || db.Ping() != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+	ping := db.Ping()
+	if err != nil {
+		log.Fatalf("Unable to connect to database!\n"+
+			"Error: %v\nPing: %v\n", err, ping)
 	}
 
 	// Init db contents from scripts/init.sql
-	log.Printf("Initializing DB...")
-	path := filepath.Join("web", "db", "scripts", "init.sql")
-	c, err := os.ReadFile(path)
+	log.Printf("Setting up DB tables...")
+	_, err = db.Exec(createTablesSQL)
 	if err != nil {
-		log.Printf("Error initializing database -- have you generated " +
-			"the sql script (web/db/scripts/init.sh)?")
-		panic(err)
-	}
-
-	sqlScript := string(c)
-	_, err = db.Exec(sqlScript)
-	if err != nil {
-		panic(err)
+		log.Fatalf("Unable to initialize database!\n"+
+			"Error: %v\n", err)
 	}
 }
 

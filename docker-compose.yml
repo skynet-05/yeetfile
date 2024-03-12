@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    container_name: database
+    hostname: postgres
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./web/db/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_USER: ${YEETFILE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${YEETFILE_DB_PASS:-postgres}
+      POSTGRES_DB: ${YEETFILE_DB_NAME:-yeetfile}
+
+  api:
+    container_name: yeetfile
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${YEETFILE_PORT:-8090}:${YEETFILE_PORT:-8090}"
+    depends_on:
+      - db
+    env_file: ./.env
+
+volumes:
+  data:
+    external: false
+    #external: true # Run "docker volume create --name=yeetfile-data" beforehand

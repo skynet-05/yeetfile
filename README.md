@@ -139,7 +139,7 @@ All environment variables can be defined in a file named `.env` at the root leve
 
 | Name | Purpose | Default Value | Accepted Values |
 | -- | -- | -- | -- |
-| `YEETFILE_HOST` | The host for running the YeetFile server | `localhost` | |
+| `YEETFILE_HOST` | The host for running the YeetFile server | `0.0.0.0` | |
 | `YEETFILE_PORT` | The port for running the YeetFile server | `8090` | |
 | `YEETFILE_SESSION_KEY` | A key to synchronize user sessions across multiple machines | None (randomly generated) | |
 | `YEETFILE_DEBUG` | Enable (1) or disable (0) debug messages from the server | `0` | `0` or `1` |

@@ -12,7 +12,7 @@ func main() {
 	go db.CheckExpiry()
 	go db.CheckMemberships()
 
-	host := utils.GetEnvVar("YEETFILE_HOST", "localhost")
+	host := utils.GetEnvVar("YEETFILE_HOST", "0.0.0.0")
 	port := utils.GetEnvVar("YEETFILE_PORT", "8090")
 
 	addr := fmt.Sprintf("%s:%s", host, port)

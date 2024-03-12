@@ -1,20 +1,3 @@
-#!/bin/sh
-
-USER="${YEETFILE_DB_USER:-postgres}"
-PASS="${YEETFILE_DB_PASS:-}"
-DB_NAME="${YEETFILE_DB_NAME:-postgres}"
-
-sql_script="
-DO \$$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_user WHERE usename = '$USER') THEN
-    CREATE USER $USER WITH PASSWORD '$PASS';
-  END IF;
-END \$$;
-
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $USER;
-set role to $USER;
-
 create table if not exists metadata
 (
     id       text not null
@@ -49,13 +32,15 @@ create table if not exists expiry
 
 create table if not exists users
 (
-    email      text,
-    pw_hash    bytea,
-    meter      bigint,
     id         text not null
         constraint users_pk
             primary key,
-    payment_id text
+    email      text,
+    pw_hash    bytea,
+    meter      bigint,
+    payment_id text,
+    member_expiration timestamp,
+    last_upgraded_month integer
 );
 
 create table if not exists stripe
@@ -78,6 +63,3 @@ create table if not exists verify
     date    date,
     pw_hash bytea
 );
-"
-
-echo "$sql_script" > init.sql
