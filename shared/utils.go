@@ -31,7 +31,6 @@ func IsPlaintext(text string) bool {
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
 		for _, r := range scanner.Text() {
-			fmt.Println(r)
 			if r > 127 {
 				return false // Non-ASCII character found
 			}

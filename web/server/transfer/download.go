@@ -1,7 +1,6 @@
 package transfer
 
 import (
-	"golang.org/x/crypto/nacl/secretbox"
 	"yeetfile/shared"
 	"yeetfile/web/service"
 )
@@ -17,11 +16,10 @@ func DownloadFile(
 ) (bool, []byte) {
 	eof := false
 	start := (chunk-1)*shared.ChunkSize +
-		((shared.NonceSize + secretbox.Overhead) * (chunk - 1))
+		((shared.TotalOverhead) * (chunk - 1))
 
-	end := shared.NonceSize +
-		shared.ChunkSize +
-		secretbox.Overhead +
+	end := shared.ChunkSize +
+		shared.TotalOverhead +
 		start - 1
 
 	if end >= length-1 {

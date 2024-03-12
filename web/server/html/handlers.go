@@ -31,8 +31,6 @@ func HomePageHandler(w http.ResponseWriter, req *http.Request) {
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript: []string{
 					"jszip.min.js",
-					"scrypt.min.js",
-					"nacl-fast.min.js",
 					"utils.js",
 					"crypto.js",
 					"upload.js",
@@ -57,8 +55,6 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 			ErrorMessage: w.Header().Get(ErrorHeader),
 			Javascript: []string{
 				"ponyfill.min.js",
-				"scrypt.min.js",
-				"nacl-fast.min.js",
 				"crypto.js",
 				"utils.js",
 				"download.js",

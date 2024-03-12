@@ -23,14 +23,13 @@ const handleMetadata = (download) => {
     let salt = base64ToArray(download.salt);
     let pepper = location.hash.slice(1);
 
-    deriveKey("", salt, pepper, () => {}, (key, _) => {
-        let decryptedName = decryptName(key, download.name);
-
-        if (decryptedName) {
-            showDownload(decryptedName, download, key);
-        } else {
+    deriveKey("", salt, pepper, () => {}, async (key, _) => {
+        decryptName(key, download.name).then(result => {
+            showDownload(result, download, key);
+        }).catch(err => {
+            console.warn(err);
             promptPassword(download);
-        }
+        });
     });
 }
 
@@ -87,10 +86,9 @@ const showDownload = (name, download, key) => {
     })
 }
 
-const decryptName = (key, name) => {
+const decryptName = async (key, name) => {
     let nameBytes = hexToBytes(name);
-    name = decryptString(key, nameBytes);
-    return name;
+    return await decryptString(key, nameBytes);
 }
 
 const updatePasswordBtn = (txt, disabled) => {
@@ -160,10 +158,10 @@ const promptPassword = (download) => {
         deriveKey(password.value, salt, pepper, () => {
             setFormEnabled(false);
             updatePasswordBtn("Validating", true);
-        }, (key, _) => {
+        }, async (key, _) => {
             setFormEnabled(true);
 
-            let decryptedName = decryptName(key, download.name);
+            let decryptedName = await decryptName(key, download.name);
 
             if (decryptedName) {
                 showDownload(decryptedName, download, key);
@@ -184,7 +182,7 @@ const downloadText = (download, key, callback) => {
         xhr.onreadystatechange = async () => {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 let data = new Uint8Array(await xhr.response.arrayBuffer());
-                let decryptedChunk = decryptChunk(key, data);
+                let decryptedChunk = await decryptChunk(key, data);
                 let decryptedText = new TextDecoder().decode(decryptedChunk);
                 displayText(decryptedText);
                 callback(true);
@@ -219,8 +217,8 @@ const downloadFile = (name, download, key, callback) => {
         xhr.onreadystatechange = async () => {
             if (xhr.readyState === 4 && xhr.status === 200) {
                 let data = new Uint8Array(await xhr.response.arrayBuffer());
-                let decryptedChunk = decryptChunk(key, data);
-                writer.write(decryptedChunk).then(() => {
+                let decryptedChunk = await decryptChunk(key, data);
+                writer.write(new Uint8Array(decryptedChunk)).then(() => {
                     if (chunkNum === download.chunks) {
                         writer.close().then(r => console.log(r));
                         callback(true);

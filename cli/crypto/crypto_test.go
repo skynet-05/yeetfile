@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"bytes"
-	"golang.org/x/crypto/nacl/secretbox"
 	"testing"
 	"yeetfile/shared"
 )
@@ -37,7 +36,7 @@ func TestEncryptChunk(t *testing.T) {
 	key, _, _, _ := DeriveKey(password, nil, nil)
 	encrypted := EncryptChunk(key, data)
 
-	if len(encrypted) != len(data)+shared.NonceSize+secretbox.Overhead {
+	if len(encrypted) != len(data)+shared.TotalOverhead {
 		t.Fatalf("Unexpected encrypted data size\n" +
 			"(Should be data length + nonce_size + overhead)")
 	}

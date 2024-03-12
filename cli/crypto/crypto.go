@@ -1,10 +1,11 @@
 package crypto
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
-	"errors"
-	"golang.org/x/crypto/nacl/secretbox"
-	"golang.org/x/crypto/scrypt"
+	"crypto/sha256"
+	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
 	"yeetfile/cli/utils"
@@ -30,11 +31,7 @@ func DeriveKey(
 	}
 
 	pepperPw := append(password, pepper...)
-
-	key, err := scrypt.Key(pepperPw, salt, 32768, 8, 1, shared.KeySize)
-	if err != nil {
-		return [shared.KeySize]byte{}, nil, nil, err
-	}
+	key := pbkdf2.Key(pepperPw, salt, 100000, shared.KeySize, sha256.New)
 
 	var keyOut [shared.KeySize]byte
 	copy(keyOut[:], key)
@@ -50,34 +47,53 @@ func EncryptChunk(key [shared.KeySize]byte, data []byte) []byte {
 		log.Fatalf("Error generating nonce: %v\n", err)
 	}
 
-	return secretbox.Seal(nonce[:], data, &nonce, &key)
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil
+	}
+
+	result := aesgcm.Seal(nil, nonce[:], data, nil)
+	var merged []byte
+	merged = append(merged, nonce[:]...)
+	merged = append(merged, result[:]...)
+
+	return merged
 }
 
 // DecryptChunk decrypts an encrypted chunk of data using the provided key. If
 // the key is unable to decrypt the data, an error is returned, otherwise the
 // decrypted data is returned.
-func DecryptChunk(key [32]byte, chunk []byte) ([]byte, error) {
-	var decryptNonce [shared.NonceSize]byte
-	copy(decryptNonce[:], chunk[:shared.NonceSize])
+func DecryptChunk(key [shared.KeySize]byte, chunk []byte) ([]byte, error) {
+	nonce := chunk[:shared.NonceSize]
+	data := chunk[shared.NonceSize:]
 
-	// Decrypt and append contents to output
-	decrypted, ok := secretbox.Open(
-		nil,
-		chunk[shared.NonceSize:],
-		&decryptNonce,
-		&key)
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
 
-	if !ok {
-		return []byte{}, errors.New("failed to decrypt")
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	plaintext, err := aesgcm.Open(nil, nonce, data, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	//readLen := shared.NonceSize + len(decrypted) + secretbox.Overhead
-	return decrypted, nil
+	return plaintext, nil
 }
 
 // DecryptString decrypts a string using DecryptChunk, but returns a string
 // directly rather than returning a byte slice
-func DecryptString(key [32]byte, byteStr []byte) (string, error) {
+func DecryptString(key [shared.KeySize]byte, byteStr []byte) (string, error) {
 	decrypted, err := DecryptChunk(key, byteStr)
 	if err != nil {
 		return "", err

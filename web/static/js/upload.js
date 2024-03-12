@@ -140,7 +140,7 @@ const validateForm = (form) => {
     return true;
 }
 
-const submitFormMulti = (form, key, salt, callback) => {
+const submitFormMulti = async (form, key, salt, callback) => {
     let name = document.getElementById("name").value || "download.zip";
     if (name.endsWith(".zip.zip")) {
         name = name.replace(".zip.zip", ".zip");
@@ -163,7 +163,7 @@ const submitFormMulti = (form, key, salt, callback) => {
         size += file.size;
     }
 
-    let encryptedName = encryptString(key, name);
+    let encryptedName = await encryptString(key, name);
 
     let hexName = toHexString(encryptedName);
     let chunks = getNumChunks(size);
@@ -183,9 +183,9 @@ const submitFormMulti = (form, key, salt, callback) => {
         });
 }
 
-const submitFormSingle = (form, key, salt, callback) => {
+const submitFormSingle = async (form, key, salt, callback) => {
     let file = form.files[0];
-    let encryptedName = encryptString(key, file.name);
+    let encryptedName = await encryptString(key, file.name);
 
     let hexName = toHexString(encryptedName);
     let chunks = getNumChunks(file.size);
@@ -204,9 +204,12 @@ const submitFormSingle = (form, key, salt, callback) => {
         });
 }
 
-const submitFormText = (form, key, salt, callback) => {
-    let encryptedText = encryptString(key, form.plaintext);
-    let encryptedName = encryptString(key, genRandomString(10));
+const submitFormText = async (form, key, salt, callback) => {
+    let encryptedText = await encryptString(key, form.plaintext);
+    let encryptedName = await encryptString(key, genRandomString(10));
+
+    console.log(encryptedText);
+    console.log(encryptedName);
     let hexName = toHexString(encryptedName);
     let expString = getExpString(form.exp, form.unit);
     let downloads = parseInt(form.downloads);
@@ -244,20 +247,20 @@ const uploadZip = async (id, key, zip, chunks) => {
     let i = 0;
     let zipData = new Uint8Array(0);
 
-    zip.generateInternalStream({type:"uint8array"}).on ('data', (data, metadata) => {
+    zip.generateInternalStream({type:"uint8array"}).on ('data', async (data, metadata) => {
         zipData = concatTypedArrays(zipData, data);
         if (zipData.length >= chunkSize) {
             let slice = zipData.subarray(0, chunkSize);
-            let blob = encryptChunk(key, slice);
+            let blob = await encryptChunk(key, slice);
 
             updateProgress(`Uploading file... ${i + 1}/${chunks}`)
             sendChunk(blob, id, i + 1);
             zipData = zipData.subarray(chunkSize, zipData.length);
             i += 1;
         }
-    }).on("end", () => {
+    }).on("end", async () => {
         if (zipData.length > 0) {
-            let blob = encryptChunk(key, zipData);
+            let blob = await encryptChunk(key, zipData);
             updateProgress(`Uploading file... ${i + 1}/${chunks}`)
             sendChunk(blob, id, i + 1, (tag) => {
                 showFileTag(tag);
@@ -276,7 +279,7 @@ const uploadFileChunks = async (id, key, file, chunks) => {
         }
 
         let data = await file.slice(start, end).arrayBuffer();
-        let blob = encryptChunk(key, new Uint8Array(data));
+        let blob = await encryptChunk(key, new Uint8Array(data));
 
         updateProgress(`Uploading file... ${i + 1}/${chunks}`)
         sendChunk(blob, id, i + 1, (tag) => {

@@ -30,8 +30,8 @@ Contents
 
 ## About
 
-YeetFile is a text and file transferring service, with both a [web](https://yeetfile.com) and 
-[CLI client](https://github.com/meddlehead/yeetfile/releases) officially supported. 
+YeetFile is a text and file transferring service, with both a [web](https://yeetfile.com) and
+[CLI client](https://github.com/meddlehead/yeetfile/releases) officially supported.
 
 ### Features
 
@@ -61,9 +61,9 @@ YeetFile is a text and file transferring service, with both a [web](https://yeet
 When uploading a file with YeetFile, an optional password is provided by the user to protect the file contents.
 Whether or not a password is provided, however, a "pepper" (an additional secret value added prior to hashing)
 will be generated using 3 random works from a list of ~1K words, as well as a random digit placed either before
-or after any of the 3 words. This pepper + (optional) password value is used to derive a key. The file is then
-split into individual 5MB chunks, and the key is used to encrypt each individual chunk using XSalsa20 and 
-Poly1305 (see NaCl: https://nacl.cr.yp.to/index.html) before uploading the encrypted chunk to the server.
+or after any of the 3 words. This pepper + (optional) password value is used to derive a key via PBKDF2 with
+SHA-512 hashing. The file is then split into individual 5MB chunks, and the key is used to encrypt each individual
+chunk using AES-GCM before uploading the encrypted chunk to the server.
 
 On the server side, a file ID is generated for the upload process and is used to associate individual file
 chunks together. As file chunks are uploaded, the server forwards these chunks to a Backblaze B2 bucket. Once
@@ -71,7 +71,7 @@ the upload is complete, the server returns a link to the uploader that contains 
 
 <pre>https://yeetfile.com/file_8z74nn1spdni</pre>
 
-This link is then formatted by either the web or CLI client with the pepper generated before uploading:
+This link is then formatted (by the client) with the pepper that the client generated before uploading:
 
 <pre>https://yeetfile.com/file_8z74nn1spdni<b>#neither-unarmored-uncle9</b></pre>
 
@@ -80,13 +80,13 @@ The pepper is appended as part of a URL's "fragment", which is never sent to the
 When the recipient opens the link (in web or CLI), the pepper is extracted from the link and used by iteself to
 perform an initial decryption attempt of the filename. If it fails to decrypt the filename, it means that the
 uploader set a password during the upload process, and the web or CLI client will prompt the recipient to enter
-a password. Once the download is complete, the download 
+a password. Once the download is complete, the download
 
 With this model, the server never sees the file's decrypted contents or filename, and it never sees the randomly
 generated pepper required for decrypting file contents. In addition to not having the ability to decrypt any file,
 YeetFile is also not able to determine which file was uploaded by a particular account. The user's account ID is
 never tied to an uploaded file ID in the database, and the file's size is rounded down to the nearest megabyte
-when adjusting the user's file transfer usage (to avoid correlating size of an upload to a user's modified 
+when adjusting the user's file transfer usage (to avoid correlating size of an upload to a user's modified
 transfer limit).
 
 Note: Uploading text works the same way, just with a single chunk limited to 1K characters.
