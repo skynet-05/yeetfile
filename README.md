@@ -7,6 +7,9 @@
 [![Latest Release](https://img.shields.io/github/v/release/meddlehead/yeetfile)](https://github.com/meddlehead/yeetfile/releases)
 [![License: AGPLv3](https://img.shields.io/github/license/meddlehead/yeetfile)](https://opensource.org/license/agpl-v3)
 
+[![Tests (CLI)](https://github.com/meddlehead/yeetfile/actions/workflows/cli-tests.yml/badge.svg)](https://github.com/meddlehead/yeetfile/actions/workflows/cli-tests.yml)
+[![Tests (JS)](https://github.com/meddlehead/yeetfile/actions/workflows/js-tests.yml/badge.svg)](https://github.com/meddlehead/yeetfile/actions/workflows/js-tests.yml)
+
 <table>
   <tr>
     <td><a href="https://sr.ht/~benbusby/yeetfile">SourceHut</a></td>
