@@ -1,27 +1,33 @@
 const HashSize = 32;
-const NonceSize = 12;
+const NonceSize = 16;
 let utf8Encode = new TextEncoder();
 let utf8Decode = new TextDecoder();
 
-const deriveKey = (password, salt, pepper, updateCallback, keyCallback) => {
+let webcrypto;
+
+const deriveSendingKey = (password, salt, pepper, updateCallback, keyCallback) => {
     if (!salt) {
-        salt = window.crypto.getRandomValues(new Uint8Array(HashSize));
+        salt = webcrypto.getRandomValues(new Uint8Array(HashSize));
     }
 
     password = password + pepper;
 
-    window.crypto.subtle.importKey(
+    deriveKey(password, salt, updateCallback, keyCallback);
+}
+
+const deriveKey = (password, salt, updateCallback, keyCallback) => {
+    webcrypto.subtle.importKey(
         "raw",
         utf8Encode.encode(password),
         "PBKDF2",
         false,
         ["deriveBits", "deriveKey"],
     ).then((keyMaterial) => {
-        window.crypto.subtle.deriveKey(
+        webcrypto.subtle.deriveKey(
             {
                 name: "PBKDF2",
                 salt,
-                iterations: 100000,
+                iterations: 600000,
                 hash: "SHA-256",
             },
             keyMaterial,
@@ -39,10 +45,15 @@ const encryptString = async (key, str) => {
     return await encryptChunk(key, data);
 }
 
-const encryptChunk = async (key, data) => {
-    let iv = window.crypto.getRandomValues(new Uint8Array(NonceSize));
+const exportKey = async (key) => {
+    const exported = await webcrypto.subtle.exportKey("raw", key);
+    return new Uint8Array(exported);
+}
 
-    let encrypted = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
+const encryptChunk = async (key, data) => {
+    let iv = webcrypto.getRandomValues(new Uint8Array(NonceSize));
+
+    let encrypted = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
     let merged = new Uint8Array(iv.length + encrypted.byteLength);
     merged.set(iv);
     merged.set(new Uint8Array(encrypted), iv.length);
@@ -59,7 +70,7 @@ const decryptChunk = async (key, data) => {
     let iv = data.slice(0, NonceSize);
     data = data.slice(NonceSize, data.length + 1);
 
-    return await window.crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+    return await webcrypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
 }
 
 const fetchWordlist = callback => {
@@ -91,4 +102,24 @@ const generatePassphrase = (callback) => {
 
         callback(passphrase.join("."));
     })
+}
+
+if (typeof window === 'undefined') {
+    // Running in Node.js
+    webcrypto = require('crypto').webcrypto;
+
+    module.exports = {
+        deriveSendingKey,
+        encryptString,
+        encryptChunk,
+        generatePassphrase,
+        fetchWordlist,
+        decryptChunk,
+        decryptString,
+        exportKey,
+        webcrypto
+    };
+} else {
+    // Running in a browser
+    webcrypto = window.crypto;
 }
