@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setFormEnabled(false);
             generatePassphrase(passphrase => {
                 pepper = passphrase;
-                deriveKey(formValues.pw, undefined, passphrase, () => {
+                deriveSendingKey(formValues.pw, undefined, passphrase, () => {
                     updateProgress("Initializing...")
                 }, (key, salt) => {
                     if (isFileUpload()) {

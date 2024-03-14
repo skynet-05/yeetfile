@@ -23,7 +23,7 @@ const handleMetadata = (download) => {
     let salt = base64ToArray(download.salt);
     let pepper = location.hash.slice(1);
 
-    deriveKey("", salt, pepper, () => {}, async (key, _) => {
+    deriveSendingKey("", salt, pepper, () => {}, async (key, _) => {
         decryptName(key, download.name).then(result => {
             showDownload(result, download, key);
         }).catch(err => {
@@ -155,7 +155,7 @@ const promptPassword = (download) => {
         let salt = base64ToArray(download.salt);
         let pepper = location.hash.slice(1);
 
-        deriveKey(password.value, salt, pepper, () => {
+        deriveSendingKey(password.value, salt, pepper, () => {
             setFormEnabled(false);
             updatePasswordBtn("Validating", true);
         }, async (key, _) => {

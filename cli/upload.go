@@ -110,14 +110,14 @@ func StartPlaintextUpload(text string, downloads int, exp string) bool {
 
 // generateKey prompts the user for a password (blank pw is ok) and uses that to
 // derive a key for the content that is being uploaded
-func generateKey() ([shared.KeySize]byte, []byte, []byte, error) {
+func generateKey() ([]byte, []byte, []byte, error) {
 	pw := utils.RequestPassword()
 	if !utils.ConfirmPassword(pw) {
 		fmt.Printf("\nError: passwords do not match!\n\n")
 		return generateKey()
 	}
 
-	return crypto.DeriveKey(pw, nil, nil)
+	return crypto.DeriveSendingKey(pw, nil, nil)
 }
 
 // uploadMetadata begins the upload process by sending the server metadata
@@ -158,7 +158,7 @@ func uploadMetadata(meta shared.UploadMetadata) (string, error) {
 // UploadMultiChunk uploads a file in multiple chunks, with each chunk containing
 // at most the value of shared.ChunkSize (5mb). The function requires an ID from
 // InitializeUpload, the file pointer, the file size, and the key for encryption
-func UploadMultiChunk(id string, file *os.File, size int64, key [32]byte) (string, error) {
+func UploadMultiChunk(id string, file *os.File, size int64, key []byte) (string, error) {
 	fmt.Print("\033[2K\rUploading...")
 
 	var path string
@@ -205,7 +205,7 @@ func UploadMultiChunk(id string, file *os.File, size int64, key [32]byte) (strin
 // UploadSingleChunk uploads a file's contents in one chunk. This can only be
 // done if the total file size is less than the chunk size (5mb). The function
 // requires an ID, the file content, and the key for encryption.
-func UploadSingleChunk(id string, content []byte, key [shared.KeySize]byte) (string, error) {
+func UploadSingleChunk(id string, content []byte, key []byte) (string, error) {
 	fmt.Print("\033[2K\rUploading...")
 
 	data := crypto.EncryptChunk(key, content)
@@ -233,7 +233,7 @@ func UploadSingleChunk(id string, content []byte, key [shared.KeySize]byte) (str
 // shared.MaxPlaintextLen characters (shared/constants.go).
 func UploadPlaintext(
 	content []byte,
-	key [shared.KeySize]byte,
+	key []byte,
 	info shared.PlaintextUpload,
 ) (string, error) {
 	info.Text = crypto.EncryptChunk(key, content)

@@ -25,7 +25,7 @@ type FileDownload struct {
 	Chunks     int
 	Expiration time.Time
 	Downloads  int
-	Key        [shared.KeySize]byte
+	Key        []byte
 }
 
 // FetchMetadata retrieves file metadata for the requested file path
@@ -54,7 +54,7 @@ func PrepareDownload(
 	pw []byte,
 	pepper []byte,
 ) (FileDownload, error) {
-	key, _, _, err := crypto.DeriveKey(pw, d.Salt, pepper)
+	key, _, _, err := crypto.DeriveSendingKey(pw, d.Salt, pepper)
 	if err != nil {
 		return FileDownload{}, failedKeyGen
 	}
