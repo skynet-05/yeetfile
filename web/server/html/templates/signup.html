@@ -22,7 +22,12 @@
         <p>Note: By signing up with an account number only, you will be unable to recover
         your account if you ever lose your account number.</p>
 
+        <input type="password" id="account-password" name="password" placeholder="Password"><br>
+        <input type="password" id="account-confirm-password" placeholder="Confirm Password"><br>
         <input type="submit" id="create-id-only-account" value="Create Account">
+
+        <div id="account-id-verify">
+        </div>
     </div>
 
     {{ template "messages.html" . }}

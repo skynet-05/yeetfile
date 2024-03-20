@@ -46,7 +46,7 @@ func init() {
 	_, err = db.Exec(createTablesSQL)
 	if err != nil {
 		log.Fatalf("Unable to initialize database!\n"+
-			"Error: %v\n", err)
+			"  Error: %v\n", err)
 	}
 }
 

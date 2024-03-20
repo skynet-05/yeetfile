@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
@@ -36,10 +37,10 @@ func DeriveSendingKey(
 	return key, salt, pepper, nil
 }
 
-// CreateStorageKey creates the 512-bit symmetric key used for encrypting files
+// GenerateStorageKey creates the 256-bit symmetric key used for encrypting files
 // that are stored (not sent) in YeetFile. This is always encrypted using the
 // master PBKDF2 key before being sent to the server.
-func CreateStorageKey() ([]byte, error) {
+func GenerateStorageKey() ([]byte, error) {
 	key := make([]byte, shared.KeySize)
 	if _, err := rand.Read(key); err != nil {
 		return nil, err
@@ -52,6 +53,25 @@ func CreateStorageKey() ([]byte, error) {
 func DerivePBKDFKey(password []byte, salt []byte) []byte {
 	key := pbkdf2.Key(password, salt, 600000, shared.KeySize, sha256.New)
 	return key
+}
+
+// GenerateUserKey generates the key used for encrypting and decrypting
+// files that are stored in YeetFile, using their identifier (email or acct ID)
+// and their password.
+func GenerateUserKey(identifier []byte, password []byte) []byte {
+	return DerivePBKDFKey(password, identifier)
+}
+
+// GenerateLoginKeyHash generates a login key using the user's user key and
+// their password, and returns a hex encoded hash of the resulting key.
+func GenerateLoginKeyHash(userKey []byte, password []byte) string {
+	loginKey := DerivePBKDFKey(userKey, password)
+
+	h := sha256.New()
+	h.Write(loginKey)
+	loginKeyHash := h.Sum(nil)
+
+	return hex.EncodeToString(loginKeyHash)
 }
 
 // EncryptChunk encrypts a chunk of data using either the sending or storage key.

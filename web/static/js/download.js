@@ -5,10 +5,10 @@ document.addEventListener("DOMContentLoaded", () => {
     xhr.open("GET", `/d${window.location.pathname}`, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
 
-    xhr.onreadystatechange = () => {
+    xhr.onreadystatechange = async () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
             let download = JSON.parse(xhr.responseText);
-            handleMetadata(download);
+            await handleMetadata(download);
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             alert(`Error ${xhr.status}: ${xhr.responseText}`);
             window.location = "/";
@@ -18,18 +18,17 @@ document.addEventListener("DOMContentLoaded", () => {
     xhr.send();
 });
 
-const handleMetadata = (download) => {
+const handleMetadata = async (download) => {
     // Attempt to decrypt without a password first
     let salt = base64ToArray(download.salt);
     let pepper = location.hash.slice(1);
 
-    deriveSendingKey("", salt, pepper, () => {}, async (key, _) => {
-        decryptName(key, download.name).then(result => {
-            showDownload(result, download, key);
-        }).catch(err => {
-            console.warn(err);
-            promptPassword(download);
-        });
+    let [key, _] = await deriveSendingKey("", salt, pepper)
+    decryptName(key, download.name).then(result => {
+        showDownload(result, download, key);
+    }).catch(err => {
+        console.warn(err);
+        promptPassword(download);
     });
 }
 
@@ -151,25 +150,24 @@ const promptPassword = (download) => {
     let password = document.getElementById("password");
     let btn = document.getElementById("submit");
 
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
         let salt = base64ToArray(download.salt);
         let pepper = location.hash.slice(1);
 
-        deriveSendingKey(password.value, salt, pepper, () => {
-            setFormEnabled(false);
-            updatePasswordBtn("Validating", true);
-        }, async (key, _) => {
-            setFormEnabled(true);
+        setFormEnabled(false);
+        updatePasswordBtn("Validating", true);
 
-            let decryptedName = await decryptName(key, download.name);
+        let [key, _] = await deriveSendingKey(password.value, salt, pepper)
 
-            if (decryptedName) {
-                showDownload(decryptedName, download, key);
-            } else {
-                updatePasswordBtn("Submit", false);
-                alert("Incorrect password");
-            }
-        });
+        setFormEnabled(true);
+
+        let decryptedName = await decryptName(key, download.name);
+        if (decryptedName) {
+            showDownload(decryptedName, download, key);
+        } else {
+            updatePasswordBtn("Submit", false);
+            alert("Incorrect password");
+        }
     });
 }
 

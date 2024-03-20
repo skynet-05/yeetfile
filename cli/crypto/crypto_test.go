@@ -43,7 +43,7 @@ func TestEncryptChunk(t *testing.T) {
 			len(encrypted))
 	}
 
-	storageKey, _ := CreateStorageKey()
+	storageKey, _ := GenerateStorageKey()
 	storageEncrypted := EncryptChunk(storageKey, data)
 
 	if len(storageEncrypted) != len(data)+shared.TotalOverhead {
@@ -77,5 +77,21 @@ func TestDecryptChunk(t *testing.T) {
 		t.Fatalf("Error decrypting data: %v\n", err)
 	} else if !bytes.Equal(decrypted, data) {
 		t.Fatalf("Decrypted data doesn't match source data")
+	}
+}
+
+func TestLoginKey(t *testing.T) {
+	myPassword := []byte("my-password")
+	myEmail := []byte("myemail@domain.com")
+
+	storageKey := GenerateUserKey(myEmail, myPassword)
+	loginKey := GenerateLoginKeyHash(storageKey, myPassword)
+
+	// Simulates login at a later time
+	newStorageKey := GenerateUserKey(myEmail, myPassword)
+	newLoginKey := GenerateLoginKeyHash(newStorageKey, myPassword)
+
+	if loginKey != newLoginKey {
+		t.Fatalf("Login key hashes do not match")
 	}
 }

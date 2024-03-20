@@ -75,7 +75,7 @@ func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 			LoggedIn:     session.IsValidSession(req),
 			Title:        "Create Account",
 			ErrorMessage: w.Header().Get(ErrorHeader),
-			Javascript:   []string{"auth.js", "signup.js"},
+			Javascript:   []string{"signup.js", "crypto.js"},
 			CSS:          []string{"auth.css"},
 		}},
 	)
@@ -93,7 +93,7 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 			Title:          "Log In",
 			SuccessMessage: w.Header().Get(SuccessHeader),
 			ErrorMessage:   w.Header().Get(ErrorHeader),
-			Javascript:     []string{"auth.js"},
+			Javascript:     []string{"login.js", "crypto.js"},
 			CSS:            []string{"auth.css"},
 		}},
 	)

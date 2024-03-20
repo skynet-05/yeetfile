@@ -14,6 +14,7 @@ type User struct {
 	ID           string
 	Email        string
 	PasswordHash []byte
+	ProtectedKey []byte
 	Meter        int
 	PaymentID    string
 	MemberExp    time.Time
@@ -26,9 +27,9 @@ var UserAlreadyExists = errors.New("user already exists")
 
 // NewUser creates a new user in the "users" table, ensuring that the email
 // provided is not already in use.
-func NewUser(email string, pwHash []byte) (string, error) {
-	if len(email) > 0 {
-		rows, err := db.Query(`SELECT * from users WHERE email = $1`, email)
+func NewUser(user User) (string, error) {
+	if len(user.Email) > 0 {
+		rows, err := db.Query(`SELECT * from users WHERE email = $1`, user.Email)
 		if err != nil {
 			return "", err
 		} else if rows.Next() {
@@ -36,23 +37,48 @@ func NewUser(email string, pwHash []byte) (string, error) {
 		}
 	}
 
-	id := shared.GenRandomNumbers(16)
-	paymentID := shared.GenRandomString(16)
-
-	for UserIDExists(id) {
-		id = shared.GenRandomNumbers(16)
+	if len(user.ID) == 0 {
+		user.ID = CreateUniqueUserID()
+	} else {
+		if UserIDExists(user.ID) {
+			return "", UserAlreadyExists
+		}
 	}
 
-	s := `INSERT INTO users
-	      (id, email, pw_hash, payment_id, meter, member_expiration, last_upgraded_month)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	paymentID := CreateUniquePaymentID()
 
-	_, err := db.Exec(s, id, email, pwHash, paymentID, 0, defaultExp, -1)
+	s := `INSERT INTO users
+	      (id, email, pw_hash, payment_id, meter, member_expiration, last_upgraded_month, protected_key)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+
+	_, err := db.Exec(s, user.ID, user.Email, user.PasswordHash, paymentID, 0, defaultExp, -1, user.ProtectedKey)
 	if err != nil {
 		return "", err
 	}
 
-	return id, nil
+	return user.ID, nil
+}
+
+// CreateUniqueUserID creates a 16 digit user ID that is not already being used
+// in the user database.
+func CreateUniqueUserID() string {
+	id := shared.GenRandomNumbers(16)
+	for UserIDExists(id) {
+		id = shared.GenRandomNumbers(16)
+	}
+
+	return id
+}
+
+// CreateUniquePaymentID creates a 16 character payment ID that is not already
+// being used in the user database.
+func CreateUniquePaymentID() string {
+	paymentID := shared.GenRandomString(16)
+	for PaymentIDExists(paymentID) {
+		paymentID = shared.GenRandomString(16)
+	}
+
+	return paymentID
 }
 
 // RotateUserPaymentID overwrites the previous payment ID once a transaction is
@@ -120,6 +146,23 @@ func UserIDExists(id string) bool {
 	rows, err := db.Query(`SELECT id FROM users WHERE id = $1`, id)
 	if err != nil {
 		log.Fatalf("Error querying user id: %v", err)
+		return true
+	}
+
+	// If any rows are returned, the id exists
+	if rows.Next() {
+		return true
+	}
+
+	return false
+}
+
+// PaymentIDExists checks the user table to see if the provided payment ID
+// (for Stripe + BTCPay) already exists for another user.
+func PaymentIDExists(paymentID string) bool {
+	rows, err := db.Query(`SELECT * FROM users WHERE payment_id = $1`, paymentID)
+	if err != nil {
+		log.Fatalf("Error querying user payment id: %v", err)
 		return true
 	}
 
@@ -314,23 +357,6 @@ func GetUserEmailByPaymentID(paymentID string) (string, error) {
 	}
 
 	return "", errors.New("unable to find user by payment id")
-}
-
-// PaymentIDExists checks the user table to see if the provided payment ID
-// (for Stripe + BTCPay) already exists for another user.
-func PaymentIDExists(paymentID string) bool {
-	rows, err := db.Query(`SELECT * FROM users WHERE payment_id = $1`, paymentID)
-	if err != nil {
-		log.Fatalf("Error querying user payment id: %v", err)
-		return true
-	}
-
-	// If any rows are returned, the id exists
-	if rows.Next() {
-		return true
-	}
-
-	return false
 }
 
 // SetUserMembershipExpiration updates a user's membership expiration to be

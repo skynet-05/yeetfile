@@ -4,26 +4,10 @@
 <div id="center-div">
     <h1>Log In</h1>
     <hr>
-    <input type="radio" id="email-signup" name="signup" checked>
-    <label for="email-signup">Email + Password</label><br>
-    <input type="radio" id="id-signup" name="signup">
-    <label for="id-signup">Account ID Only</label><br>
-    <hr>
-    <div id="email-div">
-        <form method="post" action="/login">
-            <input type="text" id="email" name="email" placeholder="Email"><br>
-            <input type="password" id="password" name="password" placeholder="Password"><br>
-            <input type="submit" id="email-login" value="Log In"/>
-            <a href="/forgot">Forgot Password</a>
-        </form>
-    </div>
-    <div id="account-id-div">
-        <form method="post" action="/login">
-            <input type="text" id="account-id" name="email" placeholder="Account ID"><br>
-            <input type="text" name="password" value="" hidden>
-            <input type="submit" id="account-id-login" value="Log In"/>
-        </form>
-    </div>
+    <input type="text" id="identifier" placeholder="Email / Account ID"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <input type="submit" id="login-btn" onclick="login()" value="Log In"/>
+    <a href="/forgot">Forgot Password</a>
 
     {{ template "messages.html" . }}
 </div>

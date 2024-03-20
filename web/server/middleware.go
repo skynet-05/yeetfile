@@ -64,6 +64,8 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte("Too many requests from this IP address, " +
+			"please wait and try again."))
 	}
 
 	return handler

@@ -44,7 +44,8 @@ func Run(addr string) {
 		{GET, "/d/*/*", transfer.DownloadChunkHandler},
 
 		// Auth (signup, login/logout, account mgmt, etc)
-		{GET, "/verify", auth.VerifyHandler},
+		{GET, "/verify-email", auth.VerifyEmailHandler},
+		{POST, "/verify-account", auth.VerifyAccountHandler},
 		{GET, "/session", session.SessionHandler},
 		{GET, "/logout", auth.LogoutHandler},
 		{POST, "/login", auth.LoginHandler},

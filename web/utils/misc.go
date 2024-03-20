@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"reflect"
@@ -11,6 +12,12 @@ import (
 	"strings"
 	"time"
 )
+
+func Log(msg string) {
+	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
+		log.Println(msg)
+	}
+}
 
 func GetEnvVar(key string, fallback string) string {
 	value, exists := os.LookupEnv(key)
@@ -83,6 +90,25 @@ func PrettyPrintStruct(v any) {
 	fmt.Println(string(s))
 }
 
+// IsStructMissingAnyField checks to see if any generic struct is missing a
+// values in its string or array fields. Numeric fields are not checked since
+// 0 is a valid field value.
+func IsStructMissingAnyField(s interface{}) bool {
+	val := reflect.ValueOf(s)
+	missing := false
+	for i := 0; i < val.Type().NumField(); i++ {
+		switch val.Field(i).Type().Kind() {
+		case reflect.String:
+			fallthrough
+		case reflect.Slice:
+			missing = missing || val.Field(i).Len() == 0
+			break
+		}
+	}
+
+	return missing
+}
+
 // GetStructFromFormOrJSON takes a struct and an http request and pulls out
 // values from either an http form or a json request body.
 func GetStructFromFormOrJSON[T any](t *T, req *http.Request) (T, error) {
@@ -95,7 +121,6 @@ func GetStructFromFormOrJSON[T any](t *T, req *http.Request) (T, error) {
 		if tag, ok := val.Type().Field(i).Tag.Lookup("json"); ok {
 			formVal := req.FormValue(tag)
 			if len(formVal) == 0 {
-				fmt.Println("Missing tag: " + tag)
 				break
 			}
 
@@ -123,7 +148,7 @@ func GetStructFromFormOrJSON[T any](t *T, req *http.Request) (T, error) {
 	}
 
 	if !hasForm {
-		fmt.Println("Trying to decode")
+		// No HTML form, should decode instead
 		err := json.NewDecoder(req.Body).Decode(&t)
 		if err != nil {
 			return *t, err

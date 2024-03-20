@@ -30,13 +30,27 @@ type DownloadResponse struct {
 }
 
 type Signup struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Identifier   string `json:"identifier"`
+	LoginKeyHash string `json:"loginKeyHash"`
+	ProtectedKey []byte `json:"protectedKey"`
+}
+
+type SignupResponse struct {
+	Identifier string `json:"identifier"`
+	Captcha    string `json:"captcha"`
+	Error      string `json:"error"`
+}
+
+type VerifyAccount struct {
+	ID           string `json:"id"`
+	Code         string `json:"code"`
+	LoginKeyHash []byte `json:"loginKeyHash"`
+	ProtectedKey []byte `json:"protectedKey"`
 }
 
 type Login struct {
-	Identifier string `json:"email"`
-	Password   string `json:"password"`
+	Identifier   string `json:"identifier"`
+	LoginKeyHash []byte `json:"loginKeyHash"`
 }
 
 type SessionInfo struct {

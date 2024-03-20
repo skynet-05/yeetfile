@@ -49,21 +49,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (validateForm(formValues)) {
             setFormEnabled(false);
-            generatePassphrase(passphrase => {
+            generatePassphrase(async passphrase => {
                 pepper = passphrase;
-                deriveSendingKey(formValues.pw, undefined, passphrase, () => {
-                    updateProgress("Initializing...")
-                }, (key, salt) => {
-                    if (isFileUpload()) {
-                        if (formValues.files.length > 1) {
-                            submitFormMulti(formValues, key, salt, allowReset);
-                        } else {
-                            submitFormSingle(formValues, key, salt, allowReset);
-                        }
+
+                updateProgress("Initializing");
+                let [key, salt] = await deriveSendingKey(formValues.pw, undefined, passphrase);
+
+                if (isFileUpload()) {
+                    if (formValues.files.length > 1) {
+                        await submitFormMulti(formValues, key, salt, allowReset);
                     } else {
-                        submitFormText(formValues, key, salt, allowReset);
+                        await submitFormSingle(formValues, key, salt, allowReset);
                     }
-                });
+                } else {
+                    await submitFormText(formValues, key, salt, allowReset);
+                }
             });
         }
     });

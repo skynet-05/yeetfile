@@ -2,10 +2,8 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -19,44 +17,38 @@ import (
 
 // LoginHandler handles a POST request to /login to log the user in.
 func LoginHandler(w http.ResponseWriter, req *http.Request) {
-	var identifier string
-	var password []byte
+	var err error
 
-	_ = req.ParseForm()
-
-	if req.FormValue("email") != "" {
-		identifier = req.FormValue("email")
-		password = []byte(req.FormValue("password"))
-	} else {
-		var loginFields shared.Login
-		err := json.NewDecoder(req.Body).Decode(&loginFields)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		identifier = loginFields.Identifier
-		password = []byte(loginFields.Password)
+	var login shared.Login
+	login, err = utils.GetStructFromFormOrJSON(&login, req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
-	if strings.Contains(identifier, "@") {
+	identifier := login.Identifier
+	keyHash := login.LoginKeyHash
+
+	if strings.Contains(login.Identifier, "@") {
 		pwHash, err := db.GetUserPasswordHashByEmail(identifier)
-		if err != nil || bcrypt.CompareHashAndPassword(pwHash, password) != nil {
-			w.Header().Set(html.ErrorHeader, "User not found, or incorrect password")
-			html.LoginPageHandler(w, req)
+		if err != nil || bcrypt.CompareHashAndPassword(pwHash, keyHash) != nil {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("User not found, or incorrect password"))
 			return
 		}
 
 		identifier, err = db.GetUserIDByEmail(identifier)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("Internal server error"))
 			return
 		}
 	} else {
 		pwHash, err := db.GetUserPasswordHashByID(identifier)
-		if (pwHash != nil && len(pwHash) != 0) || err != nil || !db.UserIDExists(identifier) {
-			w.Header().Set(html.ErrorHeader, "Account not found")
-			html.LoginPageHandler(w, req)
+		pwError := bcrypt.CompareHashAndPassword(pwHash, keyHash)
+		if err != nil || !db.UserIDExists(identifier) || pwError != nil {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("User not found, or incorrect password"))
 			return
 		}
 	}
@@ -76,45 +68,41 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var id string
-	var err error
+	var response shared.SignupResponse
+	status := http.StatusOK
 
-	if utils.IsEitherEmpty(signupData.Email, signupData.Password) {
-		// If email is empty but not the password (or vice versa) the
-		// request is invalid.
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Bad request"))
-		return
-	} else if len(signupData.Email) == 0 {
-		// No email (or password), so this is an account ID only signup
-		id, err = SignupAccountIDOnly()
-	} else {
-		// Need email verification before finishing with signup
-		err = SignupWithEmail(signupData)
-	}
-
-	if err != nil {
-		if errors.Is(err, db.UserAlreadyExists) {
-			w.WriteHeader(http.StatusConflict)
-			_, _ = w.Write([]byte("User already exists"))
-		} else if errors.Is(err, MissingField) {
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte("Bad request"))
-		} else {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte("Server error"))
-		}
-		return
-	} else if len(signupData.Email) == 0 {
-		err = session.SetSession(id, w, req)
+	if len(signupData.Identifier) == 0 {
+		// No email, so this is an account ID only signup
+		id, captcha, err := SignupAccountIDOnly()
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			status = http.StatusBadRequest
+			response = shared.SignupResponse{
+				Error: "Error creating account ID",
+			}
+		} else {
+			response = shared.SignupResponse{
+				Identifier: id,
+				Captcha:    captcha,
+			}
 		}
-
-		_, _ = io.WriteString(w, id)
+	} else {
+		// Email signup
+		err := SignupWithEmail(signupData)
+		if err != nil {
+			status = http.StatusBadRequest
+			response = shared.SignupResponse{
+				Error: "Error creating account ID",
+			}
+		} else {
+			response = shared.SignupResponse{
+				Identifier: signupData.Identifier,
+			}
+		}
 	}
+
+	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // AccountHandler handles fetching the user's data and displaying a web page for
@@ -140,9 +128,9 @@ func AccountHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// VerifyHandler handles account verification using the link sent to a user's
+// VerifyEmailHandler handles account verification using the link sent to a user's
 // email immediately after signup.
-func VerifyHandler(w http.ResponseWriter, req *http.Request) {
+func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	email := req.URL.Query().Get("email")
 	code := req.URL.Query().Get("code")
 
@@ -158,7 +146,7 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Verify user verification code and fetch password hash
-	pwHash, err := db.VerifyUser(email, code)
+	pwHash, protectedKey, err := db.VerifyUser(email, code)
 	if err != nil {
 		w.Header().Set(html.ErrorHeader, "Incorrect verification code")
 		html.VerifyPageHandler(w, req, email)
@@ -166,7 +154,12 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Create new user
-	id, err := db.NewUser(email, pwHash)
+	id, err := db.NewUser(db.User{
+		Email:        email,
+		PasswordHash: pwHash,
+		ProtectedKey: protectedKey,
+	})
+
 	if err != nil {
 		w.Header().Set(html.ErrorHeader, "Server error")
 		html.VerifyPageHandler(w, req, email)
@@ -178,6 +171,51 @@ func VerifyHandler(w http.ResponseWriter, req *http.Request) {
 
 	_ = session.SetSession(id, w, req)
 	http.Redirect(w, req, "/account", http.StatusMovedPermanently)
+}
+
+// VerifyAccountHandler handles account verification using the CAPTCHA displayed
+// to the user containing a multi-digit code.
+func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
+	var verify shared.VerifyAccount
+	if json.NewDecoder(req.Body).Decode(&verify) != nil {
+		utils.Log("Unable to parse request")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Unable to parse request"))
+		return
+	} else if utils.IsStructMissingAnyField(verify) {
+		utils.Log("Missing required fields for verification")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Unable to parse request"))
+		return
+	}
+
+	// Verify user verification code
+	_, _, err := db.VerifyUser(verify.ID, verify.Code)
+	if err != nil {
+		utils.Log("Incorrect verification code")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte("Incorrect verification code"))
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword(verify.LoginKeyHash, 8)
+
+	_, err = db.NewUser(db.User{
+		ID:           verify.ID,
+		ProtectedKey: verify.ProtectedKey,
+		PasswordHash: hash,
+	})
+
+	if err != nil {
+		utils.Log(fmt.Sprintf("Bad request: %v\n", err))
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Bad request"))
+		return
+	}
+
+	// Remove verification entry
+	_ = db.DeleteVerification(verify.ID)
+	_ = session.SetSession(verify.ID, w, req)
 }
 
 // LogoutHandler handles a PUT request to /logout to log the user out of their
@@ -212,7 +250,7 @@ func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
 
 		id, err := db.GetUserIDByEmail(forgot.Email)
 		if err == nil && len(id) > 0 && len(forgot.Email) > 0 {
-			code, _ := db.NewVerification(forgot.Email, []byte(""), true)
+			code, _ := db.NewVerification(forgot.Email, nil, nil, true)
 			_ = mail.SendResetEmail(code, forgot.Email)
 		}
 
@@ -233,7 +271,7 @@ func ResetPasswordHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	errorMsg := ""
-	_, err = db.VerifyUser(reset.Email, reset.Code)
+	_, _, err = db.VerifyUser(reset.Email, reset.Code)
 	if err != nil {
 		errorMsg = "Incorrect verification code"
 	} else if reset.Password != reset.ConfirmPassword {

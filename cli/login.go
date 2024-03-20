@@ -6,81 +6,43 @@ import (
 	"fmt"
 	"net/http"
 	"yeetfile/cli/config"
+	"yeetfile/cli/crypto"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 )
 
 var ErrorAccountDoesNotExist = errors.New("account does not exist")
-var ErrorIncorrectPassword = errors.New("incorrect password")
 
 func LoginUser(loop bool) bool {
-	fmt.Println("1) Email + password")
-	fmt.Println("2) Account # only")
-	loginOpt := utils.StringPrompt("How do you want to login? (1 or 2):")
-
-	if loginOpt != "1" && loginOpt != "2" {
-		return LoginUser(loop)
-	}
-
-	var err error
-	if loginOpt == "1" {
-		err = loginWithEmail("")
-	} else {
-		err = loginWithAccountID()
-	}
-
-	if loop && err != nil {
-		return LoginUser(loop)
-	}
-
-	return err == nil
-}
-
-func loginWithEmail(email string) error {
-	if len(email) == 0 {
-		email = utils.StringPrompt("Email:")
-	}
+	identifier := utils.StringPrompt("Email or Account ID:")
 
 	pw := utils.RequestPassword()
+	userKey := crypto.GenerateUserKey([]byte(identifier), pw)
+	loginKeyHash := crypto.GenerateLoginKeyHash(userKey, pw)
+
 	err := sendLogin(shared.Login{
-		Identifier: email,
-		Password:   string(pw),
+		Identifier:   identifier,
+		LoginKeyHash: []byte(loginKeyHash),
 	})
+
+	var loginError error
 
 	if err != nil {
 		if errors.Is(err, ErrorAccountDoesNotExist) {
 			fmt.Println("Error: Account does not exist or incorrect password")
-			return loginWithEmail("")
-		} else if errors.Is(err, ErrorIncorrectPassword) {
-			fmt.Println("Error: Account does not exist or incorrect password")
-			return loginWithEmail(email)
+			return LoginUser(loop)
 		} else {
-			return errors.New("failed to log in")
+			loginError = errors.New("failed to log in")
 		}
 	}
 
-	fmt.Println("Successfully logged in!")
-	return nil
-}
-
-func loginWithAccountID() error {
-	account := utils.StringPrompt("Account #:")
-	err := sendLogin(shared.Login{
-		Identifier: account,
-		Password:   "",
-	})
-
-	if err != nil {
-		if errors.Is(err, ErrorAccountDoesNotExist) {
-			fmt.Println("Error: Account does not exist")
-			return loginWithAccountID()
-		} else {
-			return errors.New("failed to log in")
-		}
+	if loop && (err != nil || loginError != nil) {
+		return LoginUser(loop)
 	}
 
 	fmt.Println("Successfully logged in!")
-	return nil
+
+	return err == nil && loginError == nil
 }
 
 // sendLogin sends a POST request containing the shared.Login struct to log
@@ -112,12 +74,7 @@ func sendLogin(login shared.Login) error {
 		return nil
 	case http.StatusNotFound:
 		// 404 - Account not found
-		fmt.Printf("An account was not found for %s\n", login.Identifier)
 		return ErrorAccountDoesNotExist
-	case http.StatusUnauthorized:
-		// 401 - Account credentials incorrect
-		fmt.Println("Account password is incorrect")
-		return ErrorIncorrectPassword
 	default:
 		// ??? - Unexpected response
 		fmt.Printf("Server error: %d\n", resp.StatusCode)
