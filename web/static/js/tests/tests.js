@@ -44,7 +44,7 @@ const testDecryptChunk = async testCallback => {
 
     assert(data.length === decryptedBlob.length);
     for (let i in decryptedBlob) {
-        assert(data[i] !== decryptedBlob[i]);
+        assert(data[i] === decryptedBlob[i]);
     }
 
     let [newKey, _newSalt] = await crypto.deriveSendingKey("password", undefined, "");
