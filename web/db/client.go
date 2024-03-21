@@ -6,6 +6,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
+	"yeetfile/web/cache"
 	"yeetfile/web/service"
 	"yeetfile/web/utils"
 )
@@ -76,6 +77,12 @@ func DeleteFileByID(id string) {
 	metadata, err := RetrieveMetadata(id)
 	if err != nil {
 		log.Printf("Error fetching metadata: %v", err)
+	}
+
+	if err := cache.RemoveFile(id); err != nil {
+		log.Printf("Error removing cached file: %v\n", id)
+	} else {
+		log.Printf("%s deleted from cache\n", id)
 	}
 
 	// File must be deleted from B2 before removing from the database

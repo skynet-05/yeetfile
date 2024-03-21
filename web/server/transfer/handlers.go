@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/shared"
+	"yeetfile/web/cache"
 	"yeetfile/web/db"
 	"yeetfile/web/utils"
 )
@@ -27,6 +28,11 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	} else if !UserCanUpload(meta.Size, req) {
 		http.Error(w, "Not enough space available", http.StatusBadRequest)
+		return
+	}
+
+	if meta.Chunks == 0 {
+		http.Error(w, "# of chunks cannot be 0", http.StatusBadRequest)
 		return
 	}
 
@@ -204,7 +210,15 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	eof, bytes := DownloadFile(metadata.B2ID, metadata.Length, chunk)
+	var eof bool
+	var bytes []byte
+	if cache.HasFile(id, metadata.Length) {
+		eof, bytes = DownloadFileFromCache(id, metadata.Length, chunk)
+	} else {
+		cache.PrepCache(id, metadata.Length)
+		eof, bytes = DownloadFile(metadata.B2ID, metadata.Length, chunk)
+		_ = cache.Write(id, bytes)
+	}
 
 	// If the file is finished downloading, decrease the download counter
 	// for that file, and delete if 0 are remaining

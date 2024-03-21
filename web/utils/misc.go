@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +18,12 @@ import (
 func Log(msg string) {
 	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
 		log.Println(msg)
+	}
+}
+
+func Logf(msg string, a ...any) {
+	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
+		log.Printf(msg, a...)
 	}
 }
 
@@ -156,4 +164,51 @@ func GetStructFromFormOrJSON[T any](t *T, req *http.Request) (T, error) {
 	}
 
 	return *t, nil
+}
+
+func CheckDirSize(path string) (int64, error) {
+	var size int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return err
+	})
+	return size, err
+}
+
+func ParseSizeString(str string) int {
+	pattern := regexp.MustCompile(`^(\d+)([a-zA-Z]+)$`)
+	matches := pattern.FindStringSubmatch(str)
+
+	if len(matches) == 3 {
+		numStr := matches[1]
+		num, err := strconv.Atoi(numStr)
+		if err != nil {
+			Logf("Error converting number: %v\n", err)
+			return 0
+		}
+
+		letters := strings.ToUpper(matches[2])
+
+		switch letters[0] {
+		case 'T': // Terabyte
+			return 1024 * 1024 * 1024 * 1024 * num
+		case 'G': // Gigabyte
+			return 1024 * 1024 * 1024 * num
+		case 'M': // Megabyte
+			return 1024 * 1024 * num
+		case 'K': // Kilobyte
+			return 1024 * num
+		default:
+			return num
+		}
+	} else {
+		Logf("No match found for size string: %s\n", str)
+	}
+
+	return 0
 }

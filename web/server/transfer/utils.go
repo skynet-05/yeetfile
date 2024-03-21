@@ -3,6 +3,7 @@ package transfer
 import (
 	"log"
 	"net/http"
+	"os"
 	"yeetfile/web/db"
 	"yeetfile/web/server/session"
 )
@@ -10,6 +11,10 @@ import (
 // UserCanUpload fetches the user ID associated with the request and checks to
 // see if their upload meter is within 1 chunk size of the data being uploaded
 func UserCanUpload(size int, req *http.Request) bool {
+	if os.Getenv("YEETFILE_DEBUG") == "1" {
+		return true
+	}
+
 	// Validate that the user has enough space to upload this file
 	s, err := session.GetSession(req)
 	if err != nil {

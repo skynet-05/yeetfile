@@ -12,3 +12,4 @@ session*
 tags
 init.sql
 uploads/
+.cache/
