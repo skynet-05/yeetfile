@@ -61,6 +61,7 @@ func GetSharedItems(userID, folderID string) ([]shared.VaultItem, error) {
 			LinkTag:      "",
 			CanModify:    ownership.CanModify,
 			RefID:        refID,
+			IsOwner:      ownership.IsOwner,
 		})
 	}
 
@@ -168,6 +169,11 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, error) {
 			canModify = ownership.CanModify
 		}
 
+		if !ownership.IsOwner {
+			// Hide share count for non-owners
+			shareCount = 0
+		}
+
 		result = append(result, shared.VaultItem{
 			ID:           id,
 			Name:         name,
@@ -179,6 +185,7 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, error) {
 			LinkTag:      linkTag,
 			CanModify:    canModify,
 			RefID:        refID,
+			IsOwner:      ownership.IsOwner,
 		})
 	}
 
@@ -243,9 +250,21 @@ func ChangeFilePermission(fileID, ownerID string, canModify bool) error {
 // ShareFile shares a user's file with another user via the recipient's user
 // ID (determined before calling ShareFile).
 // Returns the ID created in the `sharing` table.
-func ShareFile(share shared.NewSharedItem) (string, error) {
+func ShareFile(share shared.NewSharedItem, userID string) (string, error) {
 	if len(share.RecipientID) == 0 {
 		return "", errors.New("invalid recipient id")
+	}
+
+	folderID, err := GetFileFolderID(share.ItemID, userID)
+	if err != nil {
+		return "", err
+	}
+
+	ownership, err := GetFolderOwnership(folderID, userID)
+	if err != nil {
+		return "", err
+	} else if !ownership.IsOwner {
+		return "", errors.New("cannot share within shared folder")
 	}
 
 	isAlreadyShared, err := IsSharedWithRecipient(share.UserID, share.ItemID, share.RecipientID)

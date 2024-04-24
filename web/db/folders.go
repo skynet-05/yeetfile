@@ -172,6 +172,11 @@ func GetSubfolders(folderID, ownerID string) ([]shared.VaultFolder, error) {
 			canModify = false
 		}
 
+		if !ownership.IsOwner {
+			// Hide share count for non-owners
+			shareCount = 0
+		}
+
 		subfolders = append(subfolders, shared.VaultFolder{
 			ID:           id,
 			Name:         name,
@@ -182,6 +187,7 @@ func GetSubfolders(folderID, ownerID string) ([]shared.VaultFolder, error) {
 			LinkTag:      linkTag,
 			CanModify:    canModify,
 			RefID:        refID,
+			IsOwner:      ownership.IsOwner,
 		})
 	}
 
@@ -244,6 +250,7 @@ func GetFolderOwnership(
 			ID:        id,
 			RefID:     refID,
 			CanModify: canModify,
+			IsOwner:   id == refID,
 		}, nil
 	}
 
@@ -314,8 +321,9 @@ func GetFolderInfo(folderID, ownerID string, ownerOnly bool) (shared.VaultFolder
 			Modified:     modified,
 			ProtectedKey: protectedKey,
 			ParentID:     parentID,
-			CanModify:    ownership.CanModify,
 			RefID:        refID,
+			IsOwner:      ownership.IsOwner,
+			CanModify:    ownership.CanModify,
 		}, nil
 	}
 
@@ -363,11 +371,18 @@ func GetKeySequence(folderID string, ownerID string) ([][]byte, error) {
 
 // ShareFolder shares a user's folder with another user via the recipient's user
 // ID (determined before calling ShareFolder).
-func ShareFolder(share shared.NewSharedItem) (string, error) {
+func ShareFolder(share shared.NewSharedItem, userID string) (string, error) {
 	if share.ItemID == share.UserID {
 		return "", errors.New("cannot share user's root folder")
 	} else if len(share.RecipientID) == 0 {
 		return "", errors.New("invalid recipient id")
+	}
+
+	ownership, err := GetFolderOwnership(share.ItemID, userID)
+	if err != nil {
+		return "", err
+	} else if !ownership.IsOwner {
+		return "", errors.New("cannot share within a shared folder")
 	}
 
 	isAlreadyShared, err := IsSharedWithRecipient(share.UserID, share.ItemID, share.RecipientID)

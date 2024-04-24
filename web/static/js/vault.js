@@ -307,7 +307,7 @@ const loadVault = async (data) => {
             encKey: protectedKey,
             key: tmpKey,
             tag: folder.linkTag,
-            owned: folder.sharedBy.length === 0,
+            owned: folder.isOwner,
             canModify: folder.canModify,
             trueID: folder.id,
         };
@@ -327,7 +327,7 @@ const loadVault = async (data) => {
             name: item.name,
             encKey: protectedKey,
             key: tmpKey,
-            owned: item.sharedBy.length === 0,
+            owned: item.isOwner,
             canModify: item.canModify,
             trueID: item.id,
         };

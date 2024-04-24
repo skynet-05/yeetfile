@@ -45,6 +45,7 @@ type VaultItem struct {
 	SharedBy     string    `json:"sharedBy"`
 	LinkTag      string    `json:"linkTag"`
 	CanModify    bool      `json:"canModify"`
+	IsOwner      bool      `json:"isOwner"`
 	RefID        string    `json:"refID"`
 }
 
@@ -71,6 +72,7 @@ type VaultFolder struct {
 	LinkTag      string    `json:"linkTag"`
 	CanModify    bool      `json:"canModify"`
 	RefID        string    `json:"refID"`
+	IsOwner      bool      `json:"isOwner"`
 }
 
 type VaultFolderResponse struct {
@@ -181,6 +183,7 @@ type FolderOwnershipInfo struct {
 	ID        string `json:"id"`
 	RefID     string `json:"refID"`
 	CanModify bool   `json:"canModify"`
+	IsOwner   bool   `json:"isOwner"`
 }
 
 type ShareInfo struct {

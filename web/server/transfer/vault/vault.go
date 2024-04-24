@@ -65,9 +65,9 @@ func shareVaultItem(
 	var shareID string
 	var shareErr error
 	if isFolder {
-		shareID, shareErr = db.ShareFolder(newShare)
+		shareID, shareErr = db.ShareFolder(newShare, userID)
 	} else {
-		shareID, shareErr = db.ShareFile(newShare)
+		shareID, shareErr = db.ShareFile(newShare, userID)
 	}
 
 	return shared.ShareInfo{ID: shareID, CanModify: share.CanModify}, shareErr
