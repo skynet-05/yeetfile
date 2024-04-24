@@ -1,14 +1,29 @@
 <div class="header">
   <div class="left">
-    <a href="/"><img class="yeetfile-logo" src="/static/img/yeetfile-logo.png" alt="yeetfile logo"></a>
+    <a href="/"><img class="yeetfile-logo" src="/static/img/{{ .Base.Version }}/yeetfile-logo.png" alt="yeetfile logo"></a>
   </div>
   <div class="right">
     {{ if .Base.LoggedIn }}
-    <a href="/account">Account</a>
-    <a href="/logout">Log Out</a>
+      {{ if eq .Base.Page "send" }}
+      <a class="selected-page" href="/send">Send</a>
+      {{ else }}
+      <a href="/send">Send</a>
+      {{ end }}
+
+      {{ if eq .Base.Page "vault" }}
+      <a class="selected-page" href="/vault">Vault</a>
+      {{ else }}
+      <a href="/vault">Vault</a>
+      {{ end }}
+
+      {{ if eq .Base.Page "account" }}
+      <a class="selected-page" href="/account">Account</a>
+      {{ else }}
+      <a href="/account">Account</a>
+      {{ end }}
     {{ else }}
-    <a href="/signup">Sign Up</a>
-    <a href="/login">Log In</a>
+      <a href="/signup">Sign Up</a>
+      <a href="/login">Log In</a>
     {{ end }}
   </div>
 </div>

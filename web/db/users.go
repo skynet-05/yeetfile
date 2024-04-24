@@ -11,13 +11,21 @@ import (
 )
 
 type User struct {
-	ID           string
-	Email        string
-	PasswordHash []byte
-	ProtectedKey []byte
-	Meter        int
-	PaymentID    string
-	MemberExp    time.Time
+	ID               string
+	Email            string
+	PasswordHash     []byte
+	ProtectedKey     []byte
+	PublicKey        []byte
+	Meter            int
+	PaymentID        string
+	MemberExp        time.Time
+	StorageAvailable int
+	StorageUsed      int
+}
+
+type UserStorage struct {
+	StorageAvailable int
+	StorageUsed      int
 }
 
 var defaultExp time.Time
@@ -35,6 +43,8 @@ func NewUser(user User) (string, error) {
 		} else if rows.Next() {
 			return "", UserAlreadyExists
 		}
+
+		rows.Close()
 	}
 
 	if len(user.ID) == 0 {
@@ -48,10 +58,20 @@ func NewUser(user User) (string, error) {
 	paymentID := CreateUniquePaymentID()
 
 	s := `INSERT INTO users
-	      (id, email, pw_hash, payment_id, meter, member_expiration, last_upgraded_month, protected_key)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	      (id, email, pw_hash, payment_id, meter, member_expiration, last_upgraded_month, protected_key, public_key)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	_, err := db.Exec(s, user.ID, user.Email, user.PasswordHash, paymentID, 0, defaultExp, -1, user.ProtectedKey)
+	_, err := db.Exec(
+		s,
+		user.ID,
+		user.Email,
+		user.PasswordHash,
+		paymentID,
+		0,
+		defaultExp,
+		-1,
+		user.ProtectedKey,
+		user.PublicKey)
 	if err != nil {
 		return "", err
 	}
@@ -81,6 +101,42 @@ func CreateUniquePaymentID() string {
 	return paymentID
 }
 
+// GetUserStorage returns a UserStorage struct containing the user's available
+// and used storage
+func GetUserStorage(id string) (UserStorage, error) {
+	rows, err := db.Query(`SELECT storage_available, storage_used from users WHERE id = $1`, id)
+	if err != nil {
+		return UserStorage{}, err
+	} else if !rows.Next() {
+		errorStr := fmt.Sprintf("unable to find user with id '%s'", id)
+		return UserStorage{}, errors.New(errorStr)
+	}
+
+	defer rows.Close()
+
+	var storageAvailable int
+	var storageUsed int
+	err = rows.Scan(&storageAvailable, &storageUsed)
+	if err != nil {
+		return UserStorage{}, err
+	}
+
+	return UserStorage{StorageAvailable: storageAvailable, StorageUsed: storageUsed}, nil
+}
+
+// UpdateStorageUsed updates the amount of storage used by the user. Can be a
+// negative number to remove storage space.
+func UpdateStorageUsed(userID string, amount int) error {
+	s := `UPDATE users 
+	      SET storage_used = CASE 
+	                           WHEN storage_used + $1 < 0 THEN 0
+	                           ELSE storage_used + $1
+	                         END
+	      WHERE id=$2`
+	_, err := db.Exec(s, amount, userID)
+	return err
+}
+
 // RotateUserPaymentID overwrites the previous payment ID once a transaction is
 // completed.
 func RotateUserPaymentID(paymentID string) error {
@@ -91,6 +147,8 @@ func RotateUserPaymentID(paymentID string) error {
 		errorStr := fmt.Sprintf("unable to find user with payment id '%s'", paymentID)
 		return errors.New(errorStr)
 	}
+
+	defer rows.Close()
 
 	newID := shared.GenRandomString(16)
 	for PaymentIDExists(newID) {
@@ -123,6 +181,8 @@ func SetNewPassword(email string, pwHash []byte) error {
 		return errors.New(errorStr)
 	}
 
+	defer rows.Close()
+
 	// Read in account ID for the user
 	var accountID string
 	err = rows.Scan(&accountID)
@@ -149,6 +209,8 @@ func UserIDExists(id string) bool {
 		return true
 	}
 
+	defer rows.Close()
+
 	// If any rows are returned, the id exists
 	if rows.Next() {
 		return true
@@ -165,6 +227,8 @@ func PaymentIDExists(paymentID string) bool {
 		log.Fatalf("Error querying user payment id: %v", err)
 		return true
 	}
+
+	defer rows.Close()
 
 	// If any rows are returned, the id exists
 	if rows.Next() {
@@ -186,6 +250,7 @@ func GetUserPasswordHashByEmail(email string) ([]byte, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var pwHash []byte
 		err = rows.Scan(&pwHash)
@@ -211,6 +276,7 @@ func GetUserPasswordHashByID(id string) ([]byte, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var pwHash []byte
 		err = rows.Scan(&pwHash)
@@ -224,6 +290,33 @@ func GetUserPasswordHashByID(id string) ([]byte, error) {
 	return nil, errors.New("unable to find user")
 }
 
+// GetUserKeys retrieves the user's public key and their private key, the latter
+// is encrypted with their user key (which is generated client side and never stored)
+func GetUserKeys(id string) ([]byte, []byte, error) {
+	rows, err := db.Query(`
+		SELECT protected_key, public_key
+		FROM users 
+		WHERE id = $1`, id)
+	if err != nil {
+		log.Printf("Error querying for user by id: %v", err)
+		return nil, nil, err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		var publicKey []byte
+		var protectedKey []byte
+		err = rows.Scan(&protectedKey, &publicKey)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return protectedKey, publicKey, nil
+	}
+
+	return nil, nil, errors.New("unable to find user")
+}
+
 // GetUserByID retrieves a User struct for given user ID.
 func GetUserByID(id string) (User, error) {
 	rows, err := db.Query(`
@@ -235,6 +328,7 @@ func GetUserByID(id string) (User, error) {
 		return User{}, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var email string
 		var meter int
@@ -253,7 +347,7 @@ func GetUserByID(id string) (User, error) {
 		}, nil
 	}
 
-	return User{}, errors.New("unexpected error fetching user by id")
+	return User{}, errors.New("error fetching user by id")
 }
 
 func GetUserByPaymentID(paymentID string) (User, error) {
@@ -266,6 +360,7 @@ func GetUserByPaymentID(paymentID string) (User, error) {
 		return User{}, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var email string
 		var meter int
@@ -286,6 +381,53 @@ func GetUserByPaymentID(paymentID string) (User, error) {
 	return User{}, errors.New("unexpected error fetching user by payment_id")
 }
 
+func GetUserPubKey(userID string) ([]byte, error) {
+	rows, err := db.Query(`SELECT public_key FROM users WHERE id=$1`, userID)
+	if err != nil {
+		log.Printf("Error querying for public key by user id: %v\n", err)
+		return nil, err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		var publicKey []byte
+		err = rows.Scan(&publicKey)
+		if err != nil {
+			return nil, err
+		}
+
+		return publicKey, nil
+	}
+
+	return nil, errors.New("user public key not found")
+}
+
+func GetUserPublicName(userID string) (string, error) {
+	rows, err := db.Query(`SELECT email FROM users WHERE id=$1`, userID)
+	if err != nil {
+		log.Printf("Error querying for user's public name")
+		return "", err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		var email string
+		err = rows.Scan(&email)
+		if err != nil {
+			return "", err
+		}
+
+		if len(email) == 0 {
+			idTail := userID[len(userID)-4:]
+			return fmt.Sprintf("*%s", idTail), nil
+		}
+
+		return email, nil
+	}
+
+	return "", errors.New("unable to fetch user's public name")
+}
+
 // GetUserIDByEmail returns a user's ID given their email address.
 func GetUserIDByEmail(email string) (string, error) {
 	rows, err := db.Query(`
@@ -297,6 +439,7 @@ func GetUserIDByEmail(email string) (string, error) {
 		return "", err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var id string
 		err = rows.Scan(&id)
@@ -321,6 +464,7 @@ func GetUserMeter(id string) (int, error) {
 		return 0, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var meter int
 		err = rows.Scan(&meter)
@@ -345,6 +489,7 @@ func GetUserEmailByPaymentID(paymentID string) (string, error) {
 		return "", err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var email string
 		err = rows.Scan(&email)
@@ -421,6 +566,7 @@ func CheckMemberships() {
 	var upgradeIDs []string
 	now := time.Now()
 
+	defer rows.Close()
 	for rows.Next() {
 		var id string
 		var exp time.Time

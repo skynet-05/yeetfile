@@ -25,7 +25,7 @@ func SignupWithEmail(signup shared.Signup) error {
 		return err
 	}
 
-	code, err := db.NewVerification(signup.Identifier, hash, signup.ProtectedKey, false)
+	code, err := db.NewVerification(signup, hash, false)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func SignupWithEmail(signup shared.Signup) error {
 func SignupAccountIDOnly() (string, string, error) {
 	id := db.CreateUniqueUserID()
 
-	code, err := db.NewVerification(id, nil, nil, false)
+	code, err := db.NewVerification(shared.Signup{Identifier: id}, nil, false)
 	if err != nil {
 		return "", "", err
 	}

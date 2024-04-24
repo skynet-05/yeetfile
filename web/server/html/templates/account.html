@@ -3,7 +3,7 @@
 {{ template "header.html" . }}
 <div id="center-div">
   <h1>Account</h1>
-  <hr>
+  <hr class="accent-hr">
   <div>
     <table>
       <tr>
@@ -20,7 +20,15 @@
       </tr>
       <tr>
         <td>
-          <label for="subscription">Membership:</label>
+          <label for="meter">Send:</label>
+        </td>
+        <td>
+          <span id="meter">{{ .ReadableMeter }} remaining</span>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label for="subscription">Subscription:</label>
         </td>
         <td>
           {{ if .IsActive }}
@@ -32,13 +40,22 @@
       </tr>
       <tr>
         <td>
-          <label for="meter">Remaining Transfer:</label>
+          <label for="actions">Actions:</label>
         </td>
         <td>
-          <span id="meter">{{ .ReadableMeter }}</span>
+          <span id="actions"><a id="logout-btn" class="red-link" href="#">Log Out</a></span>
         </td>
       </tr>
     </table>
+    <details>
+      <summary>Advanced</summary>
+      <table>
+        <tr>
+          <td>Payment ID:</td>
+          <td>8675309 -- <a href="/cycle-payment-id">Cycle</a></td>
+        </tr>
+      </table>
+    </details>
   </div>
   {{ template "messages.html" . }}
   <hr>
@@ -51,16 +68,22 @@
     </div>
     {{ else }}
     <div class="pricing-box col-1">
-      <h3>YeetFile 1-Month Membership</h3>
-      <p>Send unlimited text and up to 5GB of files for 1 month.</p>
-      <a href="/checkout?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button>Checkout │ $2</button></a>
+      <h3>Novice Yeeter</h3>
+      <ul>
+        <li>5GB storage</li>
+        <li>10GB/month transfer</li>
+      </ul>
+      <a href="/checkout?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $2</button></a>
       or
       <a href="/checkout-btc?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
     <div class="pricing-box col-2">
-      <h3>YeetFile 1-Year Membership</h3>
-      <p>Send unlimited text and up to 5GB of files each month for less than $1 per month.</p>
-      <a href="/checkout?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button>Checkout │ $9</button></a>
+      <h3>Advanced Yeeter</h3>
+      <ul>
+        <li>100GB storage</li>
+        <li>200GB/month transfer</li>
+      </ul>
+      <a href="/checkout?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $9</button></a>
       or
       <a href="/checkout-btc?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
@@ -70,31 +93,31 @@
   <h1>Upgrades</h1>
   <div id="upgrade-div">
     <div class="pricing-box col-1">
-      <h3>+100GB Transfer</h3>
-      <p>Increase available transfer amount by 100 gigabytes</p>
-      <a href="/checkout?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button>Checkout │ $19</button></a>
+      <h3>+100GB Send</h3>
+      <p>Increase available send amount by 100 gigabytes</p>
+      <a href="/checkout?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $19</button></a>
       <br>or<br>
       <a href="/checkout-btc?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
 
     <div class="pricing-box col-2">
-      <h3>+500GB Transfer</h3>
-      <p>Increase available transfer amount by 500 gigabytes</p>
-      <a href="/checkout?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button>Checkout │ $79</button></a>
+      <h3>+500GB Send</h3>
+      <p>Increase available send amount by 500 gigabytes</p>
+      <a href="/checkout?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $79</button></a>
       <br>or<br>
       <a href="/checkout-btc?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
 
     <div class="pricing-box col-3">
-      <h3>+1TB Transfer</h3>
-      <p>Increase available transfer amount by 1 terabyte</p>
-      <a href="/checkout?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button>Checkout │ $149</button></a>
+      <h3>+1TB Send</h3>
+      <p>Increase available send amount by 1 terabyte</p>
+      <a href="/checkout?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $149</button></a>
       <br>or<br>
       <a href="/checkout-btc?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
   </div>
   <br>
-  <span class="italic">Note: Transfer upgrades don't require a membership, and they never expire.</span>
+  <span class="italic">Note: Send upgrades don't require an active membership, and they don't expire.</span>
 </div>
 {{ template "footer.html" . }}
 </body>

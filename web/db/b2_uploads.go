@@ -12,12 +12,13 @@ type B2Upload struct {
 	UploadID   string
 	Checksums  []string
 	Local      bool
+	Name       string
 }
 
 func CreateNewUpload(id string, name string) B2Upload {
-	s := `INSERT INTO b2_uploads (metadata_id, upload_id)
-	      VALUES ($1, $2)`
-	_, err := db.Exec(s, id, name)
+	s := `INSERT INTO b2_uploads (metadata_id, upload_id, name)
+	      VALUES ($1, $2, $3)`
+	_, err := db.Exec(s, id, name, name)
 	if err != nil {
 		panic(err)
 	}
@@ -25,25 +26,26 @@ func CreateNewUpload(id string, name string) B2Upload {
 	return B2Upload{MetadataID: id}
 }
 
-func (b2Upload B2Upload) UpdateUploadValues(
+func UpdateUploadValues(
+	metadataID string,
 	uploadURL string,
 	token string,
 	uploadID string,
 	local bool,
-) bool {
+) error {
 	s := `UPDATE b2_uploads
 	      SET upload_url=$1, 
 	          token=$2, 
 	          upload_id=CASE WHEN $3 = '' THEN upload_id ELSE $3 END, 
 	          local=$4
 	      WHERE metadata_id=$5`
-	_, err := db.Exec(s, uploadURL, token, uploadID, local, b2Upload.MetadataID)
+	_, err := db.Exec(s, uploadURL, token, uploadID, local, metadataID)
 	if err != nil {
 		log.Printf("Error updating b2 upload values: %v\n", err)
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
 
 func UpdateUploadID(id string, metadataID string) bool {
@@ -76,10 +78,11 @@ func GetB2UploadValues(id string) B2Upload {
 
 	rows, err := db.Query(s, id)
 	if err != nil {
-		log.Fatalf("Error retrieving upload values: %v", err)
+		log.Printf("Error retrieving upload values: %v", err)
 		return B2Upload{}
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var metadataID string
 		var uploadURL string
@@ -87,6 +90,7 @@ func GetB2UploadValues(id string) B2Upload {
 		var uploadID string
 		var checksums []string
 		var local bool
+		var name string
 
 		err = rows.Scan(
 			&metadataID,
@@ -94,7 +98,8 @@ func GetB2UploadValues(id string) B2Upload {
 			&token,
 			&uploadID,
 			pq.Array(&checksums),
-			&local)
+			&local,
+			&name)
 
 		return B2Upload{
 			MetadataID: metadataID,
@@ -103,6 +108,7 @@ func GetB2UploadValues(id string) B2Upload {
 			UploadID:   uploadID,
 			Checksums:  checksums,
 			Local:      local,
+			Name:       name,
 		}
 	}
 

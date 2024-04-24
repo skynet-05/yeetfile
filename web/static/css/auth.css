@@ -14,3 +14,8 @@ fieldset {
 #account-id-verify {
     display: none;
 }
+
+#center-div {
+    width: 50%;
+    max-width: 600px;
+}

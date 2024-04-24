@@ -26,6 +26,7 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var userID string
 	identifier := login.Identifier
 	keyHash := login.LoginKeyHash
 
@@ -37,7 +38,7 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		identifier, err = db.GetUserIDByEmail(identifier)
+		userID, err = db.GetUserIDByEmail(identifier)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte("Internal server error"))
@@ -51,11 +52,21 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 			_, _ = w.Write([]byte("User not found, or incorrect password"))
 			return
 		}
+
+		userID = identifier
 	}
 
-	_ = session.SetSession(identifier, w, req)
-	req.Method = http.MethodGet
-	http.Redirect(w, req, "/", http.StatusMovedPermanently)
+	protectedKey, publicKey, err := db.GetUserKeys(userID)
+	if err != nil {
+		http.Error(w, "Error retrieving user keys", http.StatusInternalServerError)
+		return
+	}
+
+	_ = session.SetSession(userID, w, req)
+	_ = json.NewEncoder(w).Encode(shared.LoginResponse{
+		PublicKey:    publicKey,
+		ProtectedKey: protectedKey,
+	})
 }
 
 // SignupHandler uses data from the incoming POST request to create a new user.
@@ -79,6 +90,7 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 			response = shared.SignupResponse{
 				Error: "Error creating account ID",
 			}
+			utils.Logf("Error: %v\n", err)
 		} else {
 			response = shared.SignupResponse{
 				Identifier: id,
@@ -146,7 +158,7 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Verify user verification code and fetch password hash
-	pwHash, protectedKey, err := db.VerifyUser(email, code)
+	accountValues, err := db.VerifyUser(email, code)
 	if err != nil {
 		w.Header().Set(html.ErrorHeader, "Incorrect verification code")
 		html.VerifyPageHandler(w, req, email)
@@ -156,8 +168,9 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	// Create new user
 	id, err := db.NewUser(db.User{
 		Email:        email,
-		PasswordHash: pwHash,
-		ProtectedKey: protectedKey,
+		PasswordHash: accountValues.PasswordHash,
+		ProtectedKey: accountValues.ProtectedKey,
+		PublicKey:    accountValues.PublicKey,
 	})
 
 	if err != nil {
@@ -190,7 +203,7 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Verify user verification code
-	_, _, err := db.VerifyUser(verify.ID, verify.Code)
+	_, err := db.VerifyUser(verify.ID, verify.Code)
 	if err != nil {
 		utils.Log("Incorrect verification code")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -204,8 +217,17 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 		ID:           verify.ID,
 		ProtectedKey: verify.ProtectedKey,
 		PasswordHash: hash,
+		PublicKey:    verify.PublicKey,
 	})
 
+	if err != nil {
+		utils.Log(fmt.Sprintf("Bad request: %v\n", err))
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Bad request"))
+		return
+	}
+
+	err = db.NewRootFolder(verify.ID, verify.RootFolderKey)
 	if err != nil {
 		utils.Log(fmt.Sprintf("Bad request: %v\n", err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -250,7 +272,10 @@ func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
 
 		id, err := db.GetUserIDByEmail(forgot.Email)
 		if err == nil && len(id) > 0 && len(forgot.Email) > 0 {
-			code, _ := db.NewVerification(forgot.Email, nil, nil, true)
+			code, _ := db.NewVerification(
+				shared.Signup{Identifier: forgot.Email},
+				nil,
+				true)
 			_ = mail.SendResetEmail(code, forgot.Email)
 		}
 
@@ -271,7 +296,11 @@ func ResetPasswordHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	errorMsg := ""
-	_, _, err = db.VerifyUser(reset.Email, reset.Code)
+	_, err = db.VerifyUser(reset.Email, reset.Code)
+	if utils.HandleError(w, err, http.StatusBadRequest, "unable to reset password") {
+		return
+	}
+
 	if err != nil {
 		errorMsg = "Incorrect verification code"
 	} else if reset.Password != reset.ConfirmPassword {
@@ -291,4 +320,39 @@ func ResetPasswordHandler(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set(html.SuccessHeader, "Password successfully reset!")
 	html.LoginPageHandler(w, req)
+}
+
+// PubKeyHandler handles requests for a YeetFile user's public key, which can
+// be used for sharing files/folders with the user.
+func PubKeyHandler(w http.ResponseWriter, req *http.Request, _ string) {
+	userIdentifier := req.URL.Query().Get("user")
+
+	var userID string
+	var err error
+	if len(userIdentifier) == 0 {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	} else if strings.Contains(userIdentifier, "@") {
+		userID, err = db.GetUserIDByEmail(userIdentifier)
+	} else {
+		userID = userIdentifier
+		_, err = db.GetUserByID(userID)
+	}
+
+	if err != nil || len(userID) == 0 {
+		utils.Logf("Error in user lookup for pub key: %v\n", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	pubKey, err := db.GetUserPubKey(userID)
+	if err != nil {
+		utils.Logf("Error fetching pub key: %v\n", err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	jsonData, _ := json.Marshal(shared.PubKeyResponse{PublicKey: pubKey})
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(jsonData)
 }

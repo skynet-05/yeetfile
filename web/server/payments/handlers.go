@@ -44,7 +44,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 
 // StripeCheckout initiates the process for a user adding to their meter
 // using Stripe Checkout
-func StripeCheckout(w http.ResponseWriter, req *http.Request) {
+func StripeCheckout(w http.ResponseWriter, req *http.Request, _ string) {
 	// Ensure Stripe has already been set up
 	if !stripe.Ready {
 		log.Println("Stripe checkout requested, but Stripe has not been set up.")
@@ -98,7 +98,7 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 }
 
 // BTCPayCheckout generates an invoice for the requested product/upgrade
-func BTCPayCheckout(w http.ResponseWriter, req *http.Request) {
+func BTCPayCheckout(w http.ResponseWriter, req *http.Request, _ string) {
 	// Ensure BTCPay has already been set up
 	if !btcpay.Ready {
 		log.Println("BTCPay checkout requested, but it has not been set up.")

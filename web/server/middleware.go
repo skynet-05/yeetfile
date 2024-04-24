@@ -4,7 +4,6 @@ import (
 	"golang.org/x/time/rate"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 	"yeetfile/web/server/session"
@@ -72,18 +71,23 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // AuthMiddleware enforces that a particular request has a valid session before
-// handling. This is used primarily for the routes associated with uploading.
-func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+// handling.
+func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		// Skip auth if the app is in debug mode, otherwise validate session
-		isDebug := os.Getenv("YEETFILE_DEBUG") == "1"
-		if isDebug || session.IsValidSession(req) {
+		if session.IsValidSession(req) {
 			// Call the next handler
-			next.ServeHTTP(w, req)
+			id, err := session.GetSessionAndUserID(req)
+			if err != nil {
+				return
+			}
+
+			next(w, req, id)
 			return
 		}
 
-		w.WriteHeader(http.StatusForbidden)
+		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
+		return
 	}
 
 	return handler

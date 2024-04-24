@@ -1,0 +1,475 @@
+package db
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+	"time"
+	"yeetfile/shared"
+	"yeetfile/web/utils"
+)
+
+func NewRootFolder(id string, protectedFolderKey []byte) error {
+	if len(id) == 0 {
+		return errors.New("invalid folder ID length")
+	}
+
+	// User should exist for this folder ID
+	if _, err := GetUserByID(id); err != nil {
+		return errors.New("the provided ID doesn't match any user IDs")
+	}
+
+	return insertFolder(id, id, shared.NewVaultFolder{
+		Name:         "",
+		ParentID:     "",
+		ProtectedKey: protectedFolderKey,
+	})
+}
+
+func NewPublicFolder(folder shared.NewPublicVaultFolder, ownerID string) error {
+	originalFolder, err := GetFolderInfo(folder.ID, ownerID, true)
+	if err != nil {
+		return err
+	} else if originalFolder.ID == ownerID {
+		return errors.New("cannot make this folder public")
+	}
+
+	s := `INSERT INTO folders (id, name, owner_id, protected_key)
+	      VALUES ($1, $2, $3, $4)`
+	_, err = db.Exec(s, folder.ID, originalFolder.Name, publicOwnerID, folder.ProtectedKey)
+	if err != nil {
+		return err
+	}
+
+	s = `UPDATE folders
+	     SET link_tag=$1
+	     WHERE id=$2 AND owner_id=$3`
+	_, err = db.Exec(s, folder.LinkTag, originalFolder.ID, ownerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeletePublicFolder(folderID, ownerID string) error {
+	originalFolder, err := GetFolderInfo(folderID, ownerID, true)
+	if err != nil {
+		return err
+	}
+
+	publicFolder, err := GetFolderInfo(folderID, publicOwnerID, true)
+	if err != nil {
+		return err
+	}
+
+	if originalFolder.ID != publicFolder.ID {
+		return errors.New("not allowed to delete this folder")
+	}
+
+	s := `DELETE FROM folders WHERE id=$1 and owner_id=$2`
+	_, err = db.Exec(s, folderID, publicOwnerID)
+	if err != nil {
+		return err
+	}
+
+	s = `UPDATE folders
+	     SET link_tag=''
+	     WHERE id=$1 AND owner_id=$2`
+	_, err = db.Exec(s, originalFolder.ID, ownerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func NewFolder(folder shared.NewVaultFolder, ownerID string) (string, error) {
+	folderID := shared.GenRandomString(VaultIDLength)
+	for FolderIDExists(folderID) {
+		folderID = shared.GenRandomString(VaultIDLength)
+	}
+
+	if len(folder.ParentID) == 0 {
+		// Assume parent is the user's root folder
+		folder.ParentID = ownerID
+	}
+
+	return folderID, insertFolder(folderID, ownerID, folder)
+}
+
+func insertFolder(id, ownerID string, folder shared.NewVaultFolder) error {
+	s := `INSERT INTO folders (id, name, owner_id, protected_key, modified, parent_id, ref_id)
+	      VALUES ($1, $2, $3, $4, $5, $6, $1)`
+	_, err := db.Exec(s, id, folder.Name, ownerID, folder.ProtectedKey, time.Now().UTC(), folder.ParentID)
+
+	return err
+}
+
+func FolderIDExists(id string) bool {
+	rows, err := db.Query(`SELECT * FROM folders WHERE id=$1`, id)
+	if err != nil {
+		utils.Logf("Error checking folder id: %v", err)
+		return true
+	}
+
+	// If any rows are returned, the id exists
+	defer rows.Close()
+	if rows.Next() {
+		return true
+	}
+
+	return false
+}
+
+func GetSubfolders(folderID, ownerID string) ([]shared.VaultFolder, error) {
+	ownership, err := CheckFolderOwnership(ownerID, folderID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := `SELECT 
+	          f.id, 
+	          f.name, 
+     	          f.modified, 
+	          f.protected_key, 
+	          f.shared_by, 
+	          f.link_tag, 
+	          f.ref_id, 
+	          f.can_modify,
+	          (SELECT COUNT(*) FROM sharing s WHERE s.item_id = f.id) AS share_count
+	          FROM folders f
+	          WHERE f.parent_id = $1
+	          ORDER BY f.modified DESC`
+
+	rows, err := db.Query(query, folderID)
+	if err != nil {
+		return []shared.VaultFolder{}, err
+	}
+
+	var subfolders []shared.VaultFolder
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var name string
+		var modified time.Time
+		var protectedKey []byte
+		var sharedBy string
+		var linkTag string
+		var refID string
+		var canModify bool
+		var shareCount int
+
+		err = rows.Scan(&id, &name, &modified, &protectedKey,
+			&sharedBy, &linkTag, &refID, &canModify, &shareCount)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return []shared.VaultFolder{}, err
+		}
+
+		if !ownership.CanModify {
+			canModify = false
+		}
+
+		subfolders = append(subfolders, shared.VaultFolder{
+			ID:           id,
+			Name:         name,
+			Modified:     modified,
+			ProtectedKey: protectedKey,
+			SharedWith:   shareCount,
+			SharedBy:     sharedBy,
+			LinkTag:      linkTag,
+			CanModify:    canModify,
+			RefID:        refID,
+		})
+	}
+
+	if len(subfolders) == 0 {
+		return []shared.VaultFolder{}, nil
+	}
+
+	return subfolders, nil
+}
+
+func GetParentFolderID(folderID string) (string, error) {
+	query := `SELECT parent_id from folders WHERE id=$1`
+	rows, err := db.Query(query, folderID)
+	if err == nil && rows.Next() {
+		defer rows.Close()
+		var parentID string
+
+		err = rows.Scan(&parentID)
+		if err != nil {
+			return "", err
+		}
+
+		return parentID, nil
+	}
+
+	return "", err
+}
+
+func ChangeFolderPermission(folderID, ownerID string, canModify bool) error {
+	s := `UPDATE folders
+	      SET can_modify=$1
+	      WHERE ref_id=$2 and owner_id=$3`
+	_, err := db.Exec(s, canModify, folderID, ownerID)
+	if err != nil {
+		log.Printf("Error updating folder permissions: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func GetFolderOwnership(
+	folderID,
+	ownerID string,
+) (shared.FolderOwnershipInfo, error) {
+	query := `SELECT id, ref_id, can_modify FROM folders WHERE ref_id=$1 and owner_id=$2`
+	rows, err := db.Query(query, folderID, ownerID)
+	if err == nil && rows.Next() {
+		defer rows.Close()
+		var id string
+		var refID string
+		var canModify bool
+
+		err = rows.Scan(&id, &refID, &canModify)
+		if err != nil {
+			return shared.FolderOwnershipInfo{}, err
+		}
+
+		return shared.FolderOwnershipInfo{
+			ID:        id,
+			RefID:     refID,
+			CanModify: canModify,
+		}, nil
+	}
+
+	return shared.FolderOwnershipInfo{}, err
+}
+
+// GetFolderInfo returns metadata for a particular folder
+func GetFolderInfo(folderID, ownerID string, ownerOnly bool) (shared.VaultFolder, error) {
+	ownership, err := CheckFolderOwnership(ownerID, folderID)
+	if err != nil || len(ownership.ID) == 0 {
+		return shared.VaultFolder{}, errors.New("unauthorized request")
+	}
+
+	var rows *sql.Rows
+	if ownerOnly {
+		query := `SELECT id, owner_id, name, modified, protected_key, parent_id, ref_id
+	                  FROM folders 
+	                  WHERE id=$1 AND owner_id=$2`
+		rows, err = db.Query(query, folderID, ownerID)
+	} else {
+		query := `SELECT id, owner_id, name, modified, protected_key, parent_id, ref_id
+	                  FROM folders 
+	                  WHERE id=$1 OR ref_id=$1`
+		rows, err = db.Query(query, folderID)
+		if err != nil {
+			return shared.VaultFolder{}, err
+		}
+	}
+
+	if err != nil {
+		return shared.VaultFolder{}, err
+	}
+
+	defer rows.Close()
+	hasNext := rows.Next()
+	for hasNext {
+		var id string
+		var folderOwnerID string
+		var name string
+		var modified time.Time
+		var protectedKey []byte
+		var parentID string
+		var refID string
+
+		err = rows.Scan(&id, &folderOwnerID, &name, &modified, &protectedKey, &parentID, &refID)
+		if err != nil {
+			return shared.VaultFolder{}, err
+		}
+
+		if ownerOnly && refID != id {
+			return shared.VaultFolder{}, errors.New("user is not the owner of the folder")
+		}
+
+		if parentID == ownerID {
+			// Ignore parent ID if the parent is the root folder
+			parentID = ""
+		}
+
+		hasNext = rows.Next()
+		if ownerID != folderOwnerID && hasNext {
+			// Keep looking for the folder's correct owner info
+			continue
+		}
+
+		return shared.VaultFolder{
+			ID:           id,
+			Name:         name,
+			Modified:     modified,
+			ProtectedKey: protectedKey,
+			ParentID:     parentID,
+			CanModify:    ownership.CanModify,
+			RefID:        refID,
+		}, nil
+	}
+
+	return shared.VaultFolder{}, errors.New("folder not found")
+}
+
+// GetKeySequence starts with a specific folder and recursively climbs up to each
+// parent folder, retrieving the parent's protected key. This is required to decrypt
+// a folder's contents, since a folder's key is always encrypted with its parents key.
+func GetKeySequence(folderID string, ownerID string) ([][]byte, error) {
+	query := `SELECT owner_id, parent_id, protected_key 
+	          FROM folders WHERE ref_id=$1
+	          ORDER BY parent_id`
+	rows, err := db.Query(query, folderID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var folderOwnerID string
+		var parentID string
+		var protectedKey []byte
+		err = rows.Scan(&folderOwnerID, &parentID, &protectedKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// Found root level folder, which can be decrypted with the user's
+		// private key
+		if len(parentID) == 0 && folderOwnerID == ownerID {
+			return [][]byte{}, nil
+		} else if len(parentID) == 0 {
+			continue // Should check other rows for owner ID match
+		}
+
+		parentKey, err := GetKeySequence(parentID, ownerID)
+		if parentKey != nil {
+			return append(parentKey, protectedKey), err
+		}
+	}
+
+	return nil, errors.New("failed to determine key sequence")
+}
+
+// ShareFolder shares a user's folder with another user via the recipient's user
+// ID (determined before calling ShareFolder).
+func ShareFolder(share shared.NewSharedItem) (string, error) {
+	if share.ItemID == share.UserID {
+		return "", errors.New("cannot share user's root folder")
+	} else if len(share.RecipientID) == 0 {
+		return "", errors.New("invalid recipient id")
+	}
+
+	isAlreadyShared, err := IsSharedWithRecipient(share.UserID, share.ItemID, share.RecipientID)
+	if err != nil {
+		return "", err
+	} else if isAlreadyShared {
+		return "", AlreadySharedError
+	}
+
+	folder, err := GetFolderInfo(share.ItemID, share.UserID, true)
+	if err != nil {
+		return "", err
+	}
+
+	folderID := shared.GenRandomString(VaultIDLength)
+	for FolderIDExists(folderID) {
+		folderID = shared.GenRandomString(VaultIDLength)
+	}
+
+	// Add new folder entry for recipient
+	s1 := `INSERT INTO folders (id, name, parent_id, owner_id, 
+                     protected_key, shared_by, modified, ref_id, can_modify)
+	       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	_, err = db.Exec(s1, folderID, folder.Name,
+		share.RecipientID, share.RecipientID, share.ProtectedKey,
+		share.SharerName, time.Now().UTC(), folder.ID, share.CanModify)
+	if err != nil {
+		return "", err
+	}
+
+	shareID, shareErr := AddSharingEntry(share.UserID, share.RecipientID, share.ItemID, true, share.CanModify)
+	if shareErr != nil {
+		return "", shareErr
+	}
+
+	return shareID, nil
+}
+
+// UpdateVaultFolderName updates the name of a folder in the vault. Note that the
+// name is always an encrypted string
+func UpdateVaultFolderName(id, ownerID, newName string) error {
+	ownership, err := CheckFolderOwnership(ownerID, id)
+	if err != nil {
+		return err
+	} else if !ownership.CanModify {
+		return errors.New("unable to modify read-only shared folder")
+	}
+
+	s := `UPDATE folders
+	      SET name=$1, modified=$2
+	      WHERE ref_id=$3`
+	_, err = db.Exec(s, newName, time.Now().UTC(), id)
+	if err != nil {
+		log.Printf("Error updating folder name: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+// DeleteSharedFolder removes a folder that has been shared with the current user
+func DeleteSharedFolder(id, ownerID string) error {
+	s := `DELETE FROM folders WHERE id=$1 AND owner_id=$2 RETURNING ref_id`
+	rows, err := db.Query(s, id, ownerID)
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		var refID string
+		err = rows.Scan(&refID)
+		if err != nil {
+			return err
+		}
+
+		err = RemoveShareEntryByRecipient(ownerID, refID)
+	}
+
+	return err
+}
+
+func DeleteSharedFolderByRefID(id, ownerID string) error {
+	s := `DELETE FROM folders WHERE ref_id=$1 AND owner_id=$2`
+	_, err := db.Exec(s, id, ownerID)
+	return err
+}
+
+// DeleteVaultFolder removes the specified folder from the table
+func DeleteVaultFolder(id, ownerID string) error {
+	ownership, err := CheckFolderOwnership(ownerID, id)
+	if err != nil {
+		return err
+	} else if !ownership.CanModify {
+		return errors.New("unable to modify read-only shared folder")
+	}
+
+	s := `DELETE FROM folders WHERE ref_id=$1`
+	_, err = db.Exec(s, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

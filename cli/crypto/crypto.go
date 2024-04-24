@@ -77,8 +77,8 @@ func GenerateLoginKeyHash(userKey []byte, password []byte) string {
 // EncryptChunk encrypts a chunk of data using either the sending or storage key.
 // Returns the encrypted chunk of data.
 func EncryptChunk(key []byte, data []byte) []byte {
-	var nonce [shared.NonceSize]byte
-	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
+	var iv [shared.IVSize]byte
+	if _, err := io.ReadFull(rand.Reader, iv[:]); err != nil {
 		log.Fatalf("Error generating nonce: %v\n", err)
 	}
 
@@ -92,9 +92,9 @@ func EncryptChunk(key []byte, data []byte) []byte {
 		return nil
 	}
 
-	result := aesgcm.Seal(nil, nonce[:], data, nil)
+	result := aesgcm.Seal(nil, iv[:], data, nil)
 	var merged []byte
-	merged = append(merged, nonce[:]...)
+	merged = append(merged, iv[:]...)
 	merged = append(merged, result[:]...)
 
 	return merged
@@ -104,8 +104,8 @@ func EncryptChunk(key []byte, data []byte) []byte {
 // the key is unable to decrypt the data, an error is returned, otherwise the
 // decrypted data is returned.
 func DecryptChunk(key []byte, chunk []byte) ([]byte, error) {
-	nonce := chunk[:shared.NonceSize]
-	data := chunk[shared.NonceSize:]
+	iv := chunk[:shared.IVSize]
+	data := chunk[shared.IVSize:]
 
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
@@ -117,7 +117,7 @@ func DecryptChunk(key []byte, chunk []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	plaintext, err := aesgcm.Open(nil, nonce, data, nil)
+	plaintext, err := aesgcm.Open(nil, iv, data, nil)
 	if err != nil {
 		return nil, err
 	}

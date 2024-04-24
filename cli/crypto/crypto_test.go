@@ -33,13 +33,14 @@ func TestDeriveKey(t *testing.T) {
 }
 
 func TestEncryptChunk(t *testing.T) {
+	plainData := make([]byte, shared.ChunkSize)
 	key, _, _, _ := DeriveSendingKey(password, nil, nil)
-	encrypted := EncryptChunk(key, data)
+	encrypted := EncryptChunk(key, plainData)
 
-	if len(encrypted) != len(data)+shared.TotalOverhead {
+	if len(encrypted) != len(plainData)+shared.TotalOverhead {
 		t.Fatalf("Unexpected encrypted data size\n"+
 			"expected: %d, actual: %d",
-			len(data)+shared.TotalOverhead,
+			len(plainData)+shared.TotalOverhead,
 			len(encrypted))
 	}
 

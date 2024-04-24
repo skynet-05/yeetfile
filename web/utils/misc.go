@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"yeetfile/shared"
 )
 
 func Log(msg string) {
@@ -211,4 +213,20 @@ func ParseSizeString(str string) int {
 	}
 
 	return 0
+}
+
+func HandleError(w http.ResponseWriter, err error, statusCode int, message string) bool {
+	if err != nil {
+		Log(fmt.Sprintf("%s: %v\n", message, err))
+		w.WriteHeader(statusCode)
+		_, _ = w.Write([]byte(message))
+		return true
+	}
+
+	return false
+}
+
+func LimitedReader(w http.ResponseWriter, body io.ReadCloser) ([]byte, error) {
+	limitedBody := http.MaxBytesReader(w, body, int64(shared.ChunkSize+shared.TotalOverhead+1024))
+	return io.ReadAll(limitedBody)
 }

@@ -29,6 +29,7 @@ func GetStripePaymentIDBySessionID(sessionID string) (string, error) {
 		return "", err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var paymentID string
 		err = rows.Scan(&paymentID)

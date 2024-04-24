@@ -5,6 +5,10 @@
     grid-auto-flow: column;
 }
 
+ul {
+    text-align: left;
+}
+
 .pricing-box {
     background: var(--card-bg-color);
     border-radius: 5px;
@@ -30,6 +34,20 @@
     grid-column-start: 3;
 }
 
+.stripe-btn {
+    background-color: var(--accent-color);
+    color: white;
+}
+
 .btcpay-btn {
     background-color: #0f3b21;
+    color: white;
+}
+
+details {
+    margin-left: 0;
+}
+
+details::after {
+    border: 0;
 }

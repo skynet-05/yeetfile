@@ -1,3 +1,5 @@
+import * as crypto from "./crypto.js";
+
 document.addEventListener("DOMContentLoaded", () => {
     setupToggles();
 
@@ -43,12 +45,22 @@ const emailSignup = async (btn) => {
         passwordInput.disabled = true;
         confirmPasswordInput.disabled = true;
 
-        let userKey = await generateUserKey(emailInput.value, passwordInput.value);
-        let loginKeyHash = await generateLoginKeyHash(userKey, passwordInput.value);
-        let storageKey = await generateStorageKey();
-        let protectedKey = await encryptChunk(userKey, storageKey);
+        let userKey = await crypto.generateUserKey(emailInput.value, passwordInput.value);
+        let loginKeyHash = await crypto.generateLoginKeyHash(userKey, passwordInput.value);
+        let keyPair = await crypto.generateKeyPair();
+        let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
+        let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
+        let protectedKey = await crypto.encryptChunk(userKey, privateKey);
+        let folderKey = await crypto.generateRandomKey();
+        let protectedRootFolderKey = await crypto.encryptChunk(keyPair.publicKey, folderKey);
 
-        submitSignupForm(emailInput.value, loginKeyHash, protectedKey, btn);
+        // Store in indexeddb
+        let encodedKey = await arrayToBase64(protectedKey);
+
+        crypto.ingestProtectedKey(userKey, encodedKey, () => {
+            new YeetFileDB().insertVaultKeyPair(keyPair.privateKey, keyPair.publicKey);
+            submitSignupForm(btn, emailInput.value, loginKeyHash, publicKey, protectedKey, protectedRootFolderKey);
+        });
     }
 }
 
@@ -59,11 +71,11 @@ const accountIDOnlySignup = (btn) => {
     if (passwordIsValid(passwordInput.value, confirmPasswordInput.value)) {
         passwordInput.disabled = true;
         confirmPasswordInput.disabled = true;
-        submitSignupForm("", undefined, undefined, btn);
+        submitSignupForm(btn);
     }
 }
 
-const submitSignupForm = (email, loginKeyHash, protectedKey, submitBtn) => {
+const submitSignupForm = (submitBtn, email, loginKeyHash, publicKey, protectedKey, rootFolderKey) => {
     submitBtn.disabled = true;
 
     let xhr = new XMLHttpRequest();
@@ -72,7 +84,7 @@ const submitSignupForm = (email, loginKeyHash, protectedKey, submitBtn) => {
 
     xhr.onreadystatechange = () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            if (email.length > 0) {
+            if (email && email.length > 0) {
                 window.location = "/verify?email=" + email;
             } else {
                 let response = JSON.parse(xhr.responseText);
@@ -86,29 +98,39 @@ const submitSignupForm = (email, loginKeyHash, protectedKey, submitBtn) => {
     };
 
     xhr.send(JSON.stringify({
-        identifier: email,
+        identifier: email ? email : "",
         loginKeyHash: loginKeyHash ? Array.from(loginKeyHash) : loginKeyHash,
-        protectedKey: protectedKey ? Array.from(protectedKey) : protectedKey
+        protectedKey: protectedKey ? Array.from(protectedKey) : protectedKey,
+        publicKey: publicKey ? Array.from(publicKey) : publicKey,
+        rootFolderKey: rootFolderKey ? Array.from(rootFolderKey) : rootFolderKey,
     }));
 }
 
 const generateAccountIDSignupHTML = (id, img) => {
+    document.addEventListener("click", (event) => {
+        if (event.target.id === "verify-account") {
+            verifyAccountID(id);
+        }
+    });
+
     return `
     <img src="data:image/jpeg;base64,${img}"<br>
     <p>Please enter the 6-digit code above to verify your account.</p>
     <input type="text" id="account-code" name="code" placeholder="Code"><br>
-    <button id="verify-account" onclick="verifyAccountID('${id}')">Verify</button>
+    <button id="verify-account">Verify</button>
     `;
 }
 
 const generateSuccessHTML = (id) => {
+    document.addEventListener("click", (event) => {
+        if (event.target.id === "goto-account") {
+            window.location = "/account";
+        }
+    });
+
     return `<p>Your account ID is: <b>${id}</b> -- write this down!
     This is what you will use to log in, and will not be shown again.</p>
-    <button onclick="goToAccount()">Go To Account</button>`
-}
-
-const goToAccount = () => {
-    window.location = "/account";
+    <button id="goto-account">Go To Account</button>`
 }
 
 const verifyAccountID = async id => {
@@ -119,31 +141,43 @@ const verifyAccountID = async id => {
 
     button.disabled = true;
 
-    let userKey = await generateUserKey(id, password);
-    let loginKeyHash = await generateLoginKeyHash(userKey, password);
-    let storageKey = await generateStorageKey();
-    let protectedKey = await encryptChunk(userKey, storageKey);
+    let userKey = await crypto.generateUserKey(id, password);
+    let loginKeyHash = await crypto.generateLoginKeyHash(userKey, password);
+    let keyPair = await crypto.generateKeyPair();
+    let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
+    let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
+    let protectedKey = await crypto.encryptChunk(userKey, privateKey);
+    let folderKey = await crypto.generateRandomKey();
+    let protectedRootFolderKey = await crypto.encryptRSA(keyPair.publicKey, folderKey);
 
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/verify-account", false);
-    xhr.setRequestHeader("Content-Type", "application/json");
+    let encodedKey = await arrayToBase64(protectedKey);
 
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            let html = generateSuccessHTML(id);
-            addVerifyHTML(html);
-        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            button.disabled = false;
-            showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
-        }
-    };
+    crypto.ingestProtectedKey(userKey, encodedKey, () => {
+        new YeetFileDB().insertVaultKeyPair(keyPair.privateKey, keyPair.publicKey);
 
-    xhr.send(JSON.stringify({
-        id: id,
-        code: codeInput.value,
-        loginKeyHash: Array.from(loginKeyHash),
-        protectedKey: Array.from(protectedKey),
-    }));
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/verify-account", false);
+        xhr.setRequestHeader("Content-Type", "application/json");
+
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                let html = generateSuccessHTML(id);
+                addVerifyHTML(html);
+            } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                button.disabled = false;
+                showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
+            }
+        };
+
+        xhr.send(JSON.stringify({
+            id: id,
+            code: codeInput.value,
+            loginKeyHash: Array.from(loginKeyHash),
+            protectedKey: Array.from(protectedKey),
+            publicKey: Array.from(publicKey),
+            rootFolderKey: Array.from(protectedRootFolderKey)
+        }));
+    });
 }
 
 const addVerifyHTML = html => {

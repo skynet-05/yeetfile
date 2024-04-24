@@ -62,6 +62,34 @@ const testDecryptChunk = async testCallback => {
     });
 }
 
+const testLoginKeyHash = async testCallback => {
+    let userKey = await crypto.generateUserKey("myemail@domain.com", "mypassword");
+    let loginKeyHash = await crypto.generateLoginKeyHash(userKey, "mypassword");
+    let loginKeyHashDuplicate = await crypto.generateLoginKeyHash(userKey, "mypassword");
+
+    assert(loginKeyHash.length === loginKeyHashDuplicate.length)
+    for (let i in loginKeyHash) {
+        assert(loginKeyHash[i] === loginKeyHashDuplicate[i]);
+    }
+
+    testCallback();
+}
+
+const testKeyPair = async testCallback => {
+    let userKey = await crypto.generateUserKey("myemail@domain.com", "mypassword");
+    let keyPair = await crypto.generateKeyPair();
+    let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
+    let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
+
+    let protectedKey = await crypto.encryptChunk(userKey, privateKey);
+    let folderKey = await crypto.generateRandomKey();
+    let protectedRootFolderKey = await crypto.encryptRSA(keyPair.publicKey, folderKey);
+
+    let rootFolderKey = await crypto.decryptRSA(keyPair.privateKey, protectedRootFolderKey);
+    let folderKeyImport = await crypto.importKey(rootFolderKey);
+    console.log(folderKeyImport);
+}
+
 const runTest = async (testIdx) => {
     if (!testIdx) {
         testIdx = 0;
@@ -72,6 +100,8 @@ const runTest = async (testIdx) => {
         testDeriveSendingKey,
         testEncryptChunk,
         testDecryptChunk,
+        testLoginKeyHash,
+        testKeyPair,
     ]
 
     if (tests[testIdx]) {

@@ -1,7 +1,12 @@
 <div class="footer">
-    <a href="https://meddlehead.com"><img src="/static/img/meddlehead-logo.png"></a>
-    <a href="/privacy">Privacy Policy</a>
-    <a href="/terms">Terms of Service</a>
-    <a href="/faq">FAQ</a>
-    <a href="https://github.com/meddlehead/yeetfile">Source Code</a>
+    <div class="footer-elements">
+        <a href="https://meddlehead.com"><img src="/static/img/{{ .Base.Version }}/meddlehead-logo.png"></a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/faq">FAQ</a>
+        <a href="https://github.com/meddlehead/yeetfile">Source Code</a>
+    </div>
+    <div class="footer-elements">
+        <span class="small-text">v{{ .Base.Version }}</span>
+    </div>
 </div>

@@ -18,7 +18,7 @@ func GenerateCaptchaImage(code string) string {
 	// Add spaces to code for legibility
 	//code = strings.Join(strings.Split(code, ""), " ")
 	img := image.NewRGBA(image.Rect(0, 0, 45, 25))
-	addLabel(img, 1, 15, code)
+	addLabel(img, 2, 17, code)
 
 	// Resize
 	dst := image.NewRGBA(image.Rect(0, 0, 250, 100))

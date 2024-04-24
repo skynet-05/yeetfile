@@ -1,0 +1,113 @@
+#vault-items-div {
+    min-height: 500px;
+    max-height: 550px;
+    overflow-y: scroll;
+    margin-top: 20px;
+}
+
+table tr, table td, table td * {
+    vertical-align: top;
+}
+
+thead > tr > th {
+    position: sticky;
+    top: 0;
+    background-color: white;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ccc;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.blank-row {
+    height: 39px !important;
+}
+
+.folder-link {
+    color: var(--accent-color);
+}
+
+.shared-link {
+    color: var(--shared-color);
+}
+
+.action-icon {
+    text-align: center;
+    cursor: pointer;
+}
+
+.action-icon:hover {
+    font-weight: bold;
+}
+
+.edit-row {
+    display: flex;
+    height: 20px;
+    width: 100%;
+    padding-bottom: 5px;
+    padding-top: 5px;
+    cursor: pointer;
+}
+
+.edit-row img {
+    padding-right: 5px;
+}
+
+.edit-row:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.vault-icon {
+    cursor: pointer;
+    height: 23px;
+}
+
+.shared-with-div {
+    display: inline;
+}
+
+#item-bar {
+    display: none;
+    accent-color: black;
+}
+
+#vault-message {
+    display: inline-flex;
+    align-items: center;
+}
+
+.progress-spinner {
+    margin-right: 5px;
+    -webkit-transform-origin: 50% 50%;
+    -moz-transform-origin: 50% 50%;
+    -o-transform-origin: 50% 50%;
+    transform-origin: 50% 50%;
+    animation-name: spin;
+    animation-duration: 1000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+
+@-moz-keyframes spin {
+    from { -moz-transform: rotate(0deg); }
+    to { -moz-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+    from { -webkit-transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); }
+}
+@keyframes spin {
+    from {transform:rotate(0deg);}
+    to {transform:rotate(360deg);}
+}

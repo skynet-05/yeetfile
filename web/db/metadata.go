@@ -10,12 +10,13 @@ import (
 const uploadIDLength = 12
 
 type FileMetadata struct {
-	ID     string
-	Chunks int
-	Name   string
-	Salt   []byte
-	B2ID   string
-	Length int
+	ID           string
+	Chunks       int
+	Name         string
+	Salt         []byte
+	B2ID         string
+	Length       int
+	ProtectedKey []byte
 }
 
 // InsertMetadata creates a new metadata entry in the db and returns a unique ID for
@@ -52,6 +53,7 @@ func MetadataIDExists(id string) bool {
 	}
 
 	// If any rows are returned, the id exists
+	defer rows.Close()
 	if rows.Next() {
 		return true
 	}
@@ -67,6 +69,7 @@ func RetrieveMetadata(id string) (FileMetadata, error) {
 		return FileMetadata{}, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		return ParseMetadata(rows), nil
 	}
@@ -75,16 +78,25 @@ func RetrieveMetadata(id string) (FileMetadata, error) {
 	return FileMetadata{}, errors.New("no metadata found")
 }
 
-func UpdateB2Metadata(id string, b2ID string, length int) bool {
+func UpdateB2Metadata(id string, b2ID string, length int) error {
 	s := `UPDATE metadata
 	      SET b2_id=$1, length=$2
 	      WHERE id=$3`
 	_, err := db.Exec(s, b2ID, length, id)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	return true
+	s = `UPDATE vault
+	      SET b2_id=$1, length=$2
+	      WHERE id=$3`
+
+	_, err = db.Exec(s, b2ID, length, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ParseMetadata(rows *sql.Rows) FileMetadata {

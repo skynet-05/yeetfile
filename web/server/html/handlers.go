@@ -2,9 +2,11 @@ package html
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 	"yeetfile/shared"
+	"yeetfile/web/config"
 	"yeetfile/web/db"
 	"yeetfile/web/server/html/templates"
 	"yeetfile/web/server/session"
@@ -18,24 +20,60 @@ const OrderConfMsg = "Your order confirmation code " +
 	"write this down in case you need to contact YeetFile " +
 	"about your order!"
 
-// HomePageHandler returns the homepage html if not logged in, otherwise the
-// upload page should be returned
-func HomePageHandler(w http.ResponseWriter, req *http.Request) {
+// VaultPageHandler returns the html template used for interacting with files
+// (uploading, renaming, downloading, deleting) in the user's vault
+func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	userStorage, err := db.GetUserStorage(userID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	err = templates.ServeTemplate(
+		w,
+		templates.VaultHTML,
+		templates.VaultTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "Vault",
+				Page:         "vault",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript: []string{
+					"vault.js",
+					"ponyfill.min.js",
+				},
+				CSS:     []string{"vault.css"},
+				Version: config.VERSION,
+			},
+			StorageUsed:      userStorage.StorageUsed,
+			StorageAvailable: userStorage.StorageAvailable,
+		},
+	)
+
+	handleError(w, err)
+}
+
+func SharedVaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
+
+}
+
+// SendPageHandler returns the html template used for sending files
+func SendPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
-		templates.UploadHTML,
+		templates.SendHTML,
 		templates.LoginTemplate{
 			Base: templates.BaseTemplate{
 				LoggedIn:     session.IsValidSession(req),
-				Title:        "Upload",
+				Title:        "Send",
+				Page:         "send",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript: []string{
 					"jszip.min.js",
-					"utils.js",
-					"crypto.js",
-					"upload.js",
+					"share.js",
 				},
-				CSS: []string{"upload.css"},
+				CSS:     []string{"upload.css"},
+				Version: config.VERSION,
 			},
 			Meter: 0,
 		},
@@ -55,11 +93,10 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 			ErrorMessage: w.Header().Get(ErrorHeader),
 			Javascript: []string{
 				"ponyfill.min.js",
-				"crypto.js",
-				"utils.js",
 				"download.js",
 			},
-			CSS: []string{"download.css"},
+			CSS:     []string{"download.css"},
+			Version: config.VERSION,
 		}},
 	)
 
@@ -75,8 +112,9 @@ func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 			LoggedIn:     session.IsValidSession(req),
 			Title:        "Create Account",
 			ErrorMessage: w.Header().Get(ErrorHeader),
-			Javascript:   []string{"signup.js", "crypto.js"},
+			Javascript:   []string{"signup.js"},
 			CSS:          []string{"auth.css"},
+			Version:      config.VERSION,
 		}},
 	)
 
@@ -93,8 +131,9 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 			Title:          "Log In",
 			SuccessMessage: w.Header().Get(SuccessHeader),
 			ErrorMessage:   w.Header().Get(ErrorHeader),
-			Javascript:     []string{"login.js", "crypto.js"},
+			Javascript:     []string{"login.js"},
 			CSS:            []string{"auth.css"},
+			Version:        config.VERSION,
 		}},
 	)
 
@@ -112,10 +151,12 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) 
 			Base: templates.BaseTemplate{
 				LoggedIn:       session.IsValidSession(req),
 				Title:          "My Account",
+				Page:           "account",
 				ErrorMessage:   errorMsg,
 				SuccessMessage: successMsg,
-				Javascript:     nil,
+				Javascript:     []string{"account.js"},
 				CSS:            []string{"account.css"},
+				Version:        config.VERSION,
 			},
 			Email:             user.Email,
 			Meter:             user.Meter,
@@ -146,6 +187,7 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   nil,
 				CSS:          nil,
+				Version:      config.VERSION,
 			},
 			Email: email,
 		},
@@ -166,6 +208,7 @@ func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   nil,
 				CSS:          []string{"faq.css"},
+				Version:      config.VERSION,
 			},
 		},
 	)
@@ -189,6 +232,7 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   nil,
 				CSS:          nil,
+				Version:      config.VERSION,
 			},
 			Email: email,
 			Code:  req.URL.Query().Get("code"),
@@ -231,7 +275,7 @@ func generateAccountMessages(req *http.Request) (string, string) {
 
 func handleError(w http.ResponseWriter, err error) {
 	if err != nil {
-		fmt.Printf("template error: %v\n", err)
+		log.Printf("template error: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

@@ -72,17 +72,30 @@ func clearDatabase(id string) {
 	}
 }
 
-// DeleteFileByID removes a file from B2 matching the provided file ID
-func DeleteFileByID(id string) {
-	metadata, err := RetrieveMetadata(id)
+// TableIDExists checks any table to see if the `id` column already has a value
+// matching the provided id param
+func TableIDExists(tableName, id string) bool {
+	rows, err := db.Query(`SELECT * FROM `+tableName+` WHERE id=$1`, id)
 	if err != nil {
-		log.Printf("Error fetching metadata: %v", err)
+		utils.Logf("Error checking for id in table '%s': %v", tableName, err)
+		return true
 	}
 
-	if err := cache.RemoveFile(id); err != nil {
-		log.Printf("Error removing cached file: %v\n", id)
+	// If any rows are returned, the id exists
+	defer rows.Close()
+	if rows.Next() {
+		return true
+	}
+
+	return false
+}
+
+// DeleteFileByMetadata removes a file from B2 matching the provided file ID
+func DeleteFileByMetadata(metadata FileMetadata) {
+	if err := cache.RemoveFile(metadata.ID); err != nil {
+		log.Printf("Error removing cached file: %v\n", metadata.ID)
 	} else {
-		log.Printf("%s deleted from cache\n", id)
+		log.Printf("%s deleted from cache\n", metadata.ID)
 	}
 
 	// File must be deleted from B2 before removing from the database
@@ -98,5 +111,13 @@ func DeleteFileByID(id string) {
 				"metadata id: %s)\n",
 				metadata.B2ID, metadata.ID)
 		}
+	}
+}
+
+func Close() {
+	log.Println("Closing DB connection")
+	err := db.Close()
+	if err != nil {
+		panic(err)
 	}
 }

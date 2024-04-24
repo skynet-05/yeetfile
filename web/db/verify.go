@@ -6,15 +6,21 @@ import (
 	"yeetfile/shared"
 )
 
+type NewAccountValues struct {
+	PasswordHash  []byte
+	ProtectedKey  []byte
+	PublicKey     []byte
+	RootFolderKey []byte
+}
+
 // NewVerification creates a new verification entry for a user
 func NewVerification(
-	ident string,
+	signupData shared.Signup,
 	pwHash []byte,
-	protectedKey []byte,
 	reset bool,
 ) (string, error) {
 	if !reset {
-		r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`, ident)
+		r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`, signupData.Identifier)
 
 		if e != nil {
 			return "", e
@@ -26,19 +32,32 @@ func NewVerification(
 	// Generate verification code
 	code := shared.GenRandomNumbers(6)
 
-	rows, err := db.Query(`SELECT * FROM verify WHERE identity = $1`, ident)
+	rows, err := db.Query(`SELECT * FROM verify WHERE identity = $1`, signupData.Identifier)
+	if err != nil {
+		return "", err
+	}
+
+	defer rows.Close()
 	if rows.Next() {
 		// This user already has a verification entry -- update the
 		// code before resending the verification request
 		s := `UPDATE verify SET code = $1 WHERE identity=$2`
-		_, err = db.Exec(s, code, ident)
+		_, err = db.Exec(s, code, signupData.Identifier)
 		if err != nil {
 			return "", err
 		}
 	} else {
-		s := `INSERT INTO verify (identity, code, date, pw_hash, protected_key) 
-		      VALUES ($1, $2, $3, $4, $5)`
-		_, err = db.Exec(s, ident, code, time.Now(), pwHash, protectedKey)
+		s := `INSERT INTO verify (identity, code, date, pw_hash, protected_key, public_key, root_folder_key) 
+		      VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		_, err = db.Exec(
+			s,
+			signupData.Identifier,
+			code,
+			time.Now(),
+			pwHash,
+			signupData.ProtectedKey,
+			signupData.PublicKey,
+			signupData.ProtectedRootFolderKey)
 		if err != nil {
 			return "", err
 		}
@@ -50,25 +69,33 @@ func NewVerification(
 // VerifyUser verifies the user's email against the code stored in the `verify`
 // table. If the code matches the user's password hash and protected key are
 // returned so that a new user can be added to the `users` table.
-func VerifyUser(identity string, code string) ([]byte, []byte, error) {
-	rows, err := db.Query(`SELECT pw_hash, protected_key FROM verify 
+func VerifyUser(identity string, code string) (NewAccountValues, error) {
+	rows, err := db.Query(`SELECT pw_hash, protected_key, public_key, root_folder_key FROM verify 
                                WHERE identity = $1 AND code = $2`, identity, code)
 	if err != nil {
-		return nil, nil, err
+		return NewAccountValues{}, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var pwHash []byte
 		var protectedKey []byte
-		err = rows.Scan(&pwHash, &protectedKey)
+		var publicKey []byte
+		var rootFolderKey []byte
+		err = rows.Scan(&pwHash, &protectedKey, &publicKey, &rootFolderKey)
 		if err != nil {
-			return nil, nil, err
+			return NewAccountValues{}, err
 		}
 
-		return pwHash, protectedKey, nil
+		return NewAccountValues{
+			PasswordHash:  pwHash,
+			ProtectedKey:  protectedKey,
+			PublicKey:     publicKey,
+			RootFolderKey: rootFolderKey,
+		}, nil
 	}
 
-	return nil, nil, errors.New("unable to find user")
+	return NewAccountValues{}, errors.New("unable to find user")
 }
 
 // DeleteVerification removes a verification entry from the table

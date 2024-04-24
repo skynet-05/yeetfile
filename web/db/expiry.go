@@ -33,11 +33,13 @@ func DecrementDownloads(id string) int {
 
 	s2 := `SELECT downloads FROM expiry WHERE id=$1 AND downloads >= 0`
 	rows, err := db.Query(s2, id)
+
 	if err != nil {
-		log.Fatalf("Error retrieving download counter: %v", err)
+		log.Printf("Error retrieving download counter: %v\n", err)
 		return -1
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var downloads int
 		err = rows.Scan(&downloads)
@@ -53,11 +55,13 @@ func DecrementDownloads(id string) int {
 func GetFileExpiry(metadataID string) FileExpiry {
 	s := `SELECT * FROM expiry WHERE id=$1`
 	rows, err := db.Query(s, metadataID)
+
 	if err != nil {
-		log.Fatalf("Error retrieving file expiry: %v", err)
+		log.Printf("Error retrieving file expiry: %v\n", err)
 		return FileExpiry{}
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var id string
 		var downloads int
@@ -92,11 +96,13 @@ func DeleteExpiry(id string) bool {
 func CheckExpiry() {
 	s := `SELECT id, date FROM expiry`
 	rows, err := db.Query(s)
+
 	if err != nil {
-		log.Fatalf("Error retrieving file expiry: %v", err)
+		log.Printf("Error retrieving file expiry: %v\n", err)
 		return
 	}
 
+	defer rows.Close()
 	for rows.Next() {
 		var id string
 		var date time.Time
@@ -104,14 +110,19 @@ func CheckExpiry() {
 		err = rows.Scan(&id, &date)
 
 		if err != nil {
-			log.Fatalf("Error scanning rows: %v", err)
+			log.Printf("Error scanning rows: %v\n", err)
 			return
 		}
 
 		if time.Now().UTC().After(date.UTC()) {
 			// File has expired, remove from the DB and B2
 			log.Printf("%s has expired, removing now\n", id)
-			DeleteFileByID(id)
+			metadata, err := RetrieveMetadata(id)
+			if err != nil {
+				log.Printf("Metadata not found for id: " + id)
+			} else {
+				DeleteFileByMetadata(metadata)
+			}
 		}
 	}
 

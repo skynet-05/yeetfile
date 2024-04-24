@@ -8,7 +8,10 @@ import (
 	"yeetfile/web/utils"
 )
 
+const VERSION = "0.0.1"
+
 func main() {
+	defer db.Close()
 	go db.CheckExpiry()
 	go db.CheckMemberships()
 

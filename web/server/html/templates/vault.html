@@ -1,0 +1,138 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<script src="/StreamSaver.js"></script>
+<div id="center-div">
+    <h1>Vault</h1>
+    <hr class="accent-hr">
+    <input id="file-input" type="file" style="display: none;" multiple>
+    <button class="accent-btn" id="vault-upload">Upload</button>
+    <button id="new-vault-folder">Create Folder</button>
+    <p id="vault-status"></p>
+    <div id="vault-items-div">
+        <table id="vault-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Size</th>
+                    <th>Modified</th>
+                    <th class="centered-text">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+        </table>
+    </div>
+    <hr>
+    <progress max="{{ .StorageAvailable }}" value="{{ .StorageUsed }}" id="storage-bar"></progress>
+    <progress id="item-bar"></progress>
+    <span id="vault-message"></span>
+</div>
+
+<dialog id="folder-dialog">
+    <h3>New Folder</h3>
+    <hr>
+    <input id="folder-name" type="text" placeholder="New Folder Name">
+    <br><br>
+    <div class="align-items-right">
+        <button id="cancel-folder">Cancel</button>
+        <button id="submit-folder" class="accent-btn">Create</button>
+    </div>
+</dialog>
+
+<dialog data-dynamic="true" id="actions-dialog">
+    <h3 id="actions-dialog-title"></h3>
+    <hr>
+    <div id="action-download" class="edit-row">
+        <img class="flipped-icon" src="/static/icons/{{ .Base.Version }}/download.svg">
+        <span>Download</span>
+    </div>
+    <div id="action-rename" class="edit-row">
+        <img src="/static/icons/{{ .Base.Version }}/rename.svg">
+        <span>Rename</span>
+    </div>
+    <div id="action-send" class="edit-row">
+        <img src="/static/icons/{{ .Base.Version }}/send.svg">
+        <span>Send</span>
+    </div>
+    <div id="action-share" class="edit-row">
+        <img src="/static/icons/{{ .Base.Version }}/share.svg">
+        <span>Share</span>
+    </div>
+    <div id="action-link" class="edit-row">
+        <img src="/static/icons/{{ .Base.Version }}/link.svg">
+        <span>Link</span>
+    </div>
+    <div id="action-delete" class="edit-row">
+        <img class="red-icon" src="/static/icons/{{ .Base.Version }}/trash.svg">
+        <span class="red-link">Delete</span>
+    </div>
+    <div id="action-remove" class="edit-row">
+        <img class="red-icon" src="/static/icons/{{ .Base.Version }}/remove.svg">
+        <span class="red-link">Remove</span>
+    </div>
+    <br>
+    <div class="align-items-right">
+        <button id="cancel-action" autofocus>Close</button>
+    </div>
+</dialog>
+
+<dialog data-dynamic="true" id="rename-dialog">
+    <h3 id="rename-title">Rename</h3>
+    <hr>
+    <label for="new-name">New Name:</label>
+    <input id="new-name" type="text">
+    <br><br>
+    <div class="align-items-right">
+        <button id="cancel-rename">Cancel</button>
+        <button id="submit-rename" class="accent-btn">Confirm</button>
+    </div>
+</dialog>
+
+<dialog data-dynamic="true" id="share-dialog">
+    <h3>Share</h3>
+    <hr>
+    <span id="share-loading">Loading...</span>
+    <table id="share-table">
+        <thead>
+        <tr>
+            <th>Email / Account ID</th>
+            <th>Can Modify?</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody id="share-table-body">
+        </tbody>
+    </table>
+    <label for="share-target">Share With:</label>
+    <input id="share-target" type="text" placeholder="Email or Account #">
+    <br>
+    <label for="share-modify">Can Modify:</label>
+    <input id="share-modify" type="checkbox">
+    <br><br>
+    <div class="align-items-right">
+        <button id="cancel-share">Close</button>
+        <button id="submit-share" class="accent-btn">Share</button>
+    </div>
+</dialog>
+
+<dialog data-dynamic="true" id="link-dialog">
+    <h3 id="link-name">Public Link</h3>
+    <hr>
+    <span>
+        Note: Anyone with access to the link will be able to access this content
+        until the content or link is deleted.
+    </span>
+
+    <a href="" id="public-link"></a>
+
+    <br>
+    <div class="align-items-right">
+        <button id="delete-link" class="destructive-btn">Delete Public Link</button>
+        <button id="create-link" class="accent-btn">Create Public Link</button>
+        <button id="close-link">Close</button>
+    </div>
+
+</dialog>
+{{ template "footer.html" . }}
+</body>

@@ -42,7 +42,15 @@ func (r *router) AddRoutes(routes []RouteDef) {
 				continue
 			}
 
-			r.AddRoute(methodStr, route.Path, route.Handler)
+			// Check for paths with optional segments
+			if strings.Contains(route.Path, "/?") {
+				optPath := strings.Replace(route.Path, "/?", "", 1)
+				wildPath := strings.Replace(route.Path, "/?", "/*", 1)
+				r.AddRoute(methodStr, optPath, route.Handler)
+				r.AddRoute(methodStr, wildPath, route.Handler)
+			} else {
+				r.AddRoute(methodStr, route.Path, route.Handler)
+			}
 		}
 	}
 }

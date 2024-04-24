@@ -9,7 +9,7 @@ import (
 	"yeetfile/web/utils"
 )
 
-var B2 b2.Auth
+var B2 b2.Service
 var B2BucketID string
 
 const defaultStoragePath = "uploads"
@@ -26,6 +26,7 @@ func init() {
 	var err error
 
 	if strings.ToLower(os.Getenv("YEETFILE_STORAGE")) == localStorageKey {
+		log.Println("Setting up local storage...")
 		// Storage will bypass B2 and just store encrypted files on the
 		// machine in the specified path or "uploads/"
 		limit := 0
@@ -45,7 +46,8 @@ func init() {
 			B2, err = b2.AuthorizeDummyAccount(path)
 		}
 	} else {
-		B2, err = b2.AuthorizeAccount(
+		log.Println("Authorizing B2 account...")
+		B2, _, err = b2.AuthorizeAccount(
 			os.Getenv("B2_BUCKET_KEY_ID"),
 			os.Getenv("B2_BUCKET_KEY"))
 	}

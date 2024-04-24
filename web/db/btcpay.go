@@ -28,6 +28,7 @@ func GetBTCPayOrderTypeByID(orderID string) (string, error) {
 		return "", err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var orderType string
 		err = rows.Scan(&orderType)

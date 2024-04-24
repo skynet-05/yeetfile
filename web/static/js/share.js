@@ -1,8 +1,5 @@
-const expUnits = {
-    minutes: 0,
-    hours: 1,
-    days: 2
-}
+import * as crypto from "./crypto.js";
+import * as transfer from "./transfer.js";
 
 let pepper = "";
 
@@ -10,17 +7,32 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTypeToggles();
 
     let usePasswordCB = document.getElementById("use-password");
-    let passwordDiv = document.getElementById("password-div");
+    let passwordInput = document.getElementById("password");
+    let confirmPasswordInput = document.getElementById("confirm-password");
+    let showPasswordCB = document.getElementById("show-password");
+
+    showPasswordCB.addEventListener("change", (event) => {
+        passwordInput.type = event.currentTarget.checked ? "text" : "password";
+        confirmPasswordInput.type = event.currentTarget.checked ? "text" : "password";
+    });
+
     usePasswordCB.addEventListener("change", (event) => {
-        if (event.currentTarget.checked) {
-            passwordDiv.style.display = "inherit";
-        } else {
-            passwordDiv.style.display = "none";
+        passwordInput.disabled = !event.currentTarget.checked;
+        confirmPasswordInput.disabled = !event.currentTarget.checked;
+        showPasswordCB.disabled = !event.currentTarget.checked;
+
+        if (!event.currentTarget.checked) {
+            passwordInput.value = "";
+            passwordInput.type = "password";
+            confirmPasswordInput.value = "";
+            confirmPasswordInput.type = "password";
+            showPasswordCB.checked = false;
         }
     });
 
     let uploadTextContent = document.getElementById("upload-text-content");
     let uploadTextLabel = document.getElementById("upload-text-label");
+    uploadTextLabel.innerText=`Text (${uploadTextContent.value.length}/2000):`;
     uploadTextContent.addEventListener("input", () => {
         if (uploadTextLabel) {
             uploadTextLabel.innerText=`Text (${uploadTextContent.value.length}/2000):`;
@@ -49,11 +61,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (validateForm(formValues)) {
             setFormEnabled(false);
-            generatePassphrase(async passphrase => {
+            crypto.generatePassphrase(async passphrase => {
                 pepper = passphrase;
 
                 updateProgress("Initializing");
-                let [key, salt] = await deriveSendingKey(formValues.pw, undefined, passphrase);
+                let [key, salt] = await crypto.deriveSendingKey(formValues.pw, undefined, passphrase);
 
                 if (isFileUpload()) {
                     if (formValues.files.length > 1) {
@@ -163,59 +175,54 @@ const submitFormMulti = async (form, key, salt, callback) => {
         size += file.size;
     }
 
-    let encryptedName = await encryptString(key, name);
+    let encryptedName = await crypto.encryptString(key, name);
 
     let hexName = toHexString(encryptedName);
     let chunks = getNumChunks(size);
     let expString = getExpString(form.exp, form.unit);
 
     updateProgress("Uploading file...");
-    uploadMetadata(
-        hexName,
-        chunks,
-        salt,
-        parseInt(form.downloads),
-        expString,
-        (id) => {
-            uploadZip(id, key, zip, chunks).then(() => {
-                callback();
-            });
+    transfer.uploadSendMetadata({
+        name: hexName,
+        chunks: chunks,
+        salt: Array.from(salt),
+        downloads: parseInt(form.downloads),
+        expiration: expString
+    }, (id) => {
+        uploadZip(id, key, zip, chunks).then(() => {
+            callback();
         });
+    });
 }
 
 const submitFormSingle = async (form, key, salt, callback) => {
     let file = form.files[0];
-    let encryptedName = await encryptString(key, file.name);
+    let encryptedName = await crypto.encryptString(key, file.name);
 
     let hexName = toHexString(encryptedName);
     let chunks = getNumChunks(file.size);
     let expString = getExpString(form.exp, form.unit);
 
-    uploadMetadata(
-        hexName,
-        chunks,
-        salt,
-        parseInt(form.downloads),
-        expString,
-        (id) => {
-            uploadFileChunks(id, key, file, chunks).then(() => {
-                callback();
-            });
+    transfer.uploadSendMetadata({
+        name: hexName,
+        chunks: chunks,
+        salt: Array.from(salt),
+        downloads: parseInt(form.downloads),
+        expiration: expString
+    }, (id) => {
+        uploadFileChunks(id, key, file, chunks).then(() => {
+            callback();
         });
+    });
 }
 
 const submitFormText = async (form, key, salt, callback) => {
-    let encryptedText = await encryptString(key, form.plaintext);
-    let encryptedName = await encryptString(key, genRandomString(10));
+    let encryptedText = await crypto.encryptString(key, form.plaintext);
+    let encryptedName = await crypto.encryptString(key, genRandomString(10));
 
-    console.log(encryptedText);
-    console.log(encryptedName);
     let hexName = toHexString(encryptedName);
     let expString = getExpString(form.exp, form.unit);
     let downloads = parseInt(form.downloads);
-
-    console.log(typeof(salt));
-    console.log(salt);
 
     uploadPlaintext(hexName, encryptedText, salt, downloads, expString, (tag) => {
         if (tag) {
@@ -227,22 +234,6 @@ const submitFormText = async (form, key, salt, callback) => {
     });
 }
 
-const sendChunk = (blob, id, chunkNum, callback) => {
-    let xhr = new XMLHttpRequest();
-
-    xhr.open("POST", `/u/${id}/${chunkNum}`, false);
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            callback(xhr.responseText);
-        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            alert(`Error ${xhr.status}: ${xhr.responseText}`);
-            throw new Error("Unable to upload chunk!");
-        }
-    }
-
-    xhr.send(blob);
-}
-
 const uploadZip = async (id, key, zip, chunks) => {
     let i = 0;
     let zipData = new Uint8Array(0);
@@ -251,18 +242,18 @@ const uploadZip = async (id, key, zip, chunks) => {
         zipData = concatTypedArrays(zipData, data);
         if (zipData.length >= chunkSize) {
             let slice = zipData.subarray(0, chunkSize);
-            let blob = await encryptChunk(key, slice);
+            let blob = await crypto.encryptChunk(key, slice);
 
             updateProgress(`Uploading file... ${i + 1}/${chunks}`)
-            sendChunk(blob, id, i + 1);
+            transfer.sendChunk(transfer.sendEndpoint, blob, id, i + 1, () => {});
             zipData = zipData.subarray(chunkSize, zipData.length);
             i += 1;
         }
     }).on("end", async () => {
         if (zipData.length > 0) {
-            let blob = await encryptChunk(key, zipData);
+            let blob = await crypto.encryptChunk(key, zipData);
             updateProgress(`Uploading file... ${i + 1}/${chunks}`)
-            sendChunk(blob, id, i + 1, (tag) => {
+            transfer.sendChunk(transfer.sendEndpoint, blob, id, i + 1, (tag) => {
                 showFileTag(tag);
             });
         }
@@ -279,10 +270,10 @@ const uploadFileChunks = async (id, key, file, chunks) => {
         }
 
         let data = await file.slice(start, end).arrayBuffer();
-        let blob = await encryptChunk(key, new Uint8Array(data));
+        let blob = await crypto.encryptChunk(key, new Uint8Array(data));
 
         updateProgress(`Uploading file... ${i + 1}/${chunks}`)
-        sendChunk(blob, id, i + 1, (tag) => {
+        transfer.sendChunk(transfer.sendEndpoint, blob, id, i + 1, (tag) => {
             if (tag) {
                 showFileTag(tag);
             }
@@ -290,31 +281,9 @@ const uploadFileChunks = async (id, key, file, chunks) => {
     }
 }
 
-const uploadMetadata = (name, chunks, salt, downloads, exp, callback) => {
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/u", false);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            callback(xhr.responseText);
-        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            alert(`Error ${xhr.status}: ${xhr.responseText}`);
-        }
-    };
-
-    xhr.send(JSON.stringify({
-        name: name,
-        chunks: chunks,
-        salt: Array.from(salt),
-        downloads: downloads,
-        expiration: exp
-    }));
-}
-
 const uploadPlaintext = (name, text, salt, downloads, exp, callback) => {
     let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/plaintext", false);
+    xhr.open("POST", "/send/plaintext", false);
     xhr.setRequestHeader('Content-Type', 'application/json');
 
     xhr.onreadystatechange = () => {
@@ -344,35 +313,6 @@ const validateDownloads = (numDownloads) => {
     if (numDownloads > maxDownloads) {
         alert(`The number of downloads must be between 0-${maxDownloads}.`);
         return false;
-    }
-
-    return true;
-}
-
-const validateExpiration = (exp, unit) => {
-    let maxDays = 30;
-    let maxHours = 24 * maxDays;
-    let maxMinutes = 60 * maxHours;
-
-    if (unit === expUnits.minutes) {
-        if (exp <= 0 || exp > maxMinutes) {
-            alert(`Expiration must be between 0-${maxMinutes} minutes`);
-            return false;
-        }
-    }
-
-    if (unit === expUnits.hours) {
-        if (exp <= 0 || exp > maxHours) {
-            alert(`Expiration must be between 0-${maxHours} hours`);
-            return false;
-        }
-    }
-
-    if (unit === expUnits.days) {
-        if (exp <= 0 || exp > maxDays) {
-            alert(`Expiration must be between 0-${maxDays} days`);
-            return false;
-        }
     }
 
     return true;

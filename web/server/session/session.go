@@ -1,11 +1,14 @@
 package session
 
 import (
+	"errors"
 	"github.com/gorilla/sessions"
 	"net/http"
 	"yeetfile/shared"
 	"yeetfile/web/utils"
 )
+
+type HandlerFunc func(w http.ResponseWriter, req *http.Request, userID string)
 
 var (
 	key = utils.GetEnvVar(
@@ -48,5 +51,24 @@ func RemoveSession(w http.ResponseWriter, req *http.Request) error {
 }
 
 func GetSessionUserID(session *sessions.Session) string {
-	return session.Values[UserKey].(string)
+	sessionVal := session.Values[UserKey]
+	if sessionVal != nil {
+		return sessionVal.(string)
+	}
+
+	return ""
+}
+
+func GetSessionAndUserID(req *http.Request) (string, error) {
+	s, err := GetSession(req)
+	if err != nil {
+		return "", errors.New("invalid session")
+	}
+
+	id := GetSessionUserID(s)
+	if len(id) == 0 {
+		return "", errors.New("invalid session")
+	}
+
+	return id, nil
 }

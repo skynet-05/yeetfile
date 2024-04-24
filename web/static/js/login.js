@@ -1,4 +1,17 @@
+import * as crypto from "./crypto.js"
+
+document.addEventListener("DOMContentLoaded", () => {
+    let loginBtn = document.getElementById("login-btn");
+    loginBtn.addEventListener("click", async () => {
+        await login();
+    })
+})
+
 const login = async () => {
+    let btn = document.getElementById("login-btn");
+    btn.disabled = true;
+    btn.value = "Logging in...";
+
     let identifier = document.getElementById("identifier");
     let password = document.getElementById("password");
 
@@ -6,8 +19,8 @@ const login = async () => {
         return;
     }
 
-    let userKey = await generateUserKey(identifier.value, password.value);
-    let loginKeyHash = await generateLoginKeyHash(userKey, password.value);
+    let userKey = await crypto.generateUserKey(identifier.value, password.value);
+    let loginKeyHash = await crypto.generateLoginKeyHash(userKey, password.value);
 
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/login", false);
@@ -15,9 +28,17 @@ const login = async () => {
 
     xhr.onreadystatechange = () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            window.location = "/";
+            let response = JSON.parse(xhr.responseText);
+            crypto.ingestProtectedKey(userKey, response.protectedKey, privateKey => {
+                crypto.ingestPublicKey(response.publicKey, publicKey => {
+                    new YeetFileDB().insertVaultKeyPair(privateKey, publicKey);
+                    window.location = "/";
+                });
+            });
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
+            btn.disabled = false;
+            btn.value = "Log In";
         }
     };
 

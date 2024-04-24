@@ -11,10 +11,12 @@ import (
 type BaseTemplate struct {
 	LoggedIn       bool
 	Title          string
+	Page           string
 	SuccessMessage string
 	ErrorMessage   string
 	Javascript     []string
 	CSS            []string
+	Version        string
 }
 
 type Template struct {
@@ -24,6 +26,13 @@ type Template struct {
 type LoginTemplate struct {
 	Base  BaseTemplate
 	Meter int
+}
+
+type VaultTemplate struct {
+	Base             BaseTemplate
+	FolderName       string
+	StorageAvailable int
+	StorageUsed      int
 }
 
 type AccountTemplate struct {
@@ -53,7 +62,8 @@ type ForgotPasswordTemplate struct {
 }
 
 const (
-	UploadHTML       = "upload.html"
+	SendHTML         = "send.html"
+	VaultHTML        = "vault.html"
 	DownloadHTML     = "download.html"
 	VerificationHTML = "verify.html"
 	SignupHTML       = "signup.html"

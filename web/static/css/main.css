@@ -1,7 +1,85 @@
 :root {
+    --text-color: #000000;
     --accent-color: #5555F0;
+    --shared-color: #229121;
+    --destructive-color: #a83c3c;
+    --button-color: lightgrey;
     --card-bg-color: #F5F5F5;
     --light-border: #D9DCDF;
+}
+
+html {
+    font-family: Avenir, Helvetica, Arial, sans-serif;
+    background-color: #EDEDED;
+    background-image: url("/static/img/background.svg");
+    background-size: 100vw 100vh;
+    background-repeat: no-repeat;
+    /*background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");*/
+}
+
+body {
+    margin-top: 0;
+}
+
+.accent-btn {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.destructive-btn {
+    background-color: var(--destructive-color);
+    color: white;
+}
+
+.accent-icon {
+    cursor: pointer;
+    filter: invert(33%) sepia(57%) saturate(4505%) hue-rotate(232deg) brightness(96%) contrast(95%);
+}
+
+.shared-icon {
+    cursor: pointer;
+    filter: invert(41%) sepia(14%) saturate(5662%) hue-rotate(86deg) brightness(95%) contrast(78%);
+}
+
+.accent-hr {
+    color: var(--accent-color) !important;
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+}
+
+.selected-link {
+    text-decoration: underline;
+}
+
+.selected-page {
+    border-bottom: 2px solid var(--text-color) !important;
+    border-radius: 0 !important;
+}
+
+.centered-text {
+    text-align: center;
+}
+
+.grid-2-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.grid-2-col > * {
+    padding: .5rem;
+}
+
+#upload-content-div, #upload-text-row, #upload-file-row {
+    height: 100%;
+}
+
+.align-items-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.align-items-right button {
+    margin-left: 5px;
 }
 
 * {
@@ -12,6 +90,10 @@
 
 .full-width {
     width: 100%;
+}
+
+.full-height {
+    height: 100%;
 }
 
 a .disabled {
@@ -27,19 +109,36 @@ textarea {
     min-height: 50px;
 }
 
+progress {
+    border-radius: revert !important;
+    border-color: revert !important;
+    width: 100%;
+    accent-color: var(--accent-color);
+}
+
 #center-div {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80%;
-    max-width: 750px;
+    width: 85%;
+    max-width: 800px;
     max-height: 85%;
     overflow-y: auto;
-    border-radius: 1rem;
+    border-radius: .66rem;
     padding: 20px;
     box-sizing: border-box;
     box-shadow: 0 12px 18px 2px rgba(34,0,51,.04),0 6px 22px 4px rgba(7,48,114,.12),0 6px 10px -4px rgba(14,13,26,.12);
+}
+
+dialog {
+    min-width: 200px;
+    max-width: 450px;
+    border: 0;
+}
+
+dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.25);
 }
 
 details {
@@ -47,7 +146,7 @@ details {
     margin: 10px;
 }
 
-h1 {
+h1, h3 {
     margin: 0;
 }
 
@@ -70,6 +169,7 @@ summary {
 
 input {
     margin: 5px;
+    max-width: 200px;
 }
 
 input:is([type="number"], [type="password"], [type="text"]) {
@@ -87,6 +187,14 @@ button, input:is([type="button"], [type="submit"]) {
     color: white;
 }
 
+button, input:is([type="button"], [type="reset"]) {
+    background-color: var(--button-color);
+    border: 0;
+    padding: 10px;
+    font-size: medium;
+    color: black;
+}
+
 input[type=submit]:disabled,
 button:disabled {
     background-color: darkgrey;
@@ -96,15 +204,6 @@ button:disabled {
 
 input[type='radio'] {
     accent-color: var(--accent-color);
-}
-
-html {
-    font-family: Avenir, Helvetica, Arial, sans-serif;
-    background-color: #EDEDED;
-    background-image: url("/static/img/background.svg");
-    background-size: 100vw 100vh;
-    background-repeat: no-repeat;
-    /*background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");*/
 }
 
 div {
@@ -128,13 +227,45 @@ input:disabled+label {
     color: gray;
 }
 
+input:disabled, textarea:disabled {
+    background-color: lightgrey;
+    color: grey;
+}
+
 .yeetfile-logo {
     max-width: 200px;
+}
+
+.red-icon {
+    cursor: pointer;
+    filter: invert(29%) sepia(8%) saturate(5464%) hue-rotate(315deg) brightness(106%) contrast(95%);
+}
+
+.flipped-icon {
+    cursor: pointer;
+    padding-right: 0 !important;
+    padding-left: 5px;
+    transform: rotate(180deg);
+}
+
+.red-link {
+    color: var(--destructive-color);
+    text-decoration: none;
 }
 
 .header * {
     background-color: transparent;
     max-height: 63px;
+}
+
+.header {
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 63px;
+    background-color: transparent;
 }
 
 .footer {
@@ -144,10 +275,18 @@ input:disabled+label {
     z-index: 2;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     margin-top: 65px;
     width: 100%;
     min-height: 63px;
     background-color: transparent;
+}
+
+.footer-elements {
+    display: flex;
+    align-items: center;
+    background-color: transparent;
+    padding-right: 25px;
 }
 
 .footer a {
@@ -159,6 +298,10 @@ input:disabled+label {
 .footer img {
     width: 50px;
     height: 50px;
+}
+
+.small-text {
+    font-size: small;
 }
 
 .header a {
@@ -184,22 +327,43 @@ input:disabled+label {
 }
 
 @media (prefers-color-scheme: dark) {
+    :root {
+        --accent-color: #a1a125;
+    }
+
     html {
         filter: invert(90%);
         -webkit-filter: invert(90%);
     }
 
     * {
-        border-color: #121212 !important;
+        border-color: lightgray !important;
+    }
+
+    button, input:is([type="button"], [type="submit"]) {
+        color: black !important;
     }
 
     #center-div {
-        box-shadow: 0 12px 18px 2px rgba(0,0,0,.04),0 6px 22px 4px rgba(0,0,0,.12),0 6px 10px -4px rgba(0,0,0,.12);
+        /*box-shadow: 0 12px 18px 2px rgba(0,0,0,.04),0 6px 22px 4px rgba(0,0,0,.12),0 6px 10px -4px rgba(0,0,0,.12);*/
+        box-shadow: none;
+        border: 1px solid;
     }
 }
 
 @media (orientation: portrait) {
-    html {
-        background-size: 100vh 100vw;
+    #center-div {
+        width: 95%;
+    }
+}
+
+@media (max-width:768px) {
+    .grid-2-col {
+        display: block;
+    }
+
+    fieldset {
+        padding-left: 0;
+        padding-right: 0;
     }
 }
