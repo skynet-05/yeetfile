@@ -39,17 +39,31 @@ func GetEnvVar(key string, fallback string) string {
 }
 
 func GetEnvVarInt(key string, fallback int) int {
-	value := GetEnvVar(key, "")
+	value := GetEnvVar(key, strconv.Itoa(fallback))
 	if value == "" {
 		return fallback
 	}
 
-	num, err := strconv.Atoi(key)
+	num, err := strconv.Atoi(value)
 	if err != nil {
 		return fallback
 	}
 
 	return num
+}
+
+func GetEnvVarBool(key string, fallback bool) bool {
+	value := GetEnvVar(key, "")
+	value = strings.ToLower(value)
+	if value == "" {
+		return fallback
+	} else if value == "0" || value == "n" {
+		return false
+	} else if value == "1" || value == "y" {
+		return true
+	}
+
+	return fallback
 }
 
 func StrToDuration(str string) time.Duration {
@@ -105,18 +119,19 @@ func PrettyPrintStruct(v any) {
 // 0 is a valid field value.
 func IsStructMissingAnyField(s interface{}) bool {
 	val := reflect.ValueOf(s)
-	missing := false
 	for i := 0; i < val.Type().NumField(); i++ {
 		switch val.Field(i).Type().Kind() {
 		case reflect.String:
 			fallthrough
 		case reflect.Slice:
-			missing = missing || val.Field(i).Len() == 0
+			if val.Field(i).Len() == 0 {
+				return true
+			}
 			break
 		}
 	}
 
-	return missing
+	return false
 }
 
 // GetStructFromFormOrJSON takes a struct and an http request and pulls out

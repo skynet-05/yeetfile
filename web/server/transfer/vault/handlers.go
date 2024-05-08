@@ -260,7 +260,9 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 	done, err := upload.Upload(b2Values)
 
 	if err != nil {
-		http.Error(w, "Upload error", http.StatusBadRequest)
+		http.Error(w, "Error uploading file", http.StatusBadRequest)
+		log.Printf("Error uploading file: %v\n", err)
+		db.DeleteFileByMetadata(metadata)
 		return
 	}
 

@@ -176,7 +176,6 @@ func FinalizeInvoice(payment SettledPayment) error {
 			return err
 		}
 	}
-	_ = db.RotateUserPaymentID(orderID)
 
 	return nil
 }

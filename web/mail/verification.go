@@ -26,7 +26,7 @@ func SendVerificationEmail(code string, to string) error {
 	verificationEmail := VerificationEmail{
 		Code:   code,
 		Email:  to,
-		Domain: config.CallbackDomain,
+		Domain: smtpConfig.CallbackDomain,
 	}
 
 	_ = verificationBodyTemplate.Execute(&buf, verificationEmail)

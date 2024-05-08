@@ -64,6 +64,7 @@ func Run(addr string) {
 		{GET, "/api/vault/d/*/*", AuthMiddleware(vault.DownloadChunkHandler)},
 		{GET | POST | PUT | DELETE, "/api/share/file/*", AuthMiddleware(vault.ShareHandler(false))},
 		{GET | POST | PUT | DELETE, "/api/share/folder/*", AuthMiddleware(vault.ShareHandler(true))},
+		//{GET, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
 
 		// Auth (signup, login/logout, account mgmt, etc)
 		{GET, "/verify-email", auth.VerifyEmailHandler},

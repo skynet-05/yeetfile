@@ -26,7 +26,7 @@ func SendResetEmail(code string, to string) error {
 	resetEmail := ResetEmail{
 		Code:   code,
 		Email:  to,
-		Domain: config.CallbackDomain,
+		Domain: smtpConfig.CallbackDomain,
 	}
 
 	_ = resetBodyTemplate.Execute(&buf, resetEmail)

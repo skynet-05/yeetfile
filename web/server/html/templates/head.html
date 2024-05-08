@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="/static/img/{{ .Base.Version }}/favicon.ico">
-    <link rel="stylesheet" href="/static/css/{{ .Base.Version }}/main.css">
-    <script src="/static/js/{{ .Base.Version }}/db.js"></script>
-    <script src="/static/js/{{ .Base.Version }}/utils.js"></script>
+    <link rel="icon" type="image/png" href="/static/img/{{ .Base.Config.Version }}/favicon.ico">
+    <link rel="stylesheet" href="/static/css/{{ .Base.Config.Version }}/main.css">
+    <script src="/static/js/{{ .Base.Config.Version }}/db.js"></script>
+    <script src="/static/js/{{ .Base.Config.Version }}/utils.js"></script>
 
     {{ range .Base.CSS }}
-        <link rel="stylesheet" href="/static/css/{{ $.Base.Version }}/{{ . }}">
+        <link rel="stylesheet" href="/static/css/{{ $.Base.Config.Version }}/{{ . }}">
     {{ end }}
 
     {{ range .Base.Javascript }}
-        <script type="module" src="/static/js/{{ $.Base.Version }}/{{ . }}"></script>
+        <script type="module" src="/static/js/{{ $.Base.Config.Version }}/{{ . }}"></script>
     {{ end }}
 
     <title>Yeetfile - {{ .Base.Title }}</title>

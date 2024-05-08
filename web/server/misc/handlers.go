@@ -32,7 +32,9 @@ func WordlistHandler(w http.ResponseWriter, _ *http.Request) {
 func FileHandler(strip string, prepend string, files embed.FS) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req.URL.Path = prepend + req.URL.Path
-		req.URL.Path = strings.Replace(req.URL.Path, fmt.Sprintf("/%s", config.VERSION), "", 1)
+		req.URL.Path = strings.Replace(
+			req.URL.Path,
+			fmt.Sprintf("/%s", config.YeetFileConfig.Version), "", 1)
 		path := strings.Split(req.URL.Path, "/")
 		name := path[len(path)-1]
 

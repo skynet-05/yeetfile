@@ -356,3 +356,19 @@ func PubKeyHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(jsonData)
 }
+
+// RecyclePaymentIDHandler handles replacing the user's current payment ID with
+// a new value
+func RecyclePaymentIDHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, "Error fetching user", http.StatusBadRequest)
+		return
+	}
+
+	err = db.RotateUserPaymentID(user.PaymentID)
+	if err != nil {
+		http.Error(w, "Error recycling payment ID", http.StatusBadRequest)
+		return
+	}
+}

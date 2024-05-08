@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/shared"
-	"yeetfile/web/utils"
+	"yeetfile/web/config"
 )
 
 type User struct {
@@ -29,13 +29,24 @@ type UserStorage struct {
 }
 
 var defaultExp time.Time
-var defaultMeter = utils.GetEnvVarInt("YEETFILE_METER", 1024*1024*1024*5) // 5gb
 
 var UserAlreadyExists = errors.New("user already exists")
+var UserLimitReached = errors.New("user limit has been reached")
 
 // NewUser creates a new user in the "users" table, ensuring that the email
 // provided is not already in use.
 func NewUser(user User) (string, error) {
+	if config.YeetFileConfig.MaxUserCount > 0 {
+		count, err := GetUserCount()
+		if err != nil {
+			return "", err
+		} else if count == config.YeetFileConfig.MaxUserCount {
+			return "", UserLimitReached
+		}
+
+		config.YeetFileConfig.CurrentUserCount = count
+	}
+
 	if len(user.Email) > 0 {
 		rows, err := db.Query(`SELECT * from users WHERE email = $1`, user.Email)
 		if err != nil {
@@ -57,9 +68,18 @@ func NewUser(user User) (string, error) {
 
 	paymentID := CreateUniquePaymentID()
 
-	s := `INSERT INTO users
-	      (id, email, pw_hash, payment_id, meter, member_expiration, last_upgraded_month, protected_key, public_key)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	s := `INSERT INTO users (
+                   id,
+                   email,
+                   pw_hash,
+                   payment_id,
+                   meter,
+                   storage_available,
+                   member_expiration,
+                   last_upgraded_month,
+                   protected_key,
+                   public_key)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
 	_, err := db.Exec(
 		s,
@@ -67,7 +87,8 @@ func NewUser(user User) (string, error) {
 		user.Email,
 		user.PasswordHash,
 		paymentID,
-		0,
+		config.YeetFileConfig.DefaultUserSend,
+		config.YeetFileConfig.DefaultUserStorage,
 		defaultExp,
 		-1,
 		user.ProtectedKey,
@@ -76,7 +97,29 @@ func NewUser(user User) (string, error) {
 		return "", err
 	}
 
+	if config.YeetFileConfig.MaxUserCount > 0 {
+		config.YeetFileConfig.CurrentUserCount += 1
+	}
+
 	return user.ID, nil
+}
+
+// GetUserCount returns the total number of users in the table
+func GetUserCount() (int, error) {
+	rows, err := db.Query(`SELECT COUNT(*) from users`)
+	if err != nil || !rows.Next() {
+		return 0, err
+	}
+
+	defer rows.Close()
+
+	var count int
+	err = rows.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 // CreateUniqueUserID creates a 16 digit user ID that is not already being used
@@ -513,7 +556,7 @@ func SetUserMembershipExpiration(paymentID string, exp time.Time) error {
                   last_upgraded_month=$3
               WHERE payment_id=$3`
 
-	_, err := db.Exec(s, exp, defaultMeter, paymentID, time.Now().Month())
+	_, err := db.Exec(s, exp, config.YeetFileConfig.DefaultUserStorage, paymentID, time.Now().Month())
 	if err != nil {
 		return err
 	}
@@ -555,56 +598,62 @@ func ReduceUserStorage(id string, size int) error {
 // CheckMemberships inspects each user's membership and updates their available
 // transfer if their membership is still valid
 func CheckMemberships() {
-	s := `SELECT id, member_expiration, last_upgraded_month FROM users
-              WHERE member_expiration >= $1::date`
-	rows, err := db.Query(s, time.Now())
+	s := `SELECT id, member_expiration FROM users
+              WHERE last_upgraded_month != $1`
+	rows, err := db.Query(s, int(time.Now().Month()))
 	if err != nil {
 		log.Printf("Error retrieving user memberships: %v", err)
 		return
 	}
 
 	var upgradeIDs []string
+	var revertIDs []string
 	now := time.Now()
 
 	defer rows.Close()
 	for rows.Next() {
 		var id string
 		var exp time.Time
-		var lastUpgradedMonth int
 
-		err = rows.Scan(&id, &exp, &lastUpgradedMonth)
+		err = rows.Scan(&id, &exp)
 
 		if err != nil {
 			log.Printf("Error scanning user rows: %v", err)
 			return
 		}
 
-		if int(exp.Month()) == lastUpgradedMonth {
-			// User has already had their transfer limit upgraded
-			// this month
+		if exp.Before(time.Now()) {
+			// User doesn't have an active membership, set send to
+			// default amount
+			revertIDs = append(revertIDs, id)
 			continue
-		}
-
-		if now.Day() == exp.Day() || ExpDateRollover(now, exp) {
-			// User
+		} else if now.Day() == exp.Day() || ExpDateRollover(now, exp) {
+			// User has an active membership
 			upgradeIDs = append(upgradeIDs, id)
 		}
 	}
 
-	if len(upgradeIDs) > 0 {
-		// Add the default meter amount to all users whose memberships
-		// are still active
+	if len(revertIDs) > 0 {
+		// Add the default send and storage amount to all users whose
+		// memberships are no longer active
 		u := `UPDATE users
 		      SET meter=meter + $1,
-		          last_upgraded_month=$2
-		      WHERE id=ANY($3)`
+		          storage_available=$2,
+		          last_upgraded_month=$3
+		      WHERE id=ANY($4)`
 
-		ids := fmt.Sprintf("{%s}", strings.Join(upgradeIDs, ","))
-		_, err = db.Exec(u, defaultMeter, int(now.Month()), ids)
+		ids := fmt.Sprintf("{%s}", strings.Join(revertIDs, ","))
+		_, err = db.Exec(u,
+			config.YeetFileConfig.DefaultUserSend,
+			config.YeetFileConfig.DefaultUserStorage,
+			int(now.Month()),
+			ids)
 		if err != nil {
 			panic(err)
 		}
 	}
+
+	// TODO: Implement membership check and update storage/send appropriately
 
 	time.Sleep(3600 * time.Second)
 	CheckMemberships()

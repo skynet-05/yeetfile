@@ -52,7 +52,8 @@
       <table>
         <tr>
           <td>Payment ID:</td>
-          <td>8675309 -- <a href="/cycle-payment-id">Cycle</a></td>
+<!--          <td>{{ .PaymentID }} — <a id="recycle-payment-id" href="#">Recycle</a></td>-->
+          <td>{{ .PaymentID }}</td>
         </tr>
       </table>
     </details>
@@ -73,8 +74,7 @@
         <li>5GB storage</li>
         <li>10GB/month transfer</li>
       </ul>
-      <a href="/checkout?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $2</button></a>
-      or
+      <a href="/checkout?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Purchase</button></a>
       <a href="/checkout-btc?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
     <div class="pricing-box col-2">
@@ -83,8 +83,7 @@
         <li>100GB storage</li>
         <li>200GB/month transfer</li>
       </ul>
-      <a href="/checkout?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $9</button></a>
-      or
+      <a href="/checkout?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Purchase</button></a>
       <a href="/checkout-btc?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
     </div>
     {{ end }}

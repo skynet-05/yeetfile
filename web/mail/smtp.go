@@ -7,10 +7,10 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"yeetfile/web/utils"
+	"yeetfile/web/config"
 )
 
-var config SMTPConfig
+var smtpConfig SMTPConfig
 
 type SMTPConfig struct {
 	From           string
@@ -24,20 +24,20 @@ type SMTPConfig struct {
 // sendEmail sends an email to the address specified in the `to` arg, containing
 // `subject` as the subject and `body` as the body.
 func sendEmail(to string, subject string, body string) {
-	if config == (SMTPConfig{}) {
+	if smtpConfig == (SMTPConfig{}) {
 		// SMTP hasn't been configured, ignore this request
-		log.Printf("Attempted to send email, but SMTP hasn't been configured")
+		log.Println("Attempted to send email, but SMTP hasn't been configured")
 		return
 	}
 
 	m := gomail.NewMessage()
-	m.SetHeader("From", config.From)
+	m.SetHeader("From", smtpConfig.From)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
 
-	d := gomail.NewDialer(config.Host, config.Port, config.Address, config.Password)
-	d.TLSConfig = &tls.Config{ServerName: config.Host}
+	d := gomail.NewDialer(smtpConfig.Host, smtpConfig.Port, smtpConfig.Address, smtpConfig.Password)
+	d.TLSConfig = &tls.Config{ServerName: smtpConfig.Host}
 
 	err := d.DialAndSend(m)
 	if err != nil {
@@ -47,23 +47,25 @@ func sendEmail(to string, subject string, body string) {
 }
 
 func init() {
-	portEnv := utils.GetEnvVar("YEETFILE_EMAIL_PORT", "")
-	port, err := strconv.Atoi(portEnv)
+	if !config.YeetFileConfig.Email.Configured {
+		return
+	}
+
+	port, err := strconv.Atoi(config.YeetFileConfig.Email.Port)
 	if err != nil {
-		log.Printf("Unable to read YEETFILE_EMAIL_PORT "+
-			"as int: \"%s\"", portEnv)
+		log.Printf("Unable to read email port as int: \"%s\"", config.YeetFileConfig.Email.Port)
 		log.Println("Skipping SMTP setup...")
 		return
 	}
 
-	from := fmt.Sprintf("\"YeetFile\" <%s>", os.Getenv("YEETFILE_EMAIL_ADDR"))
+	from := fmt.Sprintf("\"YeetFile\" <%s>", config.YeetFileConfig.Email.Address)
 
-	config = SMTPConfig{
+	smtpConfig = SMTPConfig{
 		From:           from,
-		Address:        os.Getenv("YEETFILE_EMAIL_ADDR"),
-		Host:           os.Getenv("YEETFILE_EMAIL_HOST"),
+		Address:        config.YeetFileConfig.Email.Address,
+		Host:           config.YeetFileConfig.Email.Host,
 		Port:           port,
-		Password:       os.Getenv("YEETFILE_EMAIL_PW"),
-		CallbackDomain: os.Getenv("YEETFILE_CALLBACK_DOMAIN"),
+		Password:       config.YeetFileConfig.Email.Password,
+		CallbackDomain: config.YeetFileConfig.CallbackDomain,
 	}
 }

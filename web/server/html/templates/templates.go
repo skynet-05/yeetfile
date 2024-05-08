@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"yeetfile/web/config"
 )
 
 type BaseTemplate struct {
@@ -17,6 +18,7 @@ type BaseTemplate struct {
 	Javascript     []string
 	CSS            []string
 	Version        string
+	Config         config.ServerConfig
 }
 
 type Template struct {

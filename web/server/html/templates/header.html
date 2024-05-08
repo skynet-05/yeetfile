@@ -1,6 +1,6 @@
 <div class="header">
   <div class="left">
-    <a href="/"><img class="yeetfile-logo" src="/static/img/{{ .Base.Version }}/yeetfile-logo.png" alt="yeetfile logo"></a>
+    <a href="/"><img class="yeetfile-logo" src="/static/img/{{ .Base.Config.Version }}/yeetfile-logo.png" alt="yeetfile logo"></a>
   </div>
   <div class="right">
     {{ if .Base.LoggedIn }}
@@ -22,7 +22,11 @@
       <a href="/account">Account</a>
       {{ end }}
     {{ else }}
+      {{ if ne .Base.Config.MaxUserCount .Base.Config.CurrentUserCount }}
       <a href="/signup">Sign Up</a>
+      {{ else }}
+      <strike>Sign Up</strike><span> (Server Full) </span>
+      {{ end }}
       <a href="/login">Log In</a>
     {{ end }}
   </div>

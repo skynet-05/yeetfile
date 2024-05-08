@@ -117,12 +117,6 @@ func ProcessEvent(event stripe.Event) error {
 				fmt.Fprintln(os.Stderr, "Error sending order confirmation email")
 			}
 		}
-
-		// Rotate user payment ID now that it's no longer needed
-		err = db.RotateUserPaymentID(refID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error rotating user payment ID: %v\n", err)
-		}
 	}
 	return nil
 }

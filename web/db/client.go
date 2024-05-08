@@ -98,10 +98,11 @@ func DeleteFileByMetadata(metadata FileMetadata) {
 		log.Printf("%s deleted from cache\n", metadata.ID)
 	}
 
-	// File must be deleted from B2 before removing from the database
-	if service.B2.DeleteFile(metadata.B2ID, metadata.Name) {
+	if ok, err := service.B2.CancelLargeFile(metadata.B2ID); ok && err == nil {
+		log.Printf("%s (large B2 upload) canceled\n", metadata.ID)
+		clearDatabase(metadata.ID)
+	} else if service.B2.DeleteFile(metadata.B2ID, metadata.Name) {
 		log.Printf("%s deleted from B2\n", metadata.ID)
-
 		clearDatabase(metadata.ID)
 	} else {
 		if len(metadata.B2ID) == 0 {

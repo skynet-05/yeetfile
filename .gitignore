@@ -9,6 +9,7 @@ session*
 !session.go
 !web/server/session
 *.env
+*.swp
 tags
 init.sql
 uploads/
