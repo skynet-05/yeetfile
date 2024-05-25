@@ -597,11 +597,15 @@ func SetUserSubscription(
 	s := `UPDATE users
               SET member_expiration=$1,
                   storage_available=$2, send_available=$3,
-                  sub_duration=$4, sub_type=$5,
-                  last_upgraded_month=$6
+                  sub_duration=$4, sub_type=$5, sub_method=$6,
+                  last_upgraded_month=$7
               WHERE payment_id=$7`
 
-	_, err = db.Exec(s, exp, storage, send, subDuration, subType, time.Now().Month(), paymentID)
+	_, err = db.Exec(s,
+		exp,
+		storage, send,
+		subDuration, subType, subMethod,
+		time.Now().Month(), paymentID)
 	if err != nil {
 		return err
 	}

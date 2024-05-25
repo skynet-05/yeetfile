@@ -24,6 +24,7 @@ const (
 	PUT
 	POST
 	DELETE
+	ALL = GET | PUT | POST | DELETE
 )
 
 var MethodMap = map[HttpMethod]string{
@@ -62,8 +63,8 @@ func Run(addr string) {
 		{POST, "/api/vault/u/*/*", AuthMiddleware(vault.UploadDataHandler)},
 		{GET, "/api/vault/d/*", AuthMiddleware(vault.DownloadHandler)},
 		{GET, "/api/vault/d/*/*", AuthMiddleware(vault.DownloadChunkHandler)},
-		{GET | POST | PUT | DELETE, "/api/share/file/*", AuthMiddleware(vault.ShareHandler(false))},
-		{GET | POST | PUT | DELETE, "/api/share/folder/*", AuthMiddleware(vault.ShareHandler(true))},
+		{ALL, "/api/share/file/*", AuthMiddleware(vault.ShareHandler(false))},
+		{ALL, "/api/share/folder/*", AuthMiddleware(vault.ShareHandler(true))},
 		//{GET, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
 
 		// Auth (signup, login/logout, account mgmt, etc)
