@@ -116,7 +116,7 @@ progress {
     accent-color: var(--accent-color);
 }
 
-#center-div {
+#center-div, #nojs-div {
     position: absolute;
     top: 50%;
     left: 50%;

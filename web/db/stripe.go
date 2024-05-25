@@ -2,30 +2,18 @@ package db
 
 import (
 	"errors"
-	"log"
-	"time"
 )
 
-func InsertNewStripeOrder(
-	intentID string,
-	paymentID string,
-	productID string,
-	sessionID string,
-) error {
-	s := `INSERT INTO stripe (intent_id, payment_id, product_id, session_id, date)
-	      VALUES ($1, $2, $3, $4, $5)`
-	_, err := db.Exec(s, intentID, paymentID, productID, sessionID, time.Now())
+func CreateNewStripeCustomer(customerID, paymentID string) error {
+	s := `INSERT INTO stripe (customer_id, payment_id) VALUES ($1, $2)`
+	_, err := db.Exec(s, customerID, paymentID)
 
 	return err
 }
 
-func GetStripePaymentIDBySessionID(sessionID string) (string, error) {
-	rows, err := db.Query(`
-		SELECT payment_id
-		FROM stripe
-		WHERE session_id = $1`, sessionID)
+func GetPaymentIDByStripeCustomerID(customerID string) (string, error) {
+	rows, err := db.Query(`SELECT payment_id FROM stripe WHERE customer_id = $1`, customerID)
 	if err != nil {
-		log.Printf("Error querying for payment ID by session ID: %v", err)
 		return "", err
 	}
 
@@ -41,4 +29,24 @@ func GetStripePaymentIDBySessionID(sessionID string) (string, error) {
 	}
 
 	return "", errors.New("unable to find payment ID")
+}
+
+func GetStripeCustomerIDByPaymentID(paymentID string) (string, error) {
+	rows, err := db.Query(`SELECT customer_id FROM stripe WHERE payment_id = $1`, paymentID)
+	if err != nil {
+		return "", err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		var customerID string
+		err = rows.Scan(&customerID)
+		if err != nil {
+			return "", err
+		}
+
+		return customerID, nil
+	}
+
+	return "", errors.New("unable to find customer ID")
 }

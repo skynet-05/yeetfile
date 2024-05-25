@@ -1,7 +1,6 @@
 package html
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"yeetfile/web/db"
 	"yeetfile/web/server/html/templates"
 	"yeetfile/web/server/session"
+	"yeetfile/web/server/subscriptions"
 )
 
 const ErrorHeader = "ErrorMsg"
@@ -23,7 +23,7 @@ const OrderConfMsg = "Your order confirmation code " +
 // VaultPageHandler returns the html template used for interacting with files
 // (uploading, renaming, downloading, deleting) in the user's vault
 func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
-	userStorage, err := db.GetUserStorage(userID)
+	userStorage, _, err := db.GetUserStorage(userID)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -143,6 +143,7 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 // AccountPageHandler returns the HTML page for a user managing their account
 func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) {
 	successMsg, errorMsg := generateAccountMessages(req)
+	isYearly := req.URL.Query().Has("yearly")
 
 	err := templates.ServeTemplate(
 		w,
@@ -158,17 +159,21 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) 
 				CSS:            []string{"account.css"},
 				Config:         config.YeetFileConfig,
 			},
-			Email:             user.Email,
-			Meter:             user.Meter,
-			PaymentID:         user.PaymentID,
-			ExpString:         user.MemberExp.Format("2 Jan 2006"),
-			IsActive:          time.Now().Before(user.MemberExp),
-			ReadableMeter:     shared.ReadableFileSize(user.Meter),
-			Membership3Months: shared.TypeSub3Months,
-			Membership1Year:   shared.TypeSub1Year,
-			Upgrade100GB:      shared.Type100GB,
-			Upgrade500GB:      shared.Type500GB,
-			Upgrade1TB:        shared.Type1TB,
+			Email:            user.Email,
+			PaymentID:        user.PaymentID,
+			ExpString:        user.MemberExp.Format("2 Jan 2006"),
+			IsActive:         time.Now().Before(user.MemberExp),
+			SendAvailable:    shared.ReadableFileSize(user.SendAvailable),
+			SendUsed:         shared.ReadableFileSize(user.SendUsed),
+			StorageAvailable: shared.ReadableFileSize(user.StorageAvailable),
+			StorageUsed:      shared.ReadableFileSize(user.StorageUsed),
+			IsYearly:         isYearly,
+			IsStripeUser:     user.SubscriptionMethod == subscriptions.SubMethodStripe,
+			StripeConfigured: config.YeetFileConfig.StripeBilling.Configured,
+			BTCPayConfigured: config.YeetFileConfig.BTCPayBilling.Configured,
+			BillingConfigured: config.YeetFileConfig.StripeBilling.Configured ||
+				config.YeetFileConfig.BTCPayBilling.Configured,
+			SubscriptionTemplate: subscriptions.TemplateValues,
 		},
 	)
 
@@ -246,7 +251,6 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 // the data contained in the request.
 func generateAccountMessages(req *http.Request) (string, string) {
 	success := req.URL.Query().Get("success")
-	conf := req.URL.Query().Get("confirmation")
 	fromBTC := req.URL.Query().Get("btcpay")
 
 	successMsg := ""
@@ -258,13 +262,6 @@ func generateAccountMessages(req *http.Request) (string, string) {
 			successMsg += "BTCPay orders can take up to 5 minutes " +
 				"to finalize. Your account will be updated once " +
 				"your transaction has been validated. "
-		}
-
-		if len(conf) > 0 {
-			paymentID, err := db.GetStripePaymentIDBySessionID(conf)
-			if err == nil {
-				successMsg += fmt.Sprintf(OrderConfMsg, paymentID)
-			}
 		}
 	} else if len(success) > 0 && success == "0" {
 		errorMsg = "Failed to update account!"

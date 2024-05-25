@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"yeetfile/web/config"
+	"yeetfile/web/server/subscriptions"
 )
 
 type BaseTemplate struct {
@@ -38,18 +39,22 @@ type VaultTemplate struct {
 }
 
 type AccountTemplate struct {
-	Base              BaseTemplate
-	Email             string
-	Meter             int
-	IsActive          bool
-	PaymentID         string
-	ExpString         string
-	ReadableMeter     string
-	Membership3Months string
-	Membership1Year   string
-	Upgrade100GB      string
-	Upgrade500GB      string
-	Upgrade1TB        string
+	Base                 BaseTemplate
+	Email                string
+	Meter                int
+	IsActive             bool
+	PaymentID            string
+	ExpString            string
+	StorageAvailable     string
+	StorageUsed          string
+	SendAvailable        string
+	SendUsed             string
+	IsYearly             bool
+	IsStripeUser         bool
+	StripeConfigured     bool
+	BTCPayConfigured     bool
+	BillingConfigured    bool
+	SubscriptionTemplate subscriptions.SubscriptionTemplateValues
 }
 
 type VerificationTemplate struct {
@@ -76,6 +81,7 @@ const (
 )
 
 //go:embed *.html
+//go:embed items/*.html
 var HTML embed.FS
 
 var templates *template.Template
@@ -98,7 +104,7 @@ func init() {
 	// Load templates
 	var templateList []string
 	err := fs.WalkDir(HTML, ".", func(path string, d fs.DirEntry, err error) error {
-		if !d.IsDir() && strings.HasSuffix(path, ".html") {
+		if strings.HasSuffix(path, ".html") {
 			templateList = append(templateList, path)
 		}
 		return err

@@ -12,7 +12,7 @@ var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var numbers = []rune("1234567890")
 
 func ReadableFileSize(b int) string {
-	const unit = 1024
+	const unit = 1000
 	if b < unit {
 		return fmt.Sprintf("%d B", b)
 	}

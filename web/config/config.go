@@ -6,7 +6,7 @@ import (
 	"yeetfile/web/utils"
 )
 
-const version = "0.0.1"
+const version = "0.0.1-beta"
 
 // =============================================================================
 // General configuration
@@ -45,6 +45,7 @@ type StripeBillingConfig struct {
 	Configured    bool
 	Key           string
 	WebhookSecret string
+	PortalLink    string
 
 	SubNoviceMonthly     string
 	SubNoviceMonthlyLink string
@@ -61,19 +62,21 @@ type StripeBillingConfig struct {
 	SubAdvancedYearly      string
 	SubAdvancedYearlyLink  string
 
-	Add50GBSend     string
-	Add50GBSendLink string
-
-	Add100GBSend     string
-	Add100GBSendLink string
-
-	Add250GBSend     string
-	Add250GBSendLink string
+	//Add50GBSend     string
+	//Add50GBSendLink string
+	//
+	//Add100GBSend     string
+	//Add100GBSendLink string
+	//
+	//Add250GBSend     string
+	//Add250GBSendLink string
 }
 
 var stripeBilling = StripeBillingConfig{
-	Key:                  os.Getenv("YEETFILE_STRIPE_KEY"),
-	WebhookSecret:        os.Getenv("YEETFILE_STRIPE_WEBHOOK_SECRET"),
+	Key:           os.Getenv("YEETFILE_STRIPE_KEY"),
+	WebhookSecret: os.Getenv("YEETFILE_STRIPE_WEBHOOK_SECRET"),
+	PortalLink:    os.Getenv("YEETFILE_STRIPE_PORTAL_LINK"),
+
 	SubNoviceMonthly:     os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY"),
 	SubNoviceMonthlyLink: os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_LINK"),
 	SubNoviceYearly:      os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY"),
@@ -89,14 +92,14 @@ var stripeBilling = StripeBillingConfig{
 	SubAdvancedYearly:      os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY"),
 	SubAdvancedYearlyLink:  os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_LINK"),
 
-	Add50GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_50GB_SEND"),
-	Add50GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_50GB_SEND_LINK"),
-
-	Add100GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_100GB_SEND"),
-	Add100GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_100GB_SEND_LINK"),
-
-	Add250GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_250GB_SEND"),
-	Add250GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_250GB_SEND_LINK"),
+	//Add50GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_50GB_SEND"),
+	//Add50GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_50GB_SEND_LINK"),
+	//
+	//Add100GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_100GB_SEND"),
+	//Add100GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_100GB_SEND_LINK"),
+	//
+	//Add250GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_250GB_SEND"),
+	//Add250GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_250GB_SEND_LINK"),
 }
 
 // =============================================================================
@@ -110,20 +113,12 @@ type BTCPayBillingConfig struct {
 	StoreID       string
 	ServerURL     string
 
-	SubNoviceMonthlyPrice string
-	SubNoviceMonthlyDesc  string
-	SubNoviceYearlyPrice  string
-	SubNoviceYearlyDesc   string
-
-	SubRegularMonthlyPrice string
-	SubRegularMonthlyDesc  string
-	SubRegularYearlyPrice  string
-	SubRegularYearlyDesc   string
-
-	SubAdvancedMonthlyPrice string
-	SubAdvancedMonthlyDesc  string
-	SubAdvancedYearlyPrice  string
-	SubAdvancedYearlyDesc   string
+	SubNoviceMonthlyLink   string
+	SubNoviceYearlyLink    string
+	SubRegularMonthlyLink  string
+	SubRegularYearlyLink   string
+	SubAdvancedMonthlyLink string
+	SubAdvancedYearlyLink  string
 }
 
 var btcPayBilling = BTCPayBillingConfig{
@@ -132,20 +127,12 @@ var btcPayBilling = BTCPayBillingConfig{
 	StoreID:       os.Getenv("YEETFILE_BTCPAY_STORE_ID"),
 	ServerURL:     os.Getenv("YEETFILE_BTCPAY_SERVER_URL"),
 
-	SubNoviceMonthlyPrice: os.Getenv("YEETFILE_BTCPAY_NOVICE_1M_PRICE"),
-	SubNoviceMonthlyDesc:  "YeetFile Novice 1 Month Subscription",
-	SubNoviceYearlyPrice:  os.Getenv("YEETFILE_BTCPAY_NOVICE_1Y_PRICE"),
-	SubNoviceYearlyDesc:   "YeetFile Novice 1 Year Subscription",
-
-	SubRegularMonthlyPrice: os.Getenv("YEETFILE_BTCPAY_REGULAR_1M_PRICE"),
-	SubRegularMonthlyDesc:  "YeetFile Regular 1 Month Subscription",
-	SubRegularYearlyPrice:  os.Getenv("YEETFILE_BTCPAY_REGULAR_1Y_PRICE"),
-	SubRegularYearlyDesc:   "YeetFile Regular 1 Year Subscription",
-
-	SubAdvancedMonthlyPrice: os.Getenv("YEETFILE_BTCPAY_ADVANCED_1M_PRICE"),
-	SubAdvancedMonthlyDesc:  "YeetFile Advanced 1 Month Subscription",
-	SubAdvancedYearlyPrice:  os.Getenv("YEETFILE_BTCPAY_ADVANCED_1Y_PRICE"),
-	SubAdvancedYearlyDesc:   "YeetFile Advanced 1 Year Subscription",
+	SubNoviceMonthlyLink:   os.Getenv("YEETFILE_BTCPAY_SUB_NOVICE_MONTHLY_LINK"),
+	SubNoviceYearlyLink:    os.Getenv("YEETFILE_BTCPAY_SUB_NOVICE_YEARLY_LINK"),
+	SubRegularMonthlyLink:  os.Getenv("YEETFILE_BTCPAY_SUB_REGULAR_MONTHLY_LINK"),
+	SubRegularYearlyLink:   os.Getenv("YEETFILE_BTCPAY_SUB_REGULAR_YEARLY_LINK"),
+	SubAdvancedMonthlyLink: os.Getenv("YEETFILE_BTCPAY_SUB_ADVANCED_MONTHLY_LINK"),
+	SubAdvancedYearlyLink:  os.Getenv("YEETFILE_BTCPAY_SUB_ADVANCED_YEARLY_LINK"),
 }
 
 // =============================================================================
@@ -161,6 +148,7 @@ type ServerConfig struct {
 	Email              EmailConfig
 	StripeBilling      StripeBillingConfig
 	BTCPayBilling      BTCPayBillingConfig
+	BillingEnabled     bool
 	Version            string
 }
 
@@ -181,6 +169,7 @@ func init() {
 		Email:              email,
 		StripeBilling:      stripeBilling,
 		BTCPayBilling:      btcPayBilling,
+		BillingEnabled:     stripeBilling.Configured || btcPayBilling.Configured,
 		Version:            version,
 	}
 

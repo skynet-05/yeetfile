@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+	"yeetfile/web/config"
 	"yeetfile/web/server/session"
 )
 
@@ -63,8 +64,8 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusTooManyRequests)
-		_, _ = w.Write([]byte("Too many requests from this IP address, " +
-			"please wait and try again."))
+		_, _ = w.Write([]byte("Too many back-to-back requests from this " +
+			"IP address, please wait and try again."))
 	}
 
 	return handler
@@ -88,6 +89,36 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
 		return
+	}
+
+	return handler
+}
+
+// StripeMiddleware ensures that requests made to Stripe related endpoints are
+// only processed if Stripe has been set up already.
+func StripeMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		if !config.YeetFileConfig.StripeBilling.Configured {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		next(w, req)
+	}
+
+	return handler
+}
+
+// BTCPayMiddleware ensures that requests made to BTCPay related endpoints are
+// only processed if BTCPay has been set up already.
+func BTCPayMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		if !config.YeetFileConfig.BTCPayBilling.Configured {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		next(w, req)
 	}
 
 	return handler

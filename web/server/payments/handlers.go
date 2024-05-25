@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"yeetfile/shared"
 	"yeetfile/web/db"
 	"yeetfile/web/server/payments/btcpay"
 	"yeetfile/web/server/payments/stripe"
@@ -42,19 +41,35 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// StripeCheckout initiates the process for a user adding to their meter
-// using Stripe Checkout
-func StripeCheckout(w http.ResponseWriter, req *http.Request, _ string) {
-	// Ensure Stripe has already been set up
-	if !stripe.Ready {
-		log.Println("Stripe checkout requested, but Stripe has not been set up.")
-		w.WriteHeader(http.StatusNotFound)
+// StripeCustomerPortal redirects users to the Stripe customer portal, which
+// allows existing subscribers to manage their subscription.
+func StripeCustomerPortal(w http.ResponseWriter, req *http.Request, id string) {
+	paymentID, err := db.GetPaymentIDByUserID(id)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
+	link, err := stripe.GetCustomerPortalLink(paymentID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, req, link, http.StatusTemporaryRedirect)
+}
+
+// StripeCheckout initiates the process for a user adding to their meter
+// using Stripe Checkout
+func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
-	paymentID := req.URL.Query().Get("payment_id")
-	if len(itemType) == 0 || len(paymentID) == 0 || !db.PaymentIDExists(paymentID) {
+	paymentID, err := db.GetPaymentIDByUserID(id)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	if len(itemType) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -71,7 +86,7 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request, _ string) {
 
 // BTCPayWebhook handles relevant incoming webhook events from BTCPay
 func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
-	bodyBytes, isValid := btcpay.IsValidRequest(req)
+	bodyBytes, isValid := btcpay.IsValidRequest(w, req)
 	if !isValid {
 		log.Printf("Error validating BTCPay webhook event, ignoring")
 		w.WriteHeader(http.StatusBadRequest)
@@ -80,14 +95,15 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 
 	reader := bytes.NewReader(bodyBytes)
 	decoder := json.NewDecoder(reader)
-	var settledPayment btcpay.SettledPayment
-	err := decoder.Decode(&settledPayment)
+	var settledInvoice btcpay.Invoice
+	err := decoder.Decode(&settledInvoice)
 	if err != nil {
+		log.Printf("Error decoding BTCPay webhook request body")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	err = btcpay.FinalizeInvoice(settledPayment)
+	err = btcpay.FinalizeInvoice(settledInvoice)
 	if err != nil {
 		log.Printf("Error finalizing BTCPay invoice: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -98,49 +114,25 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 }
 
 // BTCPayCheckout generates an invoice for the requested product/upgrade
-func BTCPayCheckout(w http.ResponseWriter, req *http.Request, _ string) {
-	// Ensure BTCPay has already been set up
-	if !btcpay.Ready {
-		log.Println("BTCPay checkout requested, but it has not been set up.")
-		w.WriteHeader(http.StatusNotFound)
+func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
+	itemType := req.URL.Query().Get("type")
+	paymentID, err := db.GetPaymentIDByUserID(id)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	itemType := req.URL.Query().Get("type")
-	paymentID := req.URL.Query().Get("payment_id")
-
-	isValidID := false
-	if len(paymentID) > 0 {
-		isValidID = db.PaymentIDExists(paymentID)
-	}
-
-	if len(itemType) == 0 || len(paymentID) == 0 || !isValidID {
+	if len(itemType) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Fetch price of item being purchased
-	price, ok := shared.PriceMapping[itemType]
+	checkoutLink, ok := btcpay.LinkMapping[itemType]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Generate BTCPay invoice w/ checkout link
-	invoice, err := btcpay.GenerateBTCPayInvoice(paymentID, price)
-	if err != nil {
-		fmt.Printf("Error generating BTCPay invoice: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Add payment ID to database
-	err = db.InsertNewBTCPayOrder(paymentID, invoice.ID, itemType)
-	if err != nil {
-		fmt.Printf("Error inserting new BTCPay order: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, req, invoice.CheckoutLink, http.StatusTemporaryRedirect)
+	checkoutParams := fmt.Sprintf("?orderId=%s", paymentID)
+	http.Redirect(w, req, checkoutLink+checkoutParams, http.StatusTemporaryRedirect)
 }

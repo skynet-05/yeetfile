@@ -17,7 +17,7 @@ func NewRootFolder(id string, protectedFolderKey []byte) error {
 
 	// User should exist for this folder ID
 	if _, err := GetUserByID(id); err != nil {
-		return errors.New("the provided ID doesn't match any user IDs")
+		return errors.New("error fetching user by ID when creating root folder")
 	}
 
 	return insertFolder(id, id, shared.NewVaultFolder{

@@ -6,7 +6,6 @@ import (
 )
 
 type OrderEmail struct {
-	RefID   string
 	Product string
 	Email   string
 }
@@ -14,16 +13,14 @@ type OrderEmail struct {
 var orderSubject = "YeetFile Order Confirmation"
 var orderBodyTemplate = template.Must(template.New("").Parse(
 	"Thank you for using YeetFile! Your order summary is below.\n\n" +
-		"- Product: {{.Product}}\n" +
-		"- Order ID: {{.RefID}}\n\n" +
+		"{{.Product}}\n\n" +
 		"If you have any questions about your order, feel free to email " +
 		"support@yeetfile.com or reply to this email."))
 
 // CreateOrderEmail creates an OrderEmail struct for sending the order
 // confirmation email
-func CreateOrderEmail(refID string, desc string, email string) OrderEmail {
+func CreateOrderEmail(desc string, email string) OrderEmail {
 	return OrderEmail{
-		RefID:   refID,
 		Product: desc,
 		Email:   email,
 	}

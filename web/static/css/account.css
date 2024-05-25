@@ -42,10 +42,26 @@ ul {
 }
 
 .btcpay-btn {
-    background-color: #0f3b21;
+    background-color: #323232;
     color: white;
     width: 125px;
     margin: 5px;
+}
+
+.btcpay-icon {
+    vertical-align: middle;
+    margin: 0 2px;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+}
+
+.btc-icon {
+    background-image: url(/static/icons/btc.svg);
+}
+
+.xmr-icon {
+    background-image: url(/static/icons/xmr.svg);
 }
 
 details {
@@ -54,4 +70,62 @@ details {
 
 details::after {
     border: 0;
+}
+
+.subscription-container {
+    display: flex;
+    align-items: center;
+}
+
+.radio-group {
+    margin-left: 15px;
+}
+
+.radio-group input[type="radio"] {
+    display: none;
+}
+
+.radio-group label {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: var(--card-bg-color);
+    color: black;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.radio-group input[type="radio"]:checked + label {
+    background-color: var(--accent-color);
+    color: white !important;
+}
+
+.radio-group input[type="radio"]:checked + label > a {
+    color: white;
+}
+
+label a {
+    text-decoration: none;
+}
+
+@media (max-width: 600px) {
+    #subscription-div {
+        grid-auto-flow: row;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .col-1 {
+        grid-row: 1;
+        grid-column-start: 1;
+    }
+
+    .col-2 {
+        grid-row: 2;
+        grid-column-start: 1;
+    }
+
+    .col-3 {
+        grid-row: 3;
+        grid-column-start: 1;
+    }
 }

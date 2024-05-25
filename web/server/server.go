@@ -79,10 +79,11 @@ func Run(addr string) {
 		{GET, "/pubkey", LimiterMiddleware(AuthMiddleware(auth.PubKeyHandler))},
 
 		// Payments (Stripe, BTCPay)
-		{POST, "/stripe", payments.StripeWebhook},
-		{GET, "/checkout", AuthMiddleware(payments.StripeCheckout)},
-		{POST, "/btcpay", payments.BTCPayWebhook},
-		{GET, "/checkout-btc", AuthMiddleware(payments.BTCPayCheckout)},
+		{POST, "/webhook/stripe", payments.StripeWebhook},
+		{GET, "/manage-sub", StripeMiddleware(AuthMiddleware(payments.StripeCustomerPortal))},
+		{GET, "/checkout", StripeMiddleware(AuthMiddleware(payments.StripeCheckout))},
+		{POST, "/webhook/btcpay", payments.BTCPayWebhook},
+		{GET, "/checkout-btc", BTCPayMiddleware(AuthMiddleware(payments.BTCPayCheckout))},
 
 		// HTML
 		{GET, "/", html.SendPageHandler},

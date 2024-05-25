@@ -8,36 +8,46 @@
     <table>
       <tr>
         <td>
-          <label for="email">Email:</label>
+          <label>Email:</label>
         </td>
         <td>
           {{ if ne .Email "" }}
-            <span id="email">{{ .Email }}</span>
+            <span>{{ .Email }}</span>
           {{ else }}
-            <span id="email">None</span>
+            <span>None</span>
           {{ end }}
         </td>
       </tr>
       <tr>
         <td>
-          <label for="meter">Send:</label>
+          <label>Vault:</label>
         </td>
         <td>
-          <span id="meter">{{ .ReadableMeter }} remaining</span>
+          <span>{{ .StorageUsed }} / {{ .StorageAvailable }}</span>
         </td>
       </tr>
       <tr>
         <td>
-          <label for="subscription">Subscription:</label>
+          <label>Send:</label>
+        </td>
+        <td>
+          <span>{{ .SendUsed }} / {{ .SendAvailable }}</span>
+        </td>
+      </tr>
+      {{ if .BillingConfigured }}
+      <tr>
+        <td>
+          <label>Subscription:</label>
         </td>
         <td>
           {{ if .IsActive }}
-          <span id="subscription">Active (expires {{ .ExpString }})</span>
+          <span>Active (expires {{ .ExpString }})</span>
           {{ else }}
-          <span id="subscription">Inactive</span>
+          <span>Inactive</span>
           {{ end }}
         </td>
       </tr>
+      {{ end }}
       <tr>
         <td>
           <label for="actions">Actions:</label>
@@ -59,64 +69,132 @@
     </details>
   </div>
   {{ template "messages.html" . }}
-  <hr>
-  <h1>Memberships</h1>
-  <div id="subscription-div">
-    {{ if .IsActive }}
-    <div class="pricing-box">
-      <h3>YeetFile Membership</h3>
-      <p>You're a member! You can renew or update your membership on {{ .ExpString }}.</p>
+  {{ if or .StripeConfigured .BTCPayConfigured }}
+    <hr>
+    <div class="subscription-container">
+      <h1>Subscriptions</h1>
+      {{ if not .IsStripeUser }}
+        <div class="radio-group">
+          <input type="radio" id="monthly-option" name="options" {{ if not .IsYearly }}checked{{ end }}>
+          <label id="monthly-toggle" for="monthly-option"><a href="/account">Monthly</a></label>
+          <input type="radio" id="yearly-option" name="options" {{ if .IsYearly }}checked{{ end }}>
+          <label id="yearly-toggle" for="yearly-option"><a href="/account?yearly=1">Yearly (2 months free)</a></label>
+        </div>
+      {{ end }}
     </div>
-    {{ else }}
-    <div class="pricing-box col-1">
-      <h3>Novice Yeeter</h3>
-      <ul>
-        <li>5GB storage</li>
-        <li>10GB/month transfer</li>
-      </ul>
-      <a href="/checkout?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Purchase</button></a>
-      <a href="/checkout-btc?type={{ .Membership3Months }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
-    </div>
-    <div class="pricing-box col-2">
-      <h3>Advanced Yeeter</h3>
-      <ul>
-        <li>100GB storage</li>
-        <li>200GB/month transfer</li>
-      </ul>
-      <a href="/checkout?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Purchase</button></a>
-      <a href="/checkout-btc?type={{ .Membership1Year }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
-    </div>
+    {{ if .Base.Config.BillingEnabled }}
+      <div id="subscription-div">
+        {{ if and .IsActive .IsStripeUser }}
+        <div class="pricing-box">
+          <h3>YeetFile Subscription</h3>
+          <p>You're a subscriber! You can upgrade, downgrade, or cancel your subscription
+            <a href="/manage-sub">here</a>.</p>
+        </div>
+        {{ else }}
+        <div class="pricing-box col-1">
+          <h3>Novice Yeeter</h3>
+          <ul>
+            <li>{{ .SubscriptionTemplate.NoviceStorage }}GB vault storage</li>
+            <li>{{ .SubscriptionTemplate.NoviceSend }}GB/month send</li>
+          </ul>
+          {{ if .IsYearly }}
+          <span><b>${{ .SubscriptionTemplate.YearlyNovicePrice }}/year</b></span><br>
+            {{ if .StripeConfigured }}
+            <a href="/checkout?type={{ .SubscriptionTemplate.YearlyNovice }}&payment_id={{ .PaymentID }}">
+              <button class="stripe-btn">Purchase</button>
+            </a>
+            {{ end }}
+            {{ if .BTCPayConfigured }}
+            <a href="/checkout-btc?type={{ .SubscriptionTemplate.YearlyNovice }}&payment_id={{ .PaymentID }}">
+              {{ template "btcpay-button.html" }}
+            </a>
+            {{ end }}
+          {{ else }}
+          <span><b>${{ .SubscriptionTemplate.MonthlyNovicePrice }}/month</b></span><br>
+            {{ if .StripeConfigured }}
+            <a href="/checkout?type={{ .SubscriptionTemplate.MonthlyNovice }}&payment_id={{ .PaymentID }}">
+              <button class="stripe-btn">Purchase</button>
+            </a>
+            {{ end }}
+            {{ if .BTCPayConfigured }}
+            <a href="/checkout-btc?type={{ .SubscriptionTemplate.MonthlyNovice }}&payment_id={{ .PaymentID }}">
+              {{ template "btcpay-button.html" }}
+            </a>
+            {{ end }}
+          {{ end }}
+        </div>
+        <div class="pricing-box col-2">
+          <h3>Regular Yeeter</h3>
+          <ul>
+            <li>{{ .SubscriptionTemplate.RegularStorage}}GB storage</li>
+            <li>{{ .SubscriptionTemplate.RegularSend }}GB/month send</li>
+          </ul>
+          {{ if .IsYearly }}
+          <span><b>${{ .SubscriptionTemplate.YearlyRegularPrice }}/year</b></span><br>
+            {{ if .StripeConfigured }}
+            <a href="/checkout?type={{ .SubscriptionTemplate.YearlyRegular }}&payment_id={{ .PaymentID }}">
+              <button class="stripe-btn">Purchase</button>
+            </a>
+            {{ end }}
+            {{ if .BTCPayConfigured }}
+            <a href="/checkout-btc?type={{ .SubscriptionTemplate.YearlyRegular }}&payment_id={{ .PaymentID }}">
+              {{ template "btcpay-button.html" }}
+            </a>
+            {{ end }}
+          {{ else }}
+          <span><b>${{ .SubscriptionTemplate.MonthlyRegularPrice }}/month</b></span><br>
+            {{ if .StripeConfigured }}
+            <a href="/checkout?type={{ .SubscriptionTemplate.MonthlyRegular }}&payment_id={{ .PaymentID }}">
+              <button class="stripe-btn">Purchase</button>
+            </a>
+            {{ end }}
+            {{ if .BTCPayConfigured }}
+            <a href="/checkout-btc?type={{ .SubscriptionTemplate.MonthlyRegular }}&payment_id={{ .PaymentID }}">
+              {{ template "btcpay-button.html" }}
+            </a>
+            {{ end }}
+          {{ end }}
+        </div>
+        <div class="pricing-box col-3">
+          <h3>Advanced Yeeter</h3>
+          <ul>
+            <li>{{ .SubscriptionTemplate.AdvancedStorage }}GB storage</li>
+            <li>{{ .SubscriptionTemplate.AdvancedSend }}GB/month transfer</li>
+          </ul>
+          {{ if .IsYearly }}
+          <span><b>${{ .SubscriptionTemplate.YearlyAdvancedPrice }}/year</b></span><br>
+            {{ if .StripeConfigured }}
+            <a href="/checkout?type={{ .SubscriptionTemplate.YearlyAdvanced }}&payment_id={{ .PaymentID }}">
+              <button class="stripe-btn">Purchase</button>
+            </a>
+            {{ end }}
+            {{ if .BTCPayConfigured }}
+            <a href="/checkout-btc?type={{ .SubscriptionTemplate.YearlyAdvanced }}&payment_id={{ .PaymentID }}">
+              {{ template "btcpay-button.html" }}
+            </a>
+            {{ end }}
+          {{ else }}
+          <span><b>${{ .SubscriptionTemplate.MonthlyAdvancedPrice }}/month</b></span><br>
+            {{ if .StripeConfigured }}
+            <a href="/checkout?type={{ .SubscriptionTemplate.MonthlyAdvanced }}&payment_id={{ .PaymentID }}">
+              <button class="stripe-btn">Purchase</button>
+            </a>
+            {{ end }}
+            {{ if .BTCPayConfigured }}
+            <a href="/checkout-btc?type={{ .SubscriptionTemplate.MonthlyAdvanced }}&payment_id={{ .PaymentID }}">
+              {{ template "btcpay-button.html" }}
+            </a>
+            {{ end }}
+          {{ end }}
+        </div>
+        {{ end }}
+      </div>
+    <br>
+      {{ if not .IsStripeUser }}
+        <span class="italic">Note: BTCPay subscriptions do not auto-renew, and can take up to 10-15 minutes to settle.</span>
+      {{ end }}
     {{ end }}
-  </div>
-  <hr>
-  <h1>Upgrades</h1>
-  <div id="upgrade-div">
-    <div class="pricing-box col-1">
-      <h3>+100GB Send</h3>
-      <p>Increase available send amount by 100 gigabytes</p>
-      <a href="/checkout?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $19</button></a>
-      <br>or<br>
-      <a href="/checkout-btc?type={{ .Upgrade100GB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
-    </div>
-
-    <div class="pricing-box col-2">
-      <h3>+500GB Send</h3>
-      <p>Increase available send amount by 500 gigabytes</p>
-      <a href="/checkout?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $79</button></a>
-      <br>or<br>
-      <a href="/checkout-btc?type={{ .Upgrade500GB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
-    </div>
-
-    <div class="pricing-box col-3">
-      <h3>+1TB Send</h3>
-      <p>Increase available send amount by 1 terabyte</p>
-      <a href="/checkout?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button class="stripe-btn">Checkout │ $149</button></a>
-      <br>or<br>
-      <a href="/checkout-btc?type={{ .Upgrade1TB }}&payment_id={{ .PaymentID }}"><button class="btcpay-btn">Use BTCPay</button></a>
-    </div>
-  </div>
-  <br>
-  <span class="italic">Note: Send upgrades don't require an active membership, and they don't expire.</span>
+  {{ end }}
 </div>
 {{ template "footer.html" . }}
 </body>

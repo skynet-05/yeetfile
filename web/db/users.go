@@ -8,24 +8,32 @@ import (
 	"time"
 	"yeetfile/shared"
 	"yeetfile/web/config"
+	"yeetfile/web/server/subscriptions"
 )
 
 type User struct {
-	ID               string
-	Email            string
-	PasswordHash     []byte
-	ProtectedKey     []byte
-	PublicKey        []byte
-	Meter            int
-	PaymentID        string
-	MemberExp        time.Time
-	StorageAvailable int
-	StorageUsed      int
+	ID                 string
+	Email              string
+	PasswordHash       []byte
+	ProtectedKey       []byte
+	PublicKey          []byte
+	PaymentID          string
+	MemberExp          time.Time
+	StorageAvailable   int
+	StorageUsed        int
+	SendAvailable      int
+	SendUsed           int
+	SubscriptionMethod string
 }
 
 type UserStorage struct {
 	StorageAvailable int
 	StorageUsed      int
+}
+
+type UserSend struct {
+	SendAvailable int
+	SendUsed      int
 }
 
 var defaultExp time.Time
@@ -73,7 +81,7 @@ func NewUser(user User) (string, error) {
                    email,
                    pw_hash,
                    payment_id,
-                   meter,
+                   send_available,
                    storage_available,
                    member_expiration,
                    last_upgraded_month,
@@ -144,27 +152,38 @@ func CreateUniquePaymentID() string {
 	return paymentID
 }
 
-// GetUserStorage returns a UserStorage struct containing the user's available
-// and used storage
-func GetUserStorage(id string) (UserStorage, error) {
-	rows, err := db.Query(`SELECT storage_available, storage_used from users WHERE id = $1`, id)
+// GetUserStorage returns UserStorage and UserSend struct containing the user's
+// available and used limits for storing and sending files
+func GetUserStorage(id string) (UserStorage, UserSend, error) {
+	rows, err := db.Query(`
+	    SELECT storage_available, storage_used, send_available, send_used 
+	    FROM users 
+	    WHERE id = $1`, id)
 	if err != nil {
-		return UserStorage{}, err
+		return UserStorage{}, UserSend{}, err
 	} else if !rows.Next() {
 		errorStr := fmt.Sprintf("unable to find user with id '%s'", id)
-		return UserStorage{}, errors.New(errorStr)
+		return UserStorage{}, UserSend{}, errors.New(errorStr)
 	}
 
 	defer rows.Close()
 
 	var storageAvailable int
 	var storageUsed int
-	err = rows.Scan(&storageAvailable, &storageUsed)
+	var sendAvailable int
+	var sendUsed int
+	err = rows.Scan(&storageAvailable, &storageUsed, &sendAvailable, &sendUsed)
 	if err != nil {
-		return UserStorage{}, err
+		return UserStorage{}, UserSend{}, err
 	}
 
-	return UserStorage{StorageAvailable: storageAvailable, StorageUsed: storageUsed}, nil
+	return UserStorage{
+			StorageAvailable: storageAvailable, StorageUsed: storageUsed,
+		},
+		UserSend{
+			SendAvailable: sendAvailable, SendUsed: sendUsed,
+		},
+		nil
 }
 
 // UpdateStorageUsed updates the amount of storage used by the user. Can be a
@@ -363,7 +382,10 @@ func GetUserKeys(id string) ([]byte, []byte, error) {
 // GetUserByID retrieves a User struct for given user ID.
 func GetUserByID(id string) (User, error) {
 	rows, err := db.Query(`
-		SELECT email, meter, payment_id, member_expiration
+		SELECT email, payment_id, member_expiration,
+		       send_available, send_used, 
+		       storage_available, storage_used,
+		       sub_method
 		FROM users
 		WHERE id = $1`, id)
 	if err != nil {
@@ -374,54 +396,35 @@ func GetUserByID(id string) (User, error) {
 	defer rows.Close()
 	if rows.Next() {
 		var email string
-		var meter int
 		var paymentID string
 		var expiration time.Time
-		err = rows.Scan(&email, &meter, &paymentID, &expiration)
+		var sendAvailable int
+		var sendUsed int
+		var storageAvailable int
+		var storageUsed int
+		var subMethod string
+		err = rows.Scan(
+			&email, &paymentID, &expiration,
+			&sendAvailable, &sendUsed,
+			&storageAvailable, &storageUsed,
+			&subMethod)
 		if err != nil {
 			return User{}, err
 		}
 
 		return User{
-			Email:     email,
-			Meter:     meter,
-			PaymentID: paymentID,
-			MemberExp: expiration,
+			Email:              email,
+			PaymentID:          paymentID,
+			MemberExp:          expiration,
+			SendAvailable:      sendAvailable,
+			SendUsed:           sendUsed,
+			StorageAvailable:   storageAvailable,
+			StorageUsed:        storageUsed,
+			SubscriptionMethod: subMethod,
 		}, nil
 	}
 
 	return User{}, errors.New("error fetching user by id")
-}
-
-func GetUserByPaymentID(paymentID string) (User, error) {
-	rows, err := db.Query(`
-		SELECT email, meter, member_expiration
-		FROM users
-		WHERE payment_id = $1`, paymentID)
-	if err != nil {
-		log.Printf("Error querying for user by payment_id: %s\n", paymentID)
-		return User{}, err
-	}
-
-	defer rows.Close()
-	if rows.Next() {
-		var email string
-		var meter int
-		var expiration time.Time
-		err = rows.Scan(&email, &meter, &expiration)
-		if err != nil {
-			return User{}, err
-		}
-
-		return User{
-			Email:     email,
-			Meter:     meter,
-			PaymentID: paymentID,
-			MemberExp: expiration,
-		}, nil
-	}
-
-	return User{}, errors.New("unexpected error fetching user by payment_id")
 }
 
 func GetUserPubKey(userID string) ([]byte, error) {
@@ -496,30 +499,57 @@ func GetUserIDByEmail(email string) (string, error) {
 	return "", errors.New("unable to find user")
 }
 
-// GetUserMeter returns a user's meter given their user ID.
-func GetUserMeter(id string) (int, error) {
+// GetUserSendLimits returns the amount of used and available bytes for
+// sending files
+func GetUserSendLimits(id string) (int, int, error) {
 	rows, err := db.Query(`
-		SELECT meter
+		SELECT send_used, send_available
 		FROM users
 		WHERE id = $1`, id)
 	if err != nil {
 		log.Printf("Error querying for user by id: %s\n", id)
-		return 0, err
+		return 0, 0, err
 	}
 
 	defer rows.Close()
 	if rows.Next() {
-		var meter int
-		err = rows.Scan(&meter)
+		var sendUsed int
+		var sendAvailable int
+		err = rows.Scan(&sendUsed, &sendAvailable)
 		if err != nil {
-			log.Printf("Error reading meter for user %s\n", id)
-			return 0, err
+			log.Printf("Error reading limits for user %s\n", id)
+			return 0, 0, err
 		}
 
-		return meter, nil
+		return sendUsed, sendAvailable, nil
 	}
 
-	return 0, errors.New("unable to find user by id")
+	return 0, 0, errors.New("unable to find user by id")
+}
+
+func GetPaymentIDByUserID(userID string) (string, error) {
+	rows, err := db.Query(`
+		SELECT payment_id
+		FROM users
+		WHERE id = $1`, userID)
+	if err != nil {
+		log.Println("Error querying for payment_id")
+		return "", err
+	}
+
+	defer rows.Close()
+	if rows.Next() {
+		var paymentID string
+		err = rows.Scan(&paymentID)
+		if err != nil {
+			log.Println("Error fetching payment ID")
+			return "", err
+		}
+
+		return paymentID, nil
+	}
+
+	return "", errors.New("unable to find payment id by user id")
 }
 
 func GetUserEmailByPaymentID(paymentID string) (string, error) {
@@ -547,16 +577,31 @@ func GetUserEmailByPaymentID(paymentID string) (string, error) {
 	return "", errors.New("unable to find user by payment id")
 }
 
-// SetUserMembershipExpiration updates a user's membership expiration to be
-// one year from the current payment time.
-func SetUserMembershipExpiration(paymentID string, exp time.Time) error {
+// SetUserSubscription updates a user's subscription to have the correct amount
+// of storage and sending available
+func SetUserSubscription(
+	paymentID, subTag, subMethod string,
+	exp time.Time,
+	storage, send int,
+) error {
+	subDuration, err := subscriptions.GetSubscriptionDuration(subTag)
+	if err != nil {
+		return err
+	}
+
+	subType, err := subscriptions.GetSubscriptionType(subTag)
+	if err != nil {
+		return err
+	}
+
 	s := `UPDATE users
               SET member_expiration=$1,
-                  meter=CASE WHEN meter < $2 THEN $2 ELSE meter END,
-                  last_upgraded_month=$3
-              WHERE payment_id=$3`
+                  storage_available=$2, send_available=$3,
+                  sub_duration=$4, sub_type=$5,
+                  last_upgraded_month=$6
+              WHERE payment_id=$7`
 
-	_, err := db.Exec(s, exp, config.YeetFileConfig.DefaultUserStorage, paymentID, time.Now().Month())
+	_, err = db.Exec(s, exp, storage, send, subDuration, subType, time.Now().Month(), paymentID)
 	if err != nil {
 		return err
 	}
@@ -564,27 +609,11 @@ func SetUserMembershipExpiration(paymentID string, exp time.Time) error {
 	return nil
 }
 
-// AddUserStorage adds amount to the meter column for a user with the matching
-// payment ID. Once the payment ID is used here, it should be replaced by calling
-// RotateUserPaymentID.
-func AddUserStorage(paymentID string, amount int) error {
-	s := `UPDATE users
-	      SET meter=meter + $1
-	      WHERE payment_id=$2`
-
-	_, err := db.Exec(s, amount, paymentID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ReduceUserStorage subtracts an amount of bytes (size) from a user's meter
+// UpdateUserSendUsed adds an amount of bytes (size) to a user's send_used
 // given their user ID.
-func ReduceUserStorage(id string, size int) error {
+func UpdateUserSendUsed(id string, size int) error {
 	s := `UPDATE users
-          SET meter=meter - $2
+          SET send_used=send_used + $2
           WHERE id=$1`
 
 	_, err := db.Exec(s, id, size)
@@ -637,7 +666,8 @@ func CheckMemberships() {
 		// Add the default send and storage amount to all users whose
 		// memberships are no longer active
 		u := `UPDATE users
-		      SET meter=meter + $1,
+		      SET send_used=0,
+		          send_available=$1,
 		          storage_available=$2,
 		          last_upgraded_month=$3
 		      WHERE id=ANY($4)`

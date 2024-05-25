@@ -6,27 +6,43 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
+	"yeetfile/web/config"
+	"yeetfile/web/server/subscriptions"
+	"yeetfile/web/utils"
 )
 
 var apiKey = os.Getenv("YEETFILE_BTCPAY_API_KEY")
 var storeID = os.Getenv("YEETFILE_BTCPAY_STORE_ID")
 var serverURL = os.Getenv("YEETFILE_BTCPAY_SERVER_URL")
 
-var Ready = true
+var LinkMapping = map[string]string{
+	subscriptions.MonthlyNovice: config.YeetFileConfig.BTCPayBilling.
+		SubNoviceMonthlyLink,
+	subscriptions.MonthlyRegular: config.YeetFileConfig.BTCPayBilling.
+		SubRegularMonthlyLink,
+	subscriptions.MonthlyAdvanced: config.YeetFileConfig.BTCPayBilling.
+		SubAdvancedMonthlyLink,
+
+	subscriptions.YearlyNovice: config.YeetFileConfig.BTCPayBilling.
+		SubNoviceYearlyLink,
+	subscriptions.YearlyRegular: config.YeetFileConfig.BTCPayBilling.
+		SubRegularYearlyLink,
+	subscriptions.YearlyAdvanced: config.YeetFileConfig.BTCPayBilling.
+		SubAdvancedYearlyLink,
+}
 
 // IsValidRequest validates incoming webhook events from BTCPay Server
-func IsValidRequest(req *http.Request) ([]byte, bool) {
+func IsValidRequest(w http.ResponseWriter, req *http.Request) ([]byte, bool) {
 	secret := os.Getenv("YEETFILE_BTCPAY_WEBHOOK_SECRET")
 	sig := req.Header.Get("BTCPAY-SIG")
 	if len(sig) == 0 || len(secret) == 0 {
 		return nil, false
 	}
 
-	reqBody, err := io.ReadAll(req.Body)
+	reqBody, err := utils.LimitedReader(w, req.Body)
 	if err != nil {
 		log.Printf("Error reading BTCPay webhook body")
 		return nil, false
@@ -56,12 +72,4 @@ func sendRequest(method string, path string, data []byte) (*http.Response, error
 	}
 
 	return resp, nil
-}
-
-// init ensures that the necessary values for interacting with BTCPay Server
-// have already been defined.
-func init() {
-	if len(apiKey) == 0 || len(storeID) == 0 || len(serverURL) == 0 {
-		Ready = false
-	}
 }

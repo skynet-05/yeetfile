@@ -26,13 +26,19 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 		log.Printf("Error: %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
-	} else if !UserCanUpload(meta.Size, req) {
-		http.Error(w, "Not enough space available", http.StatusBadRequest)
-		return
 	}
 
 	if meta.Chunks == 0 {
 		http.Error(w, "# of chunks cannot be 0", http.StatusBadRequest)
+		return
+	}
+
+	_, err = UserCanSend(meta.Size, req)
+	if err == OutOfSpaceError {
+		http.Error(w, "Not enough space available", http.StatusBadRequest)
+		return
+	} else if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 

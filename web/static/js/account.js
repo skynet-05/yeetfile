@@ -2,8 +2,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let logoutBtn = document.getElementById("logout-btn");
     logoutBtn.addEventListener("click", logout);
 
-    let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
-    recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
+    // let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
+    // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
+
+    let yearlyToggle = document.getElementById("yearly-toggle");
+    yearlyToggle.addEventListener("click", () => { window.location = "/account?yearly=1" });
+
+    let monthlyToggle = document.getElementById("monthly-toggle");
+    monthlyToggle.addEventListener("click", () => { window.location = "/account"; });
 });
 
 const logout = () => {
