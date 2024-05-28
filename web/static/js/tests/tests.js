@@ -87,7 +87,7 @@ const testKeyPair = async testCallback => {
 
     let rootFolderKey = await crypto.decryptRSA(keyPair.privateKey, protectedRootFolderKey);
     let folderKeyImport = await crypto.importKey(rootFolderKey);
-    console.log(folderKeyImport);
+    assert(folderKeyImport);
 }
 
 const runTest = async (testIdx) => {

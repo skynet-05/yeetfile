@@ -1,6 +1,6 @@
 const HashSize = 32;
 const IVSize = 12;
-export const TotalOverhead = 28;
+const TotalOverhead = 28;
 let utf8Encode = new TextEncoder();
 let utf8Decode = new TextDecoder();
 
@@ -16,7 +16,7 @@ let indexedDB;
  * @param pepper {string} - the pepper to extend the password
  * @returns {Promise<[CryptoKey,Uint8Array]>}
  */
-export const deriveSendingKey = async (password, salt, pepper) => {
+const deriveSendingKey = async (password, salt, pepper) => {
     if (!salt) {
         salt = webcrypto.getRandomValues(new Uint8Array(HashSize));
     }
@@ -32,7 +32,7 @@ export const deriveSendingKey = async (password, salt, pepper) => {
  * @param keyData {Uint8Array}
  * @returns {Promise<CryptoKey>}
  */
-export const importKey = async (keyData) => {
+const importKey = async (keyData) => {
     return await webcrypto.subtle.importKey(
         "raw",
         keyData,
@@ -48,7 +48,7 @@ export const importKey = async (keyData) => {
  * @param salt {Uint8Array} - the salt for the key
  * @returns {Promise<CryptoKey>}
  */
-export const deriveKey = async (password, salt) => {
+const deriveKey = async (password, salt) => {
     let keyMaterial = await webcrypto.subtle.importKey(
         "raw",
         password,
@@ -78,7 +78,7 @@ export const deriveKey = async (password, salt) => {
  * @param str {string} - the string to encrypt
  * @returns {Promise<Uint8Array>}
  */
-export const encryptString = async (key, str) => {
+const encryptString = async (key, str) => {
     let data = utf8Encode.encode(str);
     return await encryptChunk(key, data);
 }
@@ -89,7 +89,7 @@ export const encryptString = async (key, str) => {
  * @param format {string} - the format to use when exporting the key (default "raw")
  * @returns {Promise<Uint8Array>}
  */
-export const exportKey = async (key, format) => {
+const exportKey = async (key, format) => {
     const exported = await webcrypto.subtle.exportKey(format ? format : "raw", key);
     return new Uint8Array(exported);
 }
@@ -102,7 +102,7 @@ export const exportKey = async (key, format) => {
  * @param data {Uint8Array} - the data to encrypt
  * @returns {Promise<Uint8Array>}
  */
-export const encryptChunk = async (key, data) => {
+const encryptChunk = async (key, data) => {
     let iv = webcrypto.getRandomValues(new Uint8Array(IVSize));
     let encrypted = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
     let merged = new Uint8Array(iv.length + encrypted.byteLength);
@@ -118,7 +118,7 @@ export const encryptChunk = async (key, data) => {
  * @param data {Uint8Array} - the data to encrypt
  * @returns {Promise<Uint8Array>}
  */
-export const encryptRSA = async (key, data) => {
+const encryptRSA = async (key, data) => {
     let encrypted = await webcrypto.subtle.encrypt({ name: "RSA-OAEP" }, key, data);
     return new Uint8Array(encrypted);
 }
@@ -129,7 +129,7 @@ export const encryptRSA = async (key, data) => {
  * @param data {Uint8Array} - the data to decrypt
  * @returns {Promise<Uint8Array>}
  */
-export const decryptRSA = async (key, data) => {
+const decryptRSA = async (key, data) => {
     let decrypted = await webcrypto.subtle.decrypt({ name: "RSA-OAEP" }, key, data);
     return new Uint8Array(decrypted);
 }
@@ -140,7 +140,7 @@ export const decryptRSA = async (key, data) => {
  * @param data {Uint8Array} - the encrypted string data to decrypt
  * @returns {Promise<string>}
  */
-export const decryptString = async (key, data) => {
+const decryptString = async (key, data) => {
     let str = await decryptChunk(key, data);
     return utf8Decode.decode(str);
 }
@@ -152,7 +152,7 @@ export const decryptString = async (key, data) => {
  * @param data {Uint8Array} - the encrypted data to decrypt
  * @returns {Promise<ArrayBuffer>}
  */
-export const decryptChunk = async (key, data) => {
+const decryptChunk = async (key, data) => {
     let iv = data.slice(0, IVSize);
     let fileData = data.slice(IVSize, data.length + 1);
 
@@ -166,7 +166,7 @@ export const decryptChunk = async (key, data) => {
  * @param password {string} - the user's password
  * @returns {Promise<CryptoKey>}
  */
-export const generateUserKey = async (identifier, password) => {
+const generateUserKey = async (identifier, password) => {
     return await deriveKey(utf8Encode.encode(password), utf8Encode.encode(identifier));
 }
 
@@ -178,7 +178,7 @@ export const generateUserKey = async (identifier, password) => {
  * @param password {string} - the user's password
  * @returns {Promise<Uint8Array>}
  */
-export const generateLoginKeyHash = async (userKey, password) => {
+const generateLoginKeyHash = async (userKey, password) => {
     let userKeyExported = await exportKey(userKey, "raw");
 
     let loginKey = await deriveKey(userKeyExported, utf8Encode.encode(password));
@@ -194,7 +194,7 @@ export const generateLoginKeyHash = async (userKey, password) => {
  * public key before being sent to the server.
  * @returns {Uint8Array}
  */
-export const generateRandomKey = () => {
+const generateRandomKey = () => {
     return webcrypto.getRandomValues(new Uint8Array(HashSize));
 }
 
@@ -203,7 +203,7 @@ export const generateRandomKey = () => {
  * for generating random passphrases as peppers for files.
  * @param callback - the request callback
  */
-export const fetchWordlist = callback => {
+const fetchWordlist = callback => {
     fetch("/wordlist")
         .then((response) => response.json())
         .then((data) => {
@@ -219,7 +219,7 @@ export const fetchWordlist = callback => {
  * "." and including a random number in a random position.
  * @param callback {function}
  */
-export const generatePassphrase = (callback) => {
+const generatePassphrase = (callback) => {
     let passphrase = [];
     fetchWordlist(words => {
         let wordNum = Math.floor(Math.random() * 3);
@@ -250,7 +250,7 @@ export const generatePassphrase = (callback) => {
  * @param publicKey {string}
  * @param callback {function(CryptoKey)}
  */
-export const ingestPublicKey = (publicKey, callback) => {
+const ingestPublicKey = (publicKey, callback) => {
     let decodedPublicKey = base64ToArray(publicKey);
 
     webcrypto.subtle.importKey(
@@ -277,7 +277,7 @@ export const ingestPublicKey = (publicKey, callback) => {
  * @param protectedKey {Uint8Array}
  * @param callback {function(CryptoKey)}
  */
-export const ingestProtectedKey = (userKey, protectedKey, callback) => {
+const ingestProtectedKey = (userKey, protectedKey, callback) => {
     let decodedProtectedKey = base64ToArray(protectedKey);
     let iv = decodedProtectedKey.slice(0, IVSize);
 
@@ -327,7 +327,7 @@ export const ingestProtectedKey = (userKey, protectedKey, callback) => {
  *
  * @returns {Promise<CryptoKeyPair>}
  */
-export const generateKeyPair = async () => {
+const generateKeyPair = async () => {
    return await webcrypto.subtle.generateKey(
         {
             name: 'RSA-OAEP',
@@ -358,7 +358,8 @@ if (typeof window === 'undefined') {
         exportKey,
         importKey,
         generateKeyPair,
-        webcrypto
+        webcrypto,
+        TotalOverhead
     };
 } else {
     // Running in a browser
