@@ -1,7 +1,7 @@
 import * as crypto from "./crypto.js";
 import * as transfer from "./transfer.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+const init = () => {
     let xhr = new XMLHttpRequest();
     xhr.open("GET", `/send/d${window.location.pathname}`, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     xhr.send();
-});
+};
 
 const handleMetadata = async (download) => {
     // Attempt to decrypt without a password first
@@ -183,4 +183,12 @@ const displayText = (text) => {
 
     plaintextDiv.style.display = "initial";
     plaintextContent.innerText = text;
+}
+
+if (document.readyState !== "loading") {
+    init();
+} else {
+    document.addEventListener("DOMContentLoaded", () => {
+        init();
+    });
 }

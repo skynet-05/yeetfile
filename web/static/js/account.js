@@ -1,4 +1,7 @@
-document.addEventListener("DOMContentLoaded", () => {
+import * as endpoints from "./endpoints.js";
+import {YeetFileDB} from "./db.js";
+
+const init = () => {
     let logoutBtn = document.getElementById("logout-btn");
     logoutBtn.addEventListener("click", logout);
 
@@ -10,14 +13,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let monthlyToggle = document.getElementById("monthly-toggle");
     monthlyToggle.addEventListener("click", () => { window.location = "/account"; });
-});
+}
 
 const logout = () => {
     let confirmMsg = "Log out of YeetFile?";
     if (confirm(confirmMsg)) {
         new YeetFileDB().removeKeys(success => {
             if (success) {
-                window.location = "/logout";
+                window.location = endpoints.Logout;
+            } else {
+                alert("Error removing keys");
             }
         });
     }
@@ -33,4 +38,12 @@ const recyclePaymentID = () => {
             alert("Error recycling payment id");
         });
     }
+}
+
+if (document.readyState !== 'loading') {
+    init();
+} else {
+    document.addEventListener("DOMContentLoaded", () => {
+        init();
+    });
 }

@@ -141,11 +141,17 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // AccountPageHandler returns the HTML page for a user managing their account
-func AccountPageHandler(w http.ResponseWriter, req *http.Request, user db.User) {
+func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
 	successMsg, errorMsg := generateAccountMessages(req)
 	isYearly := req.URL.Query().Has("yearly")
 
-	err := templates.ServeTemplate(
+	err = templates.ServeTemplate(
 		w,
 		templates.AccountHTML,
 		templates.AccountTemplate{

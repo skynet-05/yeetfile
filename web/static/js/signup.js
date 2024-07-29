@@ -1,6 +1,8 @@
 import * as crypto from "./crypto.js";
+import * as endpoints from "./endpoints.js";
+import {YeetFileDB} from "./db.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+const init = () => {
     setupToggles();
 
     // Email signup
@@ -16,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         event.preventDefault();
         accountIDOnlySignup(accountSignupButton);
     })
-});
+};
 
 const setupToggles = () => {
     let emailToggle = document.getElementById("email-signup");
@@ -36,6 +38,37 @@ const setupToggles = () => {
     });
 }
 
+/**
+ * generateKeys generates the necessary keys for using YeetFile
+ * @param identifier {string} - either email or account ID
+ * @param password {string} - the user's password
+ * @returns {Promise<{
+ *     loginKeyHash: Uint8Array,
+ *     protectedKey: Uint8Array,
+ *     privateKey: Uint8Array,
+ *     publicKey: Uint8Array,
+ *     rootFolderKey: Uint8Array
+ * }>}
+ */
+const generateKeys = async (identifier, password) => {
+    let userKey = await crypto.generateUserKey(identifier, password);
+    let loginKeyHash = await crypto.generateLoginKeyHash(userKey, password);
+    let keyPair = await crypto.generateKeyPair();
+    let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
+    let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
+    let protectedKey = await crypto.encryptChunk(userKey, privateKey);
+    let folderKey = await crypto.generateRandomKey();
+    let protectedRootFolderKey = await crypto.encryptRSA(keyPair.publicKey, folderKey);
+
+    return {
+        "loginKeyHash": loginKeyHash,
+        "publicKey": publicKey,
+        "privateKey": privateKey,
+        "protectedKey": protectedKey,
+        "rootFolderKey": protectedRootFolderKey
+    }
+}
+
 const emailSignup = async (btn) => {
     let emailInput = document.getElementById("email");
     let passwordInput = document.getElementById("password");
@@ -45,22 +78,10 @@ const emailSignup = async (btn) => {
         passwordInput.disabled = true;
         confirmPasswordInput.disabled = true;
 
-        let userKey = await crypto.generateUserKey(emailInput.value, passwordInput.value);
-        let loginKeyHash = await crypto.generateLoginKeyHash(userKey, passwordInput.value);
-        let keyPair = await crypto.generateKeyPair();
-        let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
-        let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
-        let protectedKey = await crypto.encryptChunk(userKey, privateKey);
-        let folderKey = await crypto.generateRandomKey();
-        let protectedRootFolderKey = await crypto.encryptChunk(keyPair.publicKey, folderKey);
+        let userKeys = await generateKeys(emailInput.value, passwordInput.value);
 
-        // Store in indexeddb
-        let encodedKey = await arrayToBase64(protectedKey);
-
-        crypto.ingestProtectedKey(userKey, encodedKey, () => {
-            new YeetFileDB().insertVaultKeyPair(keyPair.privateKey, keyPair.publicKey);
-            submitSignupForm(btn, emailInput.value, loginKeyHash, publicKey, protectedKey, protectedRootFolderKey);
-        });
+        await new YeetFileDB().insertVaultKeyPair(userKeys["privateKey"], userKeys["publicKey"], "");
+        submitSignupForm(btn, emailInput.value, userKeys);
     }
 }
 
@@ -75,17 +96,29 @@ const accountIDOnlySignup = (btn) => {
     }
 }
 
-const submitSignupForm = (submitBtn, email, loginKeyHash, publicKey, protectedKey, rootFolderKey) => {
+/**
+ * submitSignupForm submits the necessary info to create a new YeetFile account
+ * @param submitBtn {}
+ * @param email {string}
+ * @param userKeys {{
+ *     loginKeyHash: Uint8Array,
+ *     protectedKey: Uint8Array,
+ *     privateKey: Uint8Array,
+ *     publicKey: Uint8Array,
+ *     rootFolderKey: Uint8Array
+ * }}
+ */
+const submitSignupForm = (submitBtn, email, userKeys) => {
     submitBtn.disabled = true;
 
     let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/signup", false);
+    xhr.open("POST", endpoints.Signup, false);
     xhr.setRequestHeader("Content-Type", "application/json");
 
     xhr.onreadystatechange = () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
             if (email && email.length > 0) {
-                window.location = "/verify?email=" + email;
+                window.location = "/verify-email?email=" + email;
             } else {
                 let response = JSON.parse(xhr.responseText);
                 let html = generateAccountIDSignupHTML(response.identifier, response.captcha);
@@ -97,13 +130,18 @@ const submitSignupForm = (submitBtn, email, loginKeyHash, publicKey, protectedKe
         }
     };
 
-    xhr.send(JSON.stringify({
-        identifier: email ? email : "",
-        loginKeyHash: loginKeyHash ? Array.from(loginKeyHash) : loginKeyHash,
-        protectedKey: protectedKey ? Array.from(protectedKey) : protectedKey,
-        publicKey: publicKey ? Array.from(publicKey) : publicKey,
-        rootFolderKey: rootFolderKey ? Array.from(rootFolderKey) : rootFolderKey,
-    }));
+    let sendData = {identifier: email ? email : ""};
+    if (userKeys) {
+        sendData = {
+            ...sendData,
+            loginKeyHash: Array.from(userKeys["loginKeyHash"]),
+            protectedKey: Array.from(userKeys["protectedKey"]),
+            publicKey: Array.from(userKeys["publicKey"]),
+            rootFolderKey: Array.from(userKeys["rootFolderKey"]),
+        }
+    }
+
+    xhr.send(JSON.stringify(sendData));
 }
 
 const generateAccountIDSignupHTML = (id, img) => {
@@ -141,43 +179,31 @@ const verifyAccountID = async id => {
 
     button.disabled = true;
 
-    let userKey = await crypto.generateUserKey(id, password);
-    let loginKeyHash = await crypto.generateLoginKeyHash(userKey, password);
-    let keyPair = await crypto.generateKeyPair();
-    let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
-    let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
-    let protectedKey = await crypto.encryptChunk(userKey, privateKey);
-    let folderKey = await crypto.generateRandomKey();
-    let protectedRootFolderKey = await crypto.encryptRSA(keyPair.publicKey, folderKey);
+    let userKeys = await generateKeys(id, password);
+    await new YeetFileDB().insertVaultKeyPair(userKeys["privateKey"], userKeys["publicKey"], "");
 
-    let encodedKey = await arrayToBase64(protectedKey);
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", endpoints.VerifyAccount, false);
+    xhr.setRequestHeader("Content-Type", "application/json");
 
-    crypto.ingestProtectedKey(userKey, encodedKey, () => {
-        new YeetFileDB().insertVaultKeyPair(keyPair.privateKey, keyPair.publicKey);
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            let html = generateSuccessHTML(id);
+            addVerifyHTML(html);
+        } else if (xhr.readyState === 4 && xhr.status !== 200) {
+            button.disabled = false;
+            showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
+        }
+    };
 
-        let xhr = new XMLHttpRequest();
-        xhr.open("POST", "/verify-account", false);
-        xhr.setRequestHeader("Content-Type", "application/json");
-
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                let html = generateSuccessHTML(id);
-                addVerifyHTML(html);
-            } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                button.disabled = false;
-                showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
-            }
-        };
-
-        xhr.send(JSON.stringify({
-            id: id,
-            code: codeInput.value,
-            loginKeyHash: Array.from(loginKeyHash),
-            protectedKey: Array.from(protectedKey),
-            publicKey: Array.from(publicKey),
-            rootFolderKey: Array.from(protectedRootFolderKey)
-        }));
-    });
+    xhr.send(JSON.stringify({
+        id: id,
+        code: codeInput.value,
+        loginKeyHash: Array.from(userKeys["loginKeyHash"]),
+        protectedKey: Array.from(userKeys["protectedKey"]),
+        publicKey: Array.from(userKeys["publicKey"]),
+        rootFolderKey: Array.from(userKeys["rootFolderKey"])
+    }));
 }
 
 const addVerifyHTML = html => {
@@ -199,4 +225,12 @@ const passwordIsValid = (password, confirm) => {
     } else {
         return true;
     }
+}
+
+if (document.readyState !== "loading") {
+    init();
+} else {
+    document.addEventListener("DOMContentLoaded", () => {
+        init();
+    });
 }

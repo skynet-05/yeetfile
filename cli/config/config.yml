@@ -1,1 +1,2 @@
 server: https://yeetfile.com
+default_view: "vault" # Can be set to "vault" or "send"

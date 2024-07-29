@@ -14,3 +14,4 @@ tags
 init.sql
 uploads/
 .cache/
+debug.log

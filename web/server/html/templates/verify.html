@@ -5,10 +5,10 @@
   <h1>Verify Email</h1>
   <hr>
   <p>A verification code has been sent to <b>{{.Email}}</b>, please enter it below.</p>
-  <form action="/verify" method="get">
+  <form action="/verify-email" method="get">
     <input hidden id="email" type="text" name="email" value="{{.Email}}">
     <label for="verify">Code: <input id="verify" name="code" type="text"></label>
-    <input type="submit">
+    <input id="submit-verify" type="submit" value="Submit">
   </form>
   {{ template "messages.html" . }}
 </div>

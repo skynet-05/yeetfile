@@ -1,6 +1,5 @@
 #vault-items-div {
-    min-height: 500px;
-    max-height: 550px;
+    height: 400px;
     overflow-y: scroll;
     margin-top: 20px;
 }

@@ -20,7 +20,7 @@ func SignupWithEmail(signup shared.Signup) error {
 		return MissingField
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(signup.LoginKeyHash), 8)
+	hash, err := bcrypt.GenerateFromPassword(signup.LoginKeyHash, 8)
 	if err != nil {
 		return err
 	}

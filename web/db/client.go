@@ -37,7 +37,7 @@ func init() {
 	db, err = sql.Open("postgres", connStr)
 
 	ping := db.Ping()
-	if err != nil {
+	if err != nil || ping != nil {
 		log.Fatalf("Unable to connect to database!\n"+
 			"Error: %v\nPing: %v\n", err, ping)
 	}
@@ -47,7 +47,7 @@ func init() {
 	_, err = db.Exec(createTablesSQL)
 	if err != nil {
 		log.Fatalf("Unable to initialize database!\n"+
-			"  Error: %v\n", err)
+			"--Error: %v\n", err)
 	}
 }
 
@@ -92,6 +92,7 @@ func TableIDExists(tableName, id string) bool {
 
 // DeleteFileByMetadata removes a file from B2 matching the provided file ID
 func DeleteFileByMetadata(metadata FileMetadata) {
+	log.Println("Deleting file by metadata (B2 errors are OK)")
 	if err := cache.RemoveFile(metadata.ID); err != nil {
 		log.Printf("Error removing cached file: %v\n", metadata.ID)
 	} else {

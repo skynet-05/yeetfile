@@ -3,10 +3,9 @@ package config
 import (
 	"log"
 	"os"
+	"yeetfile/shared/constants"
 	"yeetfile/web/utils"
 )
-
-const version = "0.0.1-beta"
 
 // =============================================================================
 // General configuration
@@ -16,6 +15,7 @@ var callbackDomain = os.Getenv("YEETFILE_CALLBACK_DOMAIN")
 var defaultUserStorage = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_STORAGE", 0)
 var defaultUserSend = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_SEND", 0)
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
+var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 
 // =============================================================================
 // Email configuration (used in account verification and billing reminders)
@@ -170,7 +170,7 @@ func init() {
 		StripeBilling:      stripeBilling,
 		BTCPayBilling:      btcPayBilling,
 		BillingEnabled:     stripeBilling.Configured || btcPayBilling.Configured,
-		Version:            version,
+		Version:            constants.VERSION,
 	}
 
 	log.Printf("Configuration:\n"+

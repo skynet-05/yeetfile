@@ -14,7 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"yeetfile/shared"
+	"yeetfile/shared/constants"
+	"yeetfile/shared/endpoints"
 )
 
 func Log(msg string) {
@@ -241,7 +242,30 @@ func HandleError(w http.ResponseWriter, err error, statusCode int, message strin
 	return false
 }
 
+// LimitedReader reads the request body, limited to max chunk size + encryption
+// overhead + 1024 bytes. This is big enough for all requests made to the
+// YeetFile API.
 func LimitedReader(w http.ResponseWriter, body io.ReadCloser) ([]byte, error) {
-	limitedBody := http.MaxBytesReader(w, body, int64(shared.ChunkSize+shared.TotalOverhead+1024))
+	limitedBody := http.MaxBytesReader(
+		w,
+		body,
+		int64(constants.ChunkSize+constants.TotalOverhead+1024))
 	return io.ReadAll(limitedBody)
+}
+
+func GetTrailingURLSegments(endpoint endpoints.Endpoint, path string) []string {
+	if strings.HasSuffix(path, "/") {
+		path = path[0 : len(path)-1]
+	}
+
+	endpointBase := strings.ReplaceAll(string(endpoint), "/*", "")
+	path = strings.Replace(path, endpointBase, "", 1)
+
+	if strings.HasSuffix(path, string(endpoint)) {
+		// There is no trailing segment, it ends with the base endpoint
+		return []string{}
+	}
+
+	path = strings.TrimPrefix(path, "/")
+	return strings.Split(path, "/")
 }

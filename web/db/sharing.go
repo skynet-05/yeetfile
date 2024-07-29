@@ -39,6 +39,7 @@ func IsSharedWithRecipient(ownerID, itemID, recipientID string) (bool, error) {
 		return true, err
 	}
 
+	defer rows.Close()
 	if rows.Next() {
 		var count int
 		err = rows.Scan(&count)
@@ -205,7 +206,7 @@ func UserCanEditItem(itemID, ownerID string, isFolder bool) error {
 			}
 		}
 
-		ownership, err := GetFolderOwnership(folderID, ownerID)
+		ownership, err := CheckFolderOwnership(ownerID, folderID)
 		if err != nil {
 			return err
 		} else if !ownership.CanModify {

@@ -3,7 +3,7 @@ import * as transfer from "./transfer.js";
 
 let pepper = "";
 
-document.addEventListener("DOMContentLoaded", () => {
+const init = () => {
     setupTypeToggles();
 
     let usePasswordCB = document.getElementById("use-password");
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     });
-});
+}
 
 const setFormEnabled = on => {
     let fieldset = document.getElementById("form-fieldset");
@@ -210,8 +210,12 @@ const submitFormSingle = async (form, key, salt, callback) => {
         downloads: parseInt(form.downloads),
         expiration: expString
     }, (id) => {
-        uploadFileChunks(id, key, file, chunks).then(() => {
+        transfer.uploadSendChunks(id, file, key, () => {
+            showFileTag(id);
             callback();
+        }, err => {
+            alert("Error uploading file");
+            console.error(err);
         });
     });
 }
@@ -352,4 +356,12 @@ const setupTypeToggles = () => {
 const isFileUpload = () => {
     let uploadFileBtn = document.getElementById("upload-file-btn");
     return uploadFileBtn.checked;
+}
+
+if (document.readyState !== "loading") {
+    init();
+} else {
+    document.addEventListener("DOMContentLoaded", () => {
+        init();
+    });
 }

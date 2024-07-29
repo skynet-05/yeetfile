@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/term"
+	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+	"yeetfile/cli/styles"
 	"yeetfile/shared"
 )
 
@@ -111,7 +114,11 @@ func ConfirmPassword(pw []byte) bool {
 }
 
 func CopyToFile(contents string, to string) error {
-	err := os.WriteFile(to, []byte(contents), 0644)
+	return CopyBytesToFile([]byte(contents), to)
+}
+
+func CopyBytesToFile(contents []byte, to string) error {
+	err := os.WriteFile(to, contents, 0644)
 	if err != nil {
 		return err
 	}
@@ -183,4 +190,41 @@ func IntFlag(intVar *int, name string, fallback int, args []string) {
 	}
 
 	*intVar = fallback
+}
+
+func GenerateTitle(s string) string {
+	prefix := "YeetFile CLI: "
+	verticalEdge := strings.Repeat("═", len(s)+len(prefix)+2)
+	title := styles.BoldStyle.Render(fmt.Sprintf(
+		"╔"+verticalEdge+"╗\n"+
+			"║ %s%s ║\n"+
+			"╚"+verticalEdge+"╝", prefix, s))
+	return fmt.Sprintf("%s", title)
+}
+
+func GetFilenameFromPath(path string) string {
+	fullPath := strings.Split(path, string(os.PathSeparator))
+	name := fullPath[len(fullPath)-1]
+	return name
+}
+
+func GenerateListIdxSpacing(length int) string {
+	lenStr := strconv.Itoa(length)
+	return strings.Repeat(" ", len(lenStr))
+}
+
+func GetListIdxSpacing(spacing string, idx, length int) string {
+	idxStr := strconv.Itoa(idx)
+	lenStr := strconv.Itoa(length)
+	return spacing[0 : len(lenStr)-len(idxStr)+1]
+}
+
+func LocalTimeFromUTC(utcTime time.Time) time.Time {
+	return utcTime.In(time.Now().Location())
+}
+
+func ParseHTTPError(response *http.Response) error {
+	body, _ := io.ReadAll(response.Body)
+	msg := fmt.Sprintf("server error [%d]: %s", response.StatusCode, body)
+	return errors.New(msg)
 }

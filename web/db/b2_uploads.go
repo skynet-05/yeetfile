@@ -59,11 +59,11 @@ func UpdateUploadID(id string, metadataID string) bool {
 	return true
 }
 
-func UpdateChecksums(id string, checksum string) bool {
+func UpdateChecksums(id string, chunk int, checksum string) bool {
 	s := `UPDATE b2_uploads
-	      SET checksums = array_append(checksums,$1)
-	      WHERE metadata_id=$2`
-	_, err := db.Exec(s, checksum, id)
+	      SET checksums[$1] = $2
+	      WHERE metadata_id=$3`
+	_, err := db.Exec(s, chunk, checksum, id)
 	if err != nil {
 		panic(err)
 	}

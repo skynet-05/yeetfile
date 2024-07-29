@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
+	"yeetfile/shared/endpoints"
 	"yeetfile/web/server/auth"
 	"yeetfile/web/server/html"
 	"yeetfile/web/server/misc"
@@ -43,41 +44,34 @@ func Run(addr string) {
 
 	r.AddRoutes([]RouteDef{
 		// File Share
-		{POST, "/send/u", AuthMiddleware(send.UploadMetadataHandler)},
-		{POST, "/send/u/*/*", AuthMiddleware(send.UploadDataHandler)},
-		{POST, "/send/plaintext", LimiterMiddleware(send.UploadPlaintextHandler)},
-		{GET, "/send/d/*", send.DownloadHandler},
-		{GET, "/send/d/*/*", send.DownloadChunkHandler},
+		{POST, endpoints.UploadSendFileMetadata, AuthMiddleware(send.UploadMetadataHandler)},
+		{POST, endpoints.UploadSendFileData, AuthMiddleware(send.UploadDataHandler)},
+		{POST, endpoints.UploadSendText, LimiterMiddleware(send.UploadPlaintextHandler)},
+		{GET, endpoints.DownloadSendFileMetadata, send.DownloadHandler},
+		{GET, endpoints.DownloadSendFileData, send.DownloadChunkHandler},
 
 		// File Vault
-		{GET, "/api/vault", AuthMiddleware(vault.FolderViewHandler(true))},
-		{GET, "/api/vault/*", AuthMiddleware(vault.FolderViewHandler(false))},
-		{GET, "/api/shared", AuthMiddleware(vault.SharedFolderViewHandler(true))},
-		{GET, "/api/shared/*", AuthMiddleware(vault.SharedFolderViewHandler(false))},
-		{POST, "/api/vault/folder", AuthMiddleware(vault.NewFolderHandler)},
-		{PUT | DELETE, "/api/vault/folder/*", AuthMiddleware(vault.ModifyFolderHandler)},
-		{PUT | DELETE, "/api/vault/file/*", AuthMiddleware(vault.ModifyFileHandler)},
-		{POST | DELETE, "/api/public/folder/*", AuthMiddleware(vault.PublicFolderHandler)},
-		//{POST, "/api/public/file/*", AuthMiddleware(vault.PublicFileHandler)},
-		{POST, "/api/vault/u", AuthMiddleware(vault.UploadMetadataHandler)},
-		{POST, "/api/vault/u/*/*", AuthMiddleware(vault.UploadDataHandler)},
-		{GET, "/api/vault/d/*", AuthMiddleware(vault.DownloadHandler)},
-		{GET, "/api/vault/d/*/*", AuthMiddleware(vault.DownloadChunkHandler)},
-		{ALL, "/api/share/file/*", AuthMiddleware(vault.ShareHandler(false))},
-		{ALL, "/api/share/folder/*", AuthMiddleware(vault.ShareHandler(true))},
+		{ALL, endpoints.VaultFolder, AuthMiddleware(vault.FolderHandler)},
+		{PUT | DELETE, endpoints.VaultFile, AuthMiddleware(vault.FileHandler)},
+		{POST, endpoints.UploadVaultFileMetadata, AuthMiddleware(vault.UploadMetadataHandler)},
+		{POST, endpoints.UploadVaultFileData, AuthMiddleware(vault.UploadDataHandler)},
+		{GET, endpoints.DownloadVaultFileMetadata, AuthMiddleware(vault.DownloadHandler)},
+		{GET, endpoints.DownloadVaultFileData, AuthMiddleware(vault.DownloadChunkHandler)},
+		{ALL, endpoints.ShareFile, AuthMiddleware(vault.ShareHandler(false))},
+		{ALL, endpoints.ShareFolder, AuthMiddleware(vault.ShareHandler(true))},
 		//{GET, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
 
 		// Auth (signup, login/logout, account mgmt, etc)
 		{GET, "/verify-email", auth.VerifyEmailHandler},
-		{POST, "/verify-account", auth.VerifyAccountHandler},
-		{GET, "/session", session.SessionHandler},
-		{GET, "/logout", auth.LogoutHandler},
-		{POST, "/login", auth.LoginHandler},
-		{POST, "/signup", auth.SignupHandler},
-		{GET | PUT, "/account", auth.AccountHandler},
-		{GET | POST, "/forgot", auth.ForgotPasswordHandler},
-		{POST, "/reset", auth.ResetPasswordHandler},
-		{GET, "/pubkey", LimiterMiddleware(AuthMiddleware(auth.PubKeyHandler))},
+		{POST, endpoints.VerifyAccount, auth.VerifyAccountHandler},
+		{GET, endpoints.Session, session.SessionHandler},
+		{GET, endpoints.Logout, auth.LogoutHandler},
+		{POST, endpoints.Login, auth.LoginHandler},
+		{POST, endpoints.Signup, auth.SignupHandler},
+		{GET | PUT, endpoints.Account, auth.AccountHandler},
+		{GET | POST, endpoints.Forgot, auth.ForgotPasswordHandler},
+		{POST, endpoints.Reset, auth.ResetPasswordHandler},
+		{GET, endpoints.PubKey, LimiterMiddleware(AuthMiddleware(auth.PubKeyHandler))},
 
 		// Payments (Stripe, BTCPay)
 		{POST, "/webhook/stripe", payments.StripeWebhook},
@@ -88,11 +82,10 @@ func Run(addr string) {
 
 		// HTML
 		{GET, "/", html.SendPageHandler},
+		{GET, "/account", AuthMiddleware(html.AccountPageHandler)},
 		{GET, "/send", html.SendPageHandler},
 		{GET, "/vault", AuthMiddleware(html.VaultPageHandler)},
 		{GET, "/vault/*", AuthMiddleware(html.VaultPageHandler)},
-		{GET, "/shared", AuthMiddleware(html.SharedVaultPageHandler)},
-		{GET, "/shared/*", AuthMiddleware(html.SharedVaultPageHandler)},
 		{GET, "/*", html.DownloadPageHandler},
 		{GET, "/signup", html.SignupPageHandler},
 		{GET, "/login", html.LoginPageHandler},

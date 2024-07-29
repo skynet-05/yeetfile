@@ -3,33 +3,42 @@ package config
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"gopkg.in/yaml.v3"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"yeetfile/cli/utils"
 )
 
 type Paths struct {
-	config    string
-	gitignore string
-	session   string
+	config        string
+	gitignore     string
+	session       string
+	encPrivateKey string
+	publicKey     string
 }
 
 type Config struct {
-	Server string
+	Server      string `yaml:"server,omitempty"`
+	DefaultView string `yaml:"default_view,omitempty"`
 }
+
+var UserConfig Config
+var UserConfigPaths Paths
+var Session string
 
 var baseConfigPath = filepath.Join(".config", "yeetfile")
 
 const configFileName = "config.yml"
 const gitignoreName = ".gitignore"
 const sessionName = "session"
+const encPrivateKeyName = "enc-priv-key"
+const publicKeyName = "pub-key"
 
 //go:embed config.yml
 var defaultConfig string
-
-//go:embed .gitignore
-var defaultGitignore string
 
 // SetupConfigDir ensures that the directory necessary for yeetfile's config
 // have been created. This path defaults to $HOME/.config/yeetfile.
@@ -45,9 +54,11 @@ func SetupConfigDir() (Paths, error) {
 	}
 
 	return Paths{
-		config:    filepath.Join(localConfig, configFileName),
-		gitignore: filepath.Join(localConfig, gitignoreName),
-		session:   filepath.Join(localConfig, sessionName),
+		config:        filepath.Join(localConfig, configFileName),
+		gitignore:     filepath.Join(localConfig, gitignoreName),
+		session:       filepath.Join(localConfig, sessionName),
+		encPrivateKey: filepath.Join(localConfig, encPrivateKeyName),
+		publicKey:     filepath.Join(localConfig, publicKeyName),
 	}, nil
 }
 
@@ -61,9 +72,11 @@ func setupTempConfigDir() (Paths, error) {
 	}
 
 	return Paths{
-		config:    filepath.Join(localConfig, configFileName),
-		gitignore: filepath.Join(localConfig, gitignoreName),
-		session:   filepath.Join(localConfig, sessionName),
+		config:        filepath.Join(localConfig, configFileName),
+		gitignore:     filepath.Join(localConfig, gitignoreName),
+		session:       filepath.Join(localConfig, sessionName),
+		encPrivateKey: filepath.Join(localConfig, encPrivateKeyName),
+		publicKey:     filepath.Join(localConfig, publicKeyName),
 	}, nil
 }
 
@@ -93,6 +106,11 @@ func ReadConfig(paths Paths) (Config, error) {
 			return config, err
 		}
 
+		// Strip trailing slash
+		if strings.HasSuffix(config.Server, "/") {
+			config.Server = config.Server[0 : len(config.Server)-1]
+		}
+
 		return config, nil
 	} else {
 		err := setupDefaultConfig(paths)
@@ -111,7 +129,17 @@ func setupDefaultConfig(paths Paths) error {
 		return err
 	}
 
+	defaultGitignore := fmt.Sprintf(`
+%s
+%s
+%s`, sessionName, encPrivateKeyName, publicKeyName)
+
 	err = utils.CopyToFile(defaultGitignore, paths.gitignore)
+	if err != nil {
+		return err
+	}
+
+	err = utils.CopyToFile("", paths.session)
 	if err != nil {
 		return err
 	}
@@ -121,7 +149,8 @@ func setupDefaultConfig(paths Paths) error {
 
 // SetSession sets the session to the value returned by the server when signing
 // up or logging in, and saves it to a (gitignored) file in the config directory
-func SetSession(paths Paths, sessionVal string) error {
+func (paths Paths) SetSession(sessionVal string) error {
+	Session = sessionVal
 	err := utils.CopyToFile(sessionVal, paths.session)
 	if err != nil {
 		return err
@@ -131,15 +160,98 @@ func SetSession(paths Paths, sessionVal string) error {
 }
 
 // ReadSession reads the value in $config_path/session
-func ReadSession(paths Paths) (string, error) {
+func (paths Paths) ReadSession() string {
 	if _, err := os.Stat(paths.session); err == nil {
 		session, err := os.ReadFile(paths.session)
 		if err != nil {
-			return "", err
+			return ""
 		}
 
-		return string(session), nil
+		return string(session)
 	} else {
-		return "", errors.New("session file doesn't exist")
+		return ""
 	}
+}
+
+func (paths Paths) Reset() error {
+	if _, err := os.Stat(paths.session); err == nil {
+		err := os.Remove(paths.session)
+		if err != nil {
+			log.Println("error removing session file")
+			return err
+		}
+	}
+
+	if _, err := os.Stat(paths.encPrivateKey); err == nil {
+		err = os.Remove(paths.encPrivateKey)
+		if err != nil {
+			log.Println("error removing private key")
+			return err
+		}
+	}
+
+	if _, err := os.Stat(paths.publicKey); err == nil {
+		err = os.Remove(paths.publicKey)
+		if err != nil {
+			log.Println("error removing public key")
+			return err
+		}
+	}
+
+	return nil
+}
+
+// SetKeys writes the encrypted private key bytes and the (unencrypted) public
+// key bytes to their respective file paths
+func (paths Paths) SetKeys(encPrivateKey, publicKey []byte) error {
+	err := utils.CopyBytesToFile(encPrivateKey, paths.encPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	err = utils.CopyBytesToFile(publicKey, paths.publicKey)
+	return err
+}
+
+// GetKeys returns the user's encrypted private key and their public key from
+// the config directory. Returns private key, public key, and error.
+func (paths Paths) GetKeys() ([]byte, []byte, error) {
+	var privateKey []byte
+	var publicKey []byte
+
+	_, privKeyErr := os.Stat(paths.encPrivateKey)
+	_, pubKeyErr := os.Stat(paths.publicKey)
+
+	if privKeyErr != nil || pubKeyErr != nil {
+		return nil, nil, errors.New("key files do not exist in config dir")
+	}
+
+	privateKey, privKeyErr = os.ReadFile(paths.encPrivateKey)
+	publicKey, pubKeyErr = os.ReadFile(paths.publicKey)
+
+	if privKeyErr != nil || pubKeyErr != nil {
+		errMsg := fmt.Sprintf("error reading key files:\n"+
+			"privkey: %v\n"+
+			"pubkey: %v", privKeyErr, pubKeyErr)
+		return nil, nil, errors.New(errMsg)
+	}
+
+	return privateKey, publicKey, nil
+}
+
+func init() {
+	var err error
+
+	// Setup config dir
+	UserConfigPaths, err = SetupConfigDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	UserConfig, err = ReadConfig(UserConfigPaths)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	Session = UserConfigPaths.ReadSession()
 }

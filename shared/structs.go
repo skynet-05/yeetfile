@@ -27,7 +27,7 @@ type ModifyVaultFile struct {
 	Name string `json:"name"`
 }
 
-type VaultUploadResponse struct {
+type MetadataUploadResponse struct {
 	ID string `json:"id"`
 }
 
@@ -109,11 +109,11 @@ type DownloadResponse struct {
 }
 
 type Signup struct {
-	Identifier             string `json:"identifier"`
-	LoginKeyHash           string `json:"loginKeyHash"`
-	PublicKey              []byte `json:"publicKey"`
-	ProtectedKey           []byte `json:"protectedKey"`
-	ProtectedRootFolderKey []byte `json:"protectedRootFolderKey"`
+	Identifier    string `json:"identifier"`
+	LoginKeyHash  []byte `json:"loginKeyHash"`
+	PublicKey     []byte `json:"publicKey"`
+	ProtectedKey  []byte `json:"protectedKey"`
+	RootFolderKey []byte `json:"rootFolderKey"`
 }
 
 type SignupResponse struct {

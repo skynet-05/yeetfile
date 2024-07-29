@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"yeetfile/shared"
+	"yeetfile/shared/constants"
 	"yeetfile/web/utils"
 )
 
@@ -135,7 +135,7 @@ func Read(fileID string, start int, end int) ([]byte, error) {
 		}
 	}
 
-	if start > 0 && end-start < shared.ChunkSize {
+	if start > 0 && end-start < constants.ChunkSize {
 		// The last chunk of the file is being deleted, so the file lock
 		// can be removed now
 		locks = removeLock(locks, fileID)

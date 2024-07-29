@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 	"yeetfile/web/db"
 	"yeetfile/web/service"
 )
@@ -38,20 +39,21 @@ func shareVaultItem(
 	isFolder bool,
 ) (shared.ShareInfo, error) {
 	var err error
+	var userName string
 	recipientID := share.User
 	if strings.Contains(share.User, "@") {
 		recipientID, err = db.GetUserIDByEmail(share.User)
 		if err != nil {
 			return shared.ShareInfo{}, err
 		}
+		userName = share.User
 	} else {
 		_, err = db.GetUserByID(share.User)
 		if err != nil {
 			return shared.ShareInfo{}, err
 		}
+		userName = shared.FormatIDTail(share.User)
 	}
-
-	userName, _ := db.GetUserPublicName(userID)
 
 	newShare := shared.NewSharedItem{
 		ItemID:       itemID,
@@ -70,7 +72,11 @@ func shareVaultItem(
 		shareID, shareErr = db.ShareFile(newShare, userID)
 	}
 
-	return shared.ShareInfo{ID: shareID, CanModify: share.CanModify}, shareErr
+	return shared.ShareInfo{
+		ID:        shareID,
+		Recipient: userName,
+		CanModify: share.CanModify,
+	}, shareErr
 }
 
 func deleteVaultFolder(id, userID string, isShared bool) error {
@@ -79,7 +85,7 @@ func deleteVaultFolder(id, userID string, isShared bool) error {
 		return db.DeleteSharedFolder(id, userID)
 	}
 
-	subfolders, err := db.GetSubfolders(id, userID)
+	subfolders, err := db.GetSubfolders(id, userID, shared.FolderOwnershipInfo{})
 	if err != nil {
 		return err
 	}
@@ -91,7 +97,7 @@ func deleteVaultFolder(id, userID string, isShared bool) error {
 		}
 	}
 
-	items, err := db.GetVaultItems(userID, id)
+	items, _, err := db.GetVaultItems(userID, id)
 	if err != nil {
 		return err
 	}
@@ -139,7 +145,7 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 		return 0, errors.New("failed to delete")
 	}
 
-	totalUploadSize := metadata.Length - (shared.TotalOverhead * metadata.Chunks)
+	totalUploadSize := metadata.Length - (constants.TotalOverhead * metadata.Chunks)
 	err = db.UpdateStorageUsed(userID, -totalUploadSize)
 	if err != nil {
 		log.Printf("Failed to update storage for user: %v\n", err)

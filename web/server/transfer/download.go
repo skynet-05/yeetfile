@@ -1,7 +1,7 @@
 package transfer
 
 import (
-	"yeetfile/shared"
+	"yeetfile/shared/constants"
 	"yeetfile/web/cache"
 	"yeetfile/web/service"
 )
@@ -28,11 +28,11 @@ func DownloadFileFromCache(fileID string, length int, chunk int) (bool, []byte) 
 func getReadBoundaries(chunk, length int) (int, int, bool) {
 	eof := false
 
-	start := (chunk-1)*shared.ChunkSize +
-		((shared.TotalOverhead) * (chunk - 1))
+	start := (chunk-1)*constants.ChunkSize +
+		((constants.TotalOverhead) * (chunk - 1))
 
-	end := shared.ChunkSize +
-		shared.TotalOverhead +
+	end := constants.ChunkSize +
+		constants.TotalOverhead +
 		start - 1
 
 	if end >= length-1 {

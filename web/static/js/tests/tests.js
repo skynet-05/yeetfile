@@ -1,5 +1,5 @@
-const assert = require('node:assert').strict;
-const crypto = require("../crypto.js");
+import { strict as assert } from "node:assert";
+import * as crypto from "../crypto.js";
 
 const testDeriveSendingKey = async testCallback => {
     // Test that two keys generated from the same password aren't the same
@@ -78,16 +78,22 @@ const testLoginKeyHash = async testCallback => {
 const testKeyPair = async testCallback => {
     let userKey = await crypto.generateUserKey("myemail@domain.com", "mypassword");
     let keyPair = await crypto.generateKeyPair();
+
     let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
     let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
-
     let protectedKey = await crypto.encryptChunk(userKey, privateKey);
+    assert(publicKey);
+    assert(privateKey);
+    assert(protectedKey);
+
     let folderKey = await crypto.generateRandomKey();
     let protectedRootFolderKey = await crypto.encryptRSA(keyPair.publicKey, folderKey);
 
     let rootFolderKey = await crypto.decryptRSA(keyPair.privateKey, protectedRootFolderKey);
     let folderKeyImport = await crypto.importKey(rootFolderKey);
     assert(folderKeyImport);
+
+    testCallback();
 }
 
 const runTest = async (testIdx) => {

@@ -1,8 +1,11 @@
 import * as crypto from "./crypto.js";
 import * as dialogs from "./dialogs.js";
 import * as transfer from "./transfer.js";
+import * as constants from "./constants.js";
+import * as endpoints from "./endpoints.js";
+import {YeetFileDB} from "./db.js";
 
-const gapFill = 10;
+const gapFill = 9;
 const actionIDPrefix = "action";
 const folderIDPrefix = "load-folder";
 const itemIDPrefix = "load-item";
@@ -24,42 +27,27 @@ let pauseInteractions = false;
 let vaultItems = {};
 let vaultFolders = {};
 
-document.addEventListener("click", event => {
-    if (event.target.id.startsWith(folderIDPrefix)) {
-        let pageID = event.target.id.split("-");
-        let id = pageID[pageID.length - 1];
-        loadFolder(id);
-    } else if (event.target.id.startsWith(itemIDPrefix)) {
-        let itemID = event.target.id.split("-");
-        let id = itemID[itemID.length - 1];
-        downloadMetadata(id);
-    }
-});
-
-document.addEventListener("click", event => {
-    if (dialogs.isDialogOpen()) {
-        return;
-    }
-
-    if (event.target.id.startsWith(actionIDPrefix)) {
-        let itemIDParts = event.target.id.split("-");
-        let itemID = itemIDParts[itemIDParts.length - 1];
-        showActionsDialog(itemID);
-    }
-});
-
-document.addEventListener("DOMContentLoaded", () => {
+const init = () => {
     folderID = getFolderID();
     if (folderID.length > 0) {
         let vaultStatus = document.getElementById("vault-status");
         vaultStatus.innerHTML = folderPlaceholder;
     }
 
-    new YeetFileDB().getVaultKeyPair((privKey, pubKey) => {
-        privateKey = privKey;
-        publicKey = pubKey;
+    let yeetfileDB = new YeetFileDB();
+    yeetfileDB.isPasswordProtected(isProtected => {
+        if (isProtected) {
+            showVaultPassDialog(yeetfileDB);
+        } else {
+            yeetfileDB.getVaultKeyPair("", (privKey, pubKey) => {
+                privateKey = privKey;
+                publicKey = pubKey;
 
-        loadFolder(folderID);
+                loadFolder(folderID);
+            }, () => {
+                alert("Failed to decrypt vault keys");
+            });
+        }
     });
 
     let vaultUploadBtn = document.getElementById("vault-upload");
@@ -96,7 +84,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setupFolderDialog();
     setupStorageIndicator();
-});
+
+    document.addEventListener("click", event => {
+        if (event.target.id.startsWith(folderIDPrefix)) {
+            let pageID = event.target.id.split("-");
+            let id = pageID[pageID.length - 1];
+            loadFolder(id);
+        } else if (event.target.id.startsWith(itemIDPrefix)) {
+            let itemID = event.target.id.split("-");
+            let id = itemID[itemID.length - 1];
+            downloadMetadata(id);
+        }
+    });
+
+    document.addEventListener("click", event => {
+        if (dialogs.isDialogOpen()) {
+            return;
+        }
+
+        if (event.target.id.startsWith(actionIDPrefix)) {
+            let itemIDParts = event.target.id.split("-");
+            let itemID = itemIDParts[itemIDParts.length - 1];
+            showActionsDialog(itemID);
+        }
+    });
+}
+
+const showVaultPassDialog = (yeetfileDB) => {
+    let vaultPasswordDialog = document.getElementById("vault-pass-dialog");
+    let cancel = document.getElementById("cancel-pass")
+    cancel.addEventListener("click", () => {
+        vaultPasswordDialog.close();
+        window.location = "/";
+    });
+
+    let submit = document.getElementById("submit-pass");
+    submit.addEventListener("click", async () => {
+        let password = document.getElementById("vault-pass").value;
+        yeetfileDB.getVaultKeyPair(password, (privKey, pubKey) => {
+            vaultPasswordDialog.close();
+            privateKey = privKey;
+            publicKey = pubKey;
+
+            loadFolder(folderID);
+        }, () => {
+            alert("Failed to decrypt vault keys. Please check your password and try again.");
+        });
+    })
+
+    vaultPasswordDialog.showModal();
+}
 
 const allowUploads = (allow) => {
     document.getElementById("vault-upload").disabled = !allow;
@@ -162,8 +199,10 @@ const uploadFile = async (file, idx, total, callback) => {
 
 const decryptData = async (data) => {
     if (!folderKey || folderKey.length === 0) {
+        console.log("RSA decrypt")
         return await crypto.decryptRSA(privateKey, data);
     } else {
+        console.log("AES decrypt")
         return await crypto.decryptChunk(folderKey, data);
     }
 }
@@ -185,8 +224,9 @@ const downloadMetadata = (id) => {
     showFileIndicator();
     setVaultMessage("Downloading...");
 
+    let endpoint = endpoints.format(endpoints.DownloadVaultFileMetadata, id);
     let xhr = new XMLHttpRequest();
-    xhr.open("GET", `/api/vault/d/${id}`, true);
+    xhr.open("GET", endpoint, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
 
     xhr.onreadystatechange = async () => {
@@ -232,14 +272,19 @@ const loadFolder = newFolderID => {
         subfolderParentID = data.folder.refID;
         allowUploads(data.folder.canModify);
         if (!data.keySequence || data.keySequence.length === 0) {
-            // In root level vault
+            // In root level vault (everything is decrypted with the user's
+            // private key, since content shared with them is encrypted with
+            // their public key and ends up in their root folder).
             await loadVault(data);
-        } else if (data.keySequence.length === 1 || data.folder.protectedKey === data.keySequence[0]) {
-            // In first folder level
-            let protectedVaultKey = base64ToArray(data.folder.protectedKey);
-            let vaultKey = await crypto.decryptRSA(privateKey, protectedVaultKey);
-            folderKey = await crypto.importKey(vaultKey);
-            await loadVault(data);
+        // } else if (data.keySequence.length === 1 ||
+        //     data.folder.protectedKey === data.keySequence[0]) {
+        //     // In first subfolder level (this folder's key is encrypted with the user's
+        //     // public key, but contents within this folder will be encrypted using the
+        //     // folder's unique key).
+        //     let protectedVaultKey = base64ToArray(data.folder.protectedKey);
+        //     let vaultKey = await crypto.decryptRSA(privateKey, protectedVaultKey);
+        //     folderKey = await unwindKeys(data.keySequence);
+        //     await loadVault(data);
         } else {
             // In sub folder, need to iterate through key sequence
             folderKey = await unwindKeys(data.keySequence);
@@ -266,7 +311,8 @@ const unwindKeys = async (keySequence) => {
 }
 
 const fetchVault = (folderID, callback) => {
-    fetch("/api/vault/" + folderID)
+    let endpoint = endpoints.format(endpoints.VaultFolder, folderID);
+    fetch(endpoint)
         .then((response) => response.json())
         .then((data) => {
             callback(data);
@@ -372,7 +418,7 @@ const generateFolderRow = async (item) => {
 const generateItemRow = async (item) => {
     let classes = item.sharedBy.length > 0 ? "shared-link" : "file-link";
     let link = `<a id="${itemIDPrefix}-${item.refID}" class="${classes}" href="#">${item.name}</a>`
-    return generateRow(link, item.name, calcFileSize(item.size - crypto.TotalOverhead), formatDate(item.modified), item.refID, false,
+    return generateRow(link, item.name, calcFileSize(item.size - constants.TotalOverhead), formatDate(item.modified), item.refID, false,
         item.sharedWith,
         item.sharedBy);
 }
@@ -518,8 +564,10 @@ const showActionsDialog = (id) => {
         downloadMetadata(id);
     });
 
+    // TOmaybeDO
     let actionSend = document.getElementById("action-send");
-    actionSend.style.display = isFolder ? "none" : "flex";
+    //actionSend.style.display = isFolder ? "none" : "flex";
+    actionSend.style.display = "none";
     actionSend.addEventListener("click", event => {});
 
     let actionRename = document.getElementById("action-rename");
@@ -535,16 +583,15 @@ const showActionsDialog = (id) => {
     }
 
     let actionLink = document.getElementById("action-link");
-    if (item.owned) {
-        actionLink.style.display = "flex";
-        actionLink.addEventListener("click", event => {
-            event.stopPropagation();
-            showLinkDialog(id, isFolder);
-            dialogs.closeDialog(actionsDialog);
-        });
-    } else {
-        actionLink.style.display = "none";
-    }
+    actionLink.style.display = "none";
+    // if (item.owned) {
+    //     actionLink.style.display = "flex";
+    //     actionLink.addEventListener("click", event => {
+    //         event.stopPropagation();
+    //         showLinkDialog(id, isFolder);
+    //         dialogs.closeDialog(actionsDialog);
+    //     });
+    // }
 
     let actionShare = document.getElementById("action-share");
     if (item.owned) {
@@ -575,7 +622,7 @@ const showActionsDialog = (id) => {
 
             if (!isFolder && confirm("Are you sure you want to delete this file?")) {
                 dialogs.closeDialogs();
-                deleteVaultContent(id, item.name, isFolder, "", async response => {
+                deleteVaultContent(id, item.name, isFolder, item.trueID, async response => {
                     removeRow(id);
                     let responseJSON = await response.json();
                     setupStorageIndicator("", responseJSON.freedSpace * -1);
@@ -646,8 +693,10 @@ const renameItem = async (id, isFolder, newName) => {
     }
 
     let newNameEncrypted = await crypto.encryptString(key, newName);
-    let endpoint = isFolder ? "/api/vault/folder" : "/api/vault/file"
-    fetch(`${endpoint}/${id}`, {
+    let endpoint = isFolder ?
+        endpoints.format(endpoints.VaultFolder, id) :
+        endpoints.format(endpoints.VaultFile, id);
+    fetch(endpoint, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
@@ -674,13 +723,17 @@ const renameItem = async (id, isFolder, newName) => {
 }
 
 const deleteVaultContent = (id, name, isFolder, trueID, callback) => {
-    let endpoint = isFolder ? "/api/vault/folder" : "/api/vault/file";
+    let modID = trueID ? trueID : id;
+    let endpoint = isFolder ?
+        endpoints.format(endpoints.VaultFolder, modID) :
+        endpoints.format(endpoints.VaultFile, modID);
+
     pauseInteractions = true;
     showFileIndicator(`Deleting ${name}...`);
 
     let sharedParam = trueID ? "?shared=true" : "";
 
-    fetch(`${endpoint}/${trueID ? trueID : id}${sharedParam}`, {
+    fetch(`${endpoint}${sharedParam}`, {
         method: "DELETE"
     }).then(response => {
         pauseInteractions = false;
@@ -697,7 +750,7 @@ const deleteVaultContent = (id, name, isFolder, trueID, callback) => {
 
 const createNewFolder = async (folderName) => {
     let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/vault/folder", false);
+    xhr.open("POST", endpoints.format(endpoints.VaultFolder, ""), false);
     xhr.setRequestHeader('Content-Type', 'application/json');
 
     let newFolderKey = await crypto.generateRandomKey();
@@ -778,4 +831,12 @@ const showFileIndicator = (msg) => {
 const setVaultMessage = msg => {
     let vaultMessage = document.getElementById("vault-message");
     vaultMessage.innerHTML = `<img class="vault-icon progress-spinner" src="/static/icons/progress.svg">${msg}`;
+}
+
+if (document.readyState !== 'loading') {
+    init();
+} else {
+    document.addEventListener("DOMContentLoaded", () => {
+        init();
+    });
 }

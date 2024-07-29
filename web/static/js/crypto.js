@@ -1,10 +1,9 @@
+export let webcrypto;
+
 const HashSize = 32;
 const IVSize = 12;
-const TotalOverhead = 28;
 let utf8Encode = new TextEncoder();
 let utf8Decode = new TextDecoder();
-
-let webcrypto;
 let indexedDB;
 
 /**
@@ -16,7 +15,7 @@ let indexedDB;
  * @param pepper {string} - the pepper to extend the password
  * @returns {Promise<[CryptoKey,Uint8Array]>}
  */
-const deriveSendingKey = async (password, salt, pepper) => {
+export const deriveSendingKey = async (password, salt, pepper) => {
     if (!salt) {
         salt = webcrypto.getRandomValues(new Uint8Array(HashSize));
     }
@@ -32,7 +31,7 @@ const deriveSendingKey = async (password, salt, pepper) => {
  * @param keyData {Uint8Array}
  * @returns {Promise<CryptoKey>}
  */
-const importKey = async (keyData) => {
+export const importKey = async (keyData) => {
     return await webcrypto.subtle.importKey(
         "raw",
         keyData,
@@ -48,7 +47,7 @@ const importKey = async (keyData) => {
  * @param salt {Uint8Array} - the salt for the key
  * @returns {Promise<CryptoKey>}
  */
-const deriveKey = async (password, salt) => {
+export const deriveKey = async (password, salt) => {
     let keyMaterial = await webcrypto.subtle.importKey(
         "raw",
         password,
@@ -78,7 +77,7 @@ const deriveKey = async (password, salt) => {
  * @param str {string} - the string to encrypt
  * @returns {Promise<Uint8Array>}
  */
-const encryptString = async (key, str) => {
+export const encryptString = async (key, str) => {
     let data = utf8Encode.encode(str);
     return await encryptChunk(key, data);
 }
@@ -89,7 +88,7 @@ const encryptString = async (key, str) => {
  * @param format {string} - the format to use when exporting the key (default "raw")
  * @returns {Promise<Uint8Array>}
  */
-const exportKey = async (key, format) => {
+export const exportKey = async (key, format) => {
     const exported = await webcrypto.subtle.exportKey(format ? format : "raw", key);
     return new Uint8Array(exported);
 }
@@ -102,7 +101,7 @@ const exportKey = async (key, format) => {
  * @param data {Uint8Array} - the data to encrypt
  * @returns {Promise<Uint8Array>}
  */
-const encryptChunk = async (key, data) => {
+export const encryptChunk = async (key, data) => {
     let iv = webcrypto.getRandomValues(new Uint8Array(IVSize));
     let encrypted = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
     let merged = new Uint8Array(iv.length + encrypted.byteLength);
@@ -118,7 +117,7 @@ const encryptChunk = async (key, data) => {
  * @param data {Uint8Array} - the data to encrypt
  * @returns {Promise<Uint8Array>}
  */
-const encryptRSA = async (key, data) => {
+export const encryptRSA = async (key, data) => {
     let encrypted = await webcrypto.subtle.encrypt({ name: "RSA-OAEP" }, key, data);
     return new Uint8Array(encrypted);
 }
@@ -129,7 +128,7 @@ const encryptRSA = async (key, data) => {
  * @param data {Uint8Array} - the data to decrypt
  * @returns {Promise<Uint8Array>}
  */
-const decryptRSA = async (key, data) => {
+export const decryptRSA = async (key, data) => {
     let decrypted = await webcrypto.subtle.decrypt({ name: "RSA-OAEP" }, key, data);
     return new Uint8Array(decrypted);
 }
@@ -140,7 +139,7 @@ const decryptRSA = async (key, data) => {
  * @param data {Uint8Array} - the encrypted string data to decrypt
  * @returns {Promise<string>}
  */
-const decryptString = async (key, data) => {
+export const decryptString = async (key, data) => {
     let str = await decryptChunk(key, data);
     return utf8Decode.decode(str);
 }
@@ -152,7 +151,7 @@ const decryptString = async (key, data) => {
  * @param data {Uint8Array} - the encrypted data to decrypt
  * @returns {Promise<ArrayBuffer>}
  */
-const decryptChunk = async (key, data) => {
+export const decryptChunk = async (key, data) => {
     let iv = data.slice(0, IVSize);
     let fileData = data.slice(IVSize, data.length + 1);
 
@@ -166,7 +165,7 @@ const decryptChunk = async (key, data) => {
  * @param password {string} - the user's password
  * @returns {Promise<CryptoKey>}
  */
-const generateUserKey = async (identifier, password) => {
+export const generateUserKey = async (identifier, password) => {
     return await deriveKey(utf8Encode.encode(password), utf8Encode.encode(identifier));
 }
 
@@ -178,7 +177,7 @@ const generateUserKey = async (identifier, password) => {
  * @param password {string} - the user's password
  * @returns {Promise<Uint8Array>}
  */
-const generateLoginKeyHash = async (userKey, password) => {
+export const generateLoginKeyHash = async (userKey, password) => {
     let userKeyExported = await exportKey(userKey, "raw");
 
     let loginKey = await deriveKey(userKeyExported, utf8Encode.encode(password));
@@ -194,7 +193,7 @@ const generateLoginKeyHash = async (userKey, password) => {
  * public key before being sent to the server.
  * @returns {Uint8Array}
  */
-const generateRandomKey = () => {
+export const generateRandomKey = () => {
     return webcrypto.getRandomValues(new Uint8Array(HashSize));
 }
 
@@ -203,7 +202,7 @@ const generateRandomKey = () => {
  * for generating random passphrases as peppers for files.
  * @param callback - the request callback
  */
-const fetchWordlist = callback => {
+export const fetchWordlist = callback => {
     fetch("/wordlist")
         .then((response) => response.json())
         .then((data) => {
@@ -219,7 +218,7 @@ const fetchWordlist = callback => {
  * "." and including a random number in a random position.
  * @param callback {function}
  */
-const generatePassphrase = (callback) => {
+export const generatePassphrase = (callback) => {
     let passphrase = [];
     fetchWordlist(words => {
         let wordNum = Math.floor(Math.random() * 3);
@@ -247,15 +246,13 @@ const generatePassphrase = (callback) => {
 /**
  * ingestPublicKey takes the raw base64 of the user's public key and
  * converts them into a CryptoKey object that can be used for encryption.
- * @param publicKey {string}
+ * @param publicKey {Uint8Array}
  * @param callback {function(CryptoKey)}
  */
-const ingestPublicKey = (publicKey, callback) => {
-    let decodedPublicKey = base64ToArray(publicKey);
-
+export const ingestPublicKey = (publicKey, callback) => {
     webcrypto.subtle.importKey(
         "spki",
-        decodedPublicKey,
+        publicKey,
         {
             name: "RSA-OAEP",
             hash: {name: "SHA-256"}
@@ -270,49 +267,27 @@ const ingestPublicKey = (publicKey, callback) => {
 }
 
 /**
- * ingestProtectedKey uses the user key to decrypt the protected key, and
- * uses the result to create a non-exportable CryptoKey object that is then
- * stored in IndexedDB.
- * @param userKey {CryptoKey}
+ * ingestProtectedKey creates a non-exportable CryptoKey object of the
+ * user's private key
  * @param protectedKey {Uint8Array}
  * @param callback {function(CryptoKey)}
  */
-const ingestProtectedKey = (userKey, protectedKey, callback) => {
-    let decodedProtectedKey = base64ToArray(protectedKey);
-    let iv = decodedProtectedKey.slice(0, IVSize);
-
-    decodedProtectedKey = decodedProtectedKey.slice(IVSize, decodedProtectedKey.length + 1);
-
-    webcrypto.subtle.decrypt(
+export const ingestProtectedKey = (protectedKey, callback) => {
+    // Import the key as non-exportable
+    webcrypto.subtle.importKey(
+        "pkcs8",
+        protectedKey,
         {
-            name: "AES-GCM",
-            iv: iv,
+            name: "RSA-OAEP",
+            hash: {name: "SHA-256"}
         },
-        userKey,
-        decodedProtectedKey
-    )
-        .then(decryptedData => {
-            // Re-import the key as non-exportable
-            webcrypto.subtle.importKey(
-                "pkcs8",
-                decryptedData,
-                {
-                    name: "RSA-OAEP",
-                    hash: {name: "SHA-256"}
-                },
-                false, // Key cannot be exported
-                ["decrypt"]
-            )
-                .catch(error => {
-                    console.error("Error re-importing vault key:", error);
-                })
-                .then(key => {
-                    callback(key);
-                });
-        })
+        false,
+        ["decrypt"])
         .catch(error => {
-            alert("Error decrypting vault key");
-            console.error("Error decrypting vault key:", error);
+            console.error("Error re-importing vault key:", error);
+        })
+        .then(key => {
+            callback(key);
         });
 }
 
@@ -327,7 +302,7 @@ const ingestProtectedKey = (userKey, protectedKey, callback) => {
  *
  * @returns {Promise<CryptoKeyPair>}
  */
-const generateKeyPair = async () => {
+export const generateKeyPair = async () => {
    return await webcrypto.subtle.generateKey(
         {
             name: 'RSA-OAEP',
@@ -338,31 +313,10 @@ const generateKeyPair = async () => {
     );
 }
 
-if (typeof window === 'undefined') {
-    // Running in Node.js
-    webcrypto = require('crypto').webcrypto;
-
-    module.exports = {
-        deriveSendingKey,
-        encryptString,
-        encryptChunk,
-        encryptRSA,
-        decryptRSA,
-        generatePassphrase,
-        generateUserKey,
-        generateLoginKeyHash,
-        generateRandomKey: generateRandomKey,
-        fetchWordlist,
-        decryptChunk,
-        decryptString,
-        exportKey,
-        importKey,
-        generateKeyPair,
-        webcrypto,
-        TotalOverhead
-    };
-} else {
-    // Running in a browser
+if (typeof window !== 'undefined') {
+    // Enforce browser variables
     webcrypto = window.crypto;
     indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB
+} else {
+    webcrypto = await import('crypto');
 }

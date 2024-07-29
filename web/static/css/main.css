@@ -1,7 +1,7 @@
 :root {
     --text-color: #000000;
-    --accent-color: #5555F0;
-    --shared-color: #229121;
+    --accent-color: #5A56E0;
+    --shared-color: #2E8B57;
     --destructive-color: #a83c3c;
     --button-color: lightgrey;
     --card-bg-color: #F5F5F5;
@@ -39,6 +39,14 @@ body {
 .shared-icon {
     cursor: pointer;
     filter: invert(41%) sepia(14%) saturate(5662%) hue-rotate(86deg) brightness(95%) contrast(78%);
+}
+
+.mobile-only {
+    display: none;
+}
+
+.desktop-only {
+    display: initial;
 }
 
 .accent-hr {
@@ -123,7 +131,7 @@ progress {
     transform: translate(-50%, -50%);
     width: 85%;
     max-width: 800px;
-    max-height: 85%;
+    max-height: 70%;
     overflow-y: auto;
     border-radius: .66rem;
     padding: 20px;
@@ -353,13 +361,21 @@ input:disabled, textarea:disabled {
 
 @media (orientation: portrait) {
     #center-div {
-        width: 95%;
+        width: 95% !important;
     }
 }
 
 @media (max-width:768px) {
     .grid-2-col {
         display: block;
+    }
+
+    .mobile-only {
+        display: initial;
+    }
+
+    .desktop-only {
+        display: none;
     }
 
     fieldset {

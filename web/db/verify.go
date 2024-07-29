@@ -57,7 +57,7 @@ func NewVerification(
 			pwHash,
 			signupData.ProtectedKey,
 			signupData.PublicKey,
-			signupData.ProtectedRootFolderKey)
+			signupData.RootFolderKey)
 		if err != nil {
 			return "", err
 		}

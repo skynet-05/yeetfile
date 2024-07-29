@@ -42,7 +42,7 @@ func PrepareUpload(
 	data []byte,
 ) (FileUpload, db.B2Upload, error) {
 	_, checksum := utils.GenChecksum(data)
-	db.UpdateChecksums(metadata.ID, checksum)
+	db.UpdateChecksums(metadata.ID, chunk, checksum)
 
 	b2Values := db.GetB2UploadValues(metadata.ID)
 
@@ -94,8 +94,19 @@ func UploadSingleChunk(upload FileUpload, b2Values db.B2Upload) (bool, error) {
 }
 
 func UploadMultiChunk(upload FileUpload, b2Values db.B2Upload) (bool, error) {
-	var err error
-	uploadChunk := func(largeFile b2.FilePartInfo, attempt int) error {
+	uploadChunk := func() error {
+		info, err := service.B2.GetUploadPartURL(b2Values.UploadID)
+		if err != nil {
+			return err
+		}
+
+		largeFile := b2.FilePartInfo{
+			FileID:             b2Values.UploadID,
+			AuthorizationToken: info.AuthorizationToken,
+			UploadURL:          info.UploadURL,
+			Dummy:              b2Values.Local,
+		}
+
 		err = b2.UploadFilePart(
 			largeFile,
 			upload.chunk,
@@ -110,33 +121,19 @@ func UploadMultiChunk(upload FileUpload, b2Values db.B2Upload) (bool, error) {
 		return nil
 	}
 
-	largeFile := b2.FilePartInfo{
-		FileID:             b2Values.UploadID,
-		AuthorizationToken: b2Values.Token,
-		UploadURL:          b2Values.UploadURL,
-		Dummy:              b2Values.Local,
-	}
-
 	attempt := 0
-	err = uploadChunk(largeFile, attempt)
+	err := uploadChunk()
 	for err != nil && attempt < MaxUploadAttempts {
-		// Regen upload values and retry
-		largeFile, err = ResetLargeUpload(
-			b2Values.UploadID,
-			b2Values.MetadataID)
-		if err != nil {
-			return false, err
-		}
-
+		// Try again
 		attempt += 1
 		log.Printf("Retrying (attempt %d)\n", attempt+1)
-		err = uploadChunk(largeFile, attempt)
+		err = uploadChunk()
 	}
 
-	if err != nil {
-		return false, err
-	} else if attempt >= MaxUploadAttempts {
+	if attempt >= MaxUploadAttempts {
 		return false, ExceededMaximumAttemptsError
+	} else if err != nil {
+		return false, err
 	}
 
 	if upload.chunk == upload.chunks {

@@ -5,12 +5,14 @@ import (
 	"errors"
 	"log"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 const uploadIDLength = 12
 
 type FileMetadata struct {
 	ID           string
+	RefID        string
 	Chunks       int
 	Name         string
 	Salt         []byte
@@ -22,9 +24,9 @@ type FileMetadata struct {
 // InsertMetadata creates a new metadata entry in the db and returns a unique ID for
 // that entry.
 func InsertMetadata(chunks int, name string, salt []byte, plaintext bool) (string, error) {
-	prefix := shared.FileIDPrefix
+	prefix := constants.FileIDPrefix
 	if plaintext {
-		prefix = shared.PlaintextIDPrefix
+		prefix = constants.PlaintextIDPrefix
 	}
 
 	id := shared.GenRandomStringWithPrefix(uploadIDLength, prefix)

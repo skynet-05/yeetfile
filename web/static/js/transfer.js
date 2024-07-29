@@ -1,12 +1,12 @@
 import * as crypto from "./crypto.js";
+import * as endpoints from "./endpoints.js";
 
 const sendEndpoint = "/send";
-const vaultEndpoint = "/api/vault"
 
 /**
  * uploadMetadata uploads file metadata to the server
  * @param metadata {object} - An object containing file metadata such as name, chunks, etc
- * @param endpoint {string} - The endpoint (either shareEndpoint or vaultEndpoint) to use
+ * @param endpoint {string} - The endpoint to use (vault or send)
  * @param callback {function(string)} - A callback returning the string ID of the file
  * @param errorCallback {function()} - An error callback for handling server errors
  */
@@ -53,7 +53,7 @@ const readChunk = (file, start, end) => {
 /**
  * uploadChunks encrypts and uploads individual file chunks to the server until the entire file
  * has been uploaded
- * @param endpoint {string} - The string endpoint to upload chunks to (either sendEndpoint or vaultEndpoint)
+ * @param endpoint {string} - The string endpoint to use for uploading chunks (vault or send)
  * @param id {string} - The file ID returned during the initial file metadata creation step beforehand
  * @param file {File} - The file object being uploaded
  * @param key {CryptoKey} - The key to use for encrypting each file chunk
@@ -180,7 +180,9 @@ const downloadFile = (endpoint, name, download, key, callback, errorCallback) =>
  * @param isFolder {boolean} - Whether the item is a folder or not
  */
 export const changeSharedItemPerms = (id, shareID, canModify, isFolder) => {
-    let endpoint = isFolder ? `/api/share/folder/${id}` : `/api/share/file/${id}`;
+    let endpoint = isFolder ?
+        endpoints.format(endpoints.ShareFolder, id) :
+        endpoints.format(endpoints.ShareFile, id);
     fetch(endpoint, {
         method: "PUT",
         headers: {
@@ -204,8 +206,10 @@ export const changeSharedItemPerms = (id, shareID, canModify, isFolder) => {
  */
 export const removeUserFromShared = (id, shareID, isFolder) => {
     let endpoint = isFolder ?
-        `/api/share/folder/${id}?id=${shareID}` :
-        `/api/share/file/${id}?id=${shareID}`;
+        endpoints.format(endpoints.ShareFolder, id) :
+        endpoints.format(endpoints.ShareFile, id);
+
+    endpoint += `?id=${shareID}`;
 
     return new Promise((resolve, reject) => {
         fetch(endpoint, {method: "DELETE"}).then(() => {
@@ -228,16 +232,19 @@ export const removeUserFromShared = (id, shareID, isFolder) => {
  * @param isFolder {boolean} - An indicator of what type of content is being shared
  */
 export const shareItem = (recipient, rawKey, itemID, canModify, isFolder) => {
-    let endpoint = isFolder ? `/api/share/folder/${itemID}` : `/api/share/file/${itemID}`
+    let endpoint = isFolder ?
+        endpoints.format(endpoints.ShareFolder, itemID) :
+        endpoints.format(endpoints.ShareFile, itemID);
     return new Promise((resolve, reject) => {
-        fetch(`/pubkey?user=${recipient}`).then(async response => {
+        fetch(`${endpoints.PubKey}?user=${recipient}`).then(async response => {
             if (!response.ok) {
                 alert("Error sharing: " + await response.text());
                 reject();
                 return;
             }
 
-            crypto.ingestPublicKey((await response.json()).publicKey, async userPubKey => {
+            let recipientPublicKey = base64ToArray((await response.json()).publicKey);
+            crypto.ingestPublicKey(recipientPublicKey, async userPubKey => {
                 if (!userPubKey) {
                     alert("Error reading user's public key");
                     reject();
@@ -274,7 +281,9 @@ export const shareItem = (recipient, rawKey, itemID, canModify, isFolder) => {
  * @param isFolder {boolean} - Whether the item is a folder
  */
 export const getSharedUsers = (itemID, isFolder) => {
-    let endpoint = isFolder ? `/api/share/folder/${itemID}` : `/api/share/file/${itemID}`;
+    let endpoint = isFolder ?
+        endpoints.format(endpoints.ShareFolder, itemID) :
+        endpoints.format(endpoints.ShareFile, itemID);
 
     return new Promise((resolve, reject) => {
         fetch(`${endpoint}`).then(response => {
@@ -313,7 +322,7 @@ export const uploadSendMetadata = (metadata, callback, errorCallback) => {
 }
 
 export const uploadVaultMetadata = (metadata, callback, errorCallback) => {
-    uploadMetadata(metadata, vaultEndpoint, callback, errorCallback);
+    uploadMetadata(metadata, endpoints.VaultRoot, callback, errorCallback);
 }
 
 export const uploadSendChunks = async (id, file, key, callback, errorCallback) => {
@@ -321,11 +330,11 @@ export const uploadSendChunks = async (id, file, key, callback, errorCallback) =
 }
 
 export const uploadVaultChunks = async (id, file, key, callback, errorCallback) => {
-    await uploadChunks(vaultEndpoint, id, file, key, callback, errorCallback);
+    await uploadChunks(endpoints.VaultRoot, id, file, key, callback, errorCallback);
 }
 
 export const downloadVaultFile = (name, download, key, callback, errorCallback) => {
-    downloadFile(vaultEndpoint, name, download, key, callback, errorCallback);
+    downloadFile(endpoints.VaultRoot, name, download, key, callback, errorCallback);
 }
 
 export const downloadSentFile = (name, download, key, callback, errorCallback) => {

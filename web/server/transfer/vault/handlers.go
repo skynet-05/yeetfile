@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
+	"yeetfile/shared/endpoints"
 	"yeetfile/web/cache"
 	"yeetfile/web/db"
 	"yeetfile/web/server/session"
@@ -15,68 +17,71 @@ import (
 	"yeetfile/web/utils"
 )
 
-func FolderViewHandler(root bool) session.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request, userID string) {
-		folderID := userID
-		if !root {
-			segments := strings.Split(req.URL.Path, "/")
-			folderID = segments[len(segments)-1]
-			if len(folderID) == 0 {
-				folderID = userID
-			}
-		}
-
-		items, err := db.GetVaultItems(userID, folderID)
-		if err != nil {
-			utils.Logf("Error fetching vault items: %v\n", err)
-			http.Error(w, "Error fetching vault items",
-				http.StatusInternalServerError)
-			return
-		}
-
-		folder, err := db.GetFolderInfo(folderID, userID, false)
-		folders, err := db.GetSubfolders(folderID, userID)
-		keySequence, err := db.GetKeySequence(folderID, userID)
-
-		_ = json.NewEncoder(w).Encode(shared.VaultFolderResponse{
-			Items:         items,
-			Folders:       folders,
-			CurrentFolder: folder,
-			KeySequence:   keySequence,
-		})
+// FileHandler directs all requests to the appropriate handler for interacting
+// with YeetFile Vault files
+func FileHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	var fn session.HandlerFunc
+	switch req.Method {
+	case http.MethodPut, http.MethodDelete:
+		fn = ModifyFileHandler
 	}
+
+	fn(w, req, userID)
 }
 
-func SharedFolderViewHandler(root bool) session.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request, userID string) {
-		folderID := ""
-		if !root {
-			segments := strings.Split(req.URL.Path, "/")
-			folderID = segments[len(segments)-1]
-			if len(folderID) == 0 {
-				folderID = ""
-			}
-		}
-
-		items, err := db.GetSharedItems(userID, folderID)
-		if err != nil {
-			utils.Logf("Error fetching shared vault items: %v\n", err)
-			http.Error(w, "Error fetching shared vault items",
-				http.StatusInternalServerError)
-			return
-		}
-
-		folder, err := db.GetFolderInfo(folderID, userID, false)
-		folders, err := db.GetSubfolders(folderID, userID)
-		keySequence, err := db.GetKeySequence(folderID, userID)
-
-		_ = json.NewEncoder(w).Encode(shared.VaultFolderResponse{
-			Items:         items,
-			Folders:       folders,
-			CurrentFolder: folder,
-			KeySequence:   keySequence,
-		})
+// FolderHandler directs all requests to the appropriate handler for interacting
+// with YeetFile Vault folders
+func FolderHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	var fn session.HandlerFunc
+	switch req.Method {
+	case http.MethodPut, http.MethodDelete:
+		fn = ModifyFolderHandler
+	case http.MethodPost:
+		fn = NewFolderHandler
+	case http.MethodGet:
+		fn = FolderViewHandler
 	}
+
+	fn(w, req, userID)
+}
+
+// FolderViewHandler returns folder contents for the requested folder. If a
+// folder ID wasn't included in the request, the user's root level folder
+// (distinguished by having the same ID as their account) is returned.
+func FolderViewHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	var folderID string
+	segments := utils.GetTrailingURLSegments(endpoints.VaultFolder, req.URL.Path)
+	if len(segments) == 0 || len(segments[0]) == 0 {
+		folderID = userID
+	} else {
+		folderID = segments[0]
+	}
+
+	items, ownership, err := db.GetVaultItems(userID, folderID)
+	if err != nil {
+		utils.Logf("Error fetching vault items: %v\n", err)
+
+		if err == db.AccessError {
+			http.Error(w, "Unauthorized access",
+				http.StatusForbidden)
+		} else {
+			http.Error(w, "Error fetching vault items",
+				http.StatusInternalServerError)
+		}
+
+		return
+	}
+
+	folder, _ := db.GetFolderInfo(folderID, userID, ownership, false)
+	folders, _ := db.GetSubfolders(folderID, userID, ownership)
+	keySequence, _ := db.GetKeySequence(folderID, userID)
+
+	_ = json.NewEncoder(w).Encode(shared.VaultFolderResponse{
+		Items:         items,
+		Folders:       folders,
+		CurrentFolder: folder,
+		KeySequence:   keySequence,
+	})
 }
 
 // NewFolderHandler handles the creation of vault folders
@@ -102,31 +107,7 @@ func NewFolderHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	}
 }
 
-func PublicFolderHandler(w http.ResponseWriter, req *http.Request, userID string) {
-	segments := strings.Split(req.URL.Path, "/")
-	id := segments[len(segments)-1]
-
-	var pubErr error
-	switch req.Method {
-	case http.MethodPost:
-		var pubFolder shared.NewPublicVaultFolder
-		pubErr = json.NewDecoder(req.Body).Decode(&pubFolder)
-		if pubErr != nil {
-			break
-		}
-
-		pubErr = db.NewPublicFolder(pubFolder, userID)
-		break
-	case http.MethodDelete:
-		pubErr = db.DeletePublicFolder(id, userID)
-		break
-	}
-
-	if pubErr != nil {
-		http.Error(w, "Error modifying public folder", http.StatusBadRequest)
-	}
-}
-
+// ModifyFolderHandler receives request to change or delete an existing folder.
 func ModifyFolderHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	segments := strings.Split(req.URL.Path, "/")
 	idPart := strings.Split(segments[len(segments)-1], "?")
@@ -185,6 +166,7 @@ func ModifyFileHandler(w http.ResponseWriter, req *http.Request, userID string) 
 	}
 
 	if modErr != nil {
+		log.Printf("Error modifying file: %v\n", modErr)
 		http.Error(w, "Error modifying file", http.StatusBadRequest)
 	} else if modResponse != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -218,10 +200,11 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, userID stri
 
 	if b2Err != nil {
 		http.Error(w, "Error initializing storage", http.StatusInternalServerError)
+		_ = db.DeleteVaultFile(itemID, userID)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(shared.VaultUploadResponse{ID: itemID})
+	err = json.NewEncoder(w).Encode(shared.MetadataUploadResponse{ID: itemID})
 	if err != nil {
 		http.Error(w, "Error sending response", http.StatusInternalServerError)
 		return
@@ -269,11 +252,11 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 	if done {
 		var totalUploadSize int
 		if metadata.Chunks == 1 {
-			totalUploadSize = len(data) - shared.TotalOverhead
+			totalUploadSize = len(data) - constants.TotalOverhead
 		} else {
 			totalUploadSize = len(data) +
-				(shared.ChunkSize * (metadata.Chunks - 1)) -
-				(shared.TotalOverhead * (metadata.Chunks - 1))
+				(constants.ChunkSize * (metadata.Chunks - 1)) -
+				(constants.TotalOverhead * (metadata.Chunks - 1))
 		}
 
 		err = db.UpdateStorageUsed(userID, totalUploadSize)
@@ -287,13 +270,14 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
+		utils.Logf("Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}
 
 	response := shared.VaultDownloadResponse{
 		Name:         metadata.Name,
-		ID:           metadata.ID,
+		ID:           metadata.RefID,
 		Chunks:       metadata.Chunks,
 		Size:         metadata.Length,
 		ProtectedKey: metadata.ProtectedKey,
@@ -321,6 +305,7 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
+		utils.Logf("Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}

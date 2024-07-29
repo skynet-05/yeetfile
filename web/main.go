@@ -8,14 +8,12 @@ import (
 	"yeetfile/web/utils"
 )
 
-const VERSION = "0.0.1"
-
 func main() {
 	defer db.Close()
 	go db.CheckExpiry()
 	go db.CheckMemberships()
 
-	host := utils.GetEnvVar("YEETFILE_HOST", "0.0.0.0")
+	host := utils.GetEnvVar("YEETFILE_HOST", "localhost")
 	port := utils.GetEnvVar("YEETFILE_PORT", "8090")
 
 	addr := fmt.Sprintf("%s:%s", host, port)

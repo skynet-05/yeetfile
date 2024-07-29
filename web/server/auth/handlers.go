@@ -101,9 +101,13 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 		// Email signup
 		err := SignupWithEmail(signupData)
 		if err != nil {
+			errMsg := "Error creating account"
+			if err == db.UserAlreadyExists {
+				errMsg = "User already exists"
+			}
 			status = http.StatusBadRequest
 			response = shared.SignupResponse{
-				Error: "Error creating account ID",
+				Error: errMsg,
 			}
 		} else {
 			response = shared.SignupResponse{
@@ -117,8 +121,7 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-// AccountHandler handles fetching the user's data and displaying a web page for
-// managing their account (web only)
+// AccountHandler handles fetching and returning the user's account information.
 func AccountHandler(w http.ResponseWriter, req *http.Request) {
 	if !session.IsValidSession(req) {
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
@@ -134,10 +137,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if req.Method == http.MethodGet {
-		html.AccountPageHandler(w, req, user)
-		return
-	}
+	_, _ = w.Write([]byte("TODO: " + user.Email))
 }
 
 // VerifyEmailHandler handles account verification using the link sent to a user's
@@ -160,6 +160,7 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	// Verify user verification code and fetch password hash
 	accountValues, err := db.VerifyUser(email, code)
 	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
 		w.Header().Set(html.ErrorHeader, "Incorrect verification code")
 		html.VerifyPageHandler(w, req, email)
 		return
@@ -174,7 +175,15 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	})
 
 	if err != nil {
-		w.Header().Set(html.ErrorHeader, "Server error")
+		w.Header().Set(html.ErrorHeader, "Error creating new account")
+		html.VerifyPageHandler(w, req, email)
+		return
+	}
+
+	err = db.NewRootFolder(id, accountValues.RootFolderKey)
+
+	if err != nil {
+		w.Header().Set(html.ErrorHeader, "Error initializing user vault")
 		html.VerifyPageHandler(w, req, email)
 		return
 	}

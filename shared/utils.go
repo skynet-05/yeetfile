@@ -3,13 +3,18 @@ package shared
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"math/rand"
+	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
+	"yeetfile/shared/constants"
 )
 
-var characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-var numbers = []rune("1234567890")
+var Characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+var Numbers = []rune("1234567890")
 
 func ReadableFileSize(b int) string {
 	const unit = 1000
@@ -53,7 +58,7 @@ func AddDate(years int, months int) time.Time {
 }
 
 func GenRandomStringWithPrefix(n int, prefix string) string {
-	randStr := GenRandomArray(n, characters)
+	randStr := GenRandomArray(n, Characters)
 
 	if len(prefix) == 0 {
 		return string(randStr)
@@ -63,12 +68,12 @@ func GenRandomStringWithPrefix(n int, prefix string) string {
 }
 
 func GenRandomString(n int) string {
-	randStr := GenRandomArray(n, characters)
+	randStr := GenRandomArray(n, Characters)
 	return string(randStr)
 }
 
 func GenRandomNumbers(n int) string {
-	randNums := GenRandomArray(n, numbers)
+	randNums := GenRandomArray(n, Numbers)
 	return string(randNums)
 }
 
@@ -82,4 +87,86 @@ func GenRandomArray(n int, runes []rune) []rune {
 	}
 
 	return b
+}
+
+func EscapeString(s string) string {
+	return strings.ReplaceAll(s, "_", "\\_")
+}
+
+func CalculateNumChunks(fileSize int64) int {
+	return int(math.Ceil(float64(fileSize) / float64(constants.ChunkSize)))
+}
+
+func RemoveOverlap[T comparable](source []T, remove []T) []T {
+	// Create a map to store the elements to be removed for quick lookup
+	toRemove := make(map[T]struct{}, len(remove))
+	for _, item := range remove {
+		toRemove[item] = struct{}{}
+	}
+
+	// Create a new slice to store the filtered elements
+	var filtered []T
+	for _, item := range source {
+		if _, found := toRemove[item]; !found {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return filtered
+}
+
+func FormatIDTail(fullID string) string {
+	idTail := fullID[len(fullID)-4:]
+	return fmt.Sprintf("*%s", idTail)
+}
+
+func GetFileInfo(filepath string) (*os.File, os.FileInfo, error) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return file, stat, nil
+}
+
+func CreateNewSaveName(filename string) string {
+	var nameOnly string
+	var ext string
+
+	if strings.Contains(filename, ".") {
+		filenameSegments := strings.Split(filename, ".")
+		nameOnly = strings.Join(
+			filenameSegments[0:len(filenameSegments)-1], ".")
+		ext = filenameSegments[len(filenameSegments)-1]
+	} else {
+		nameOnly = filename
+	}
+
+	match, _ := regexp.MatchString(".*-\\d", nameOnly)
+	if match {
+		nameSegments := strings.Split(nameOnly, "-")
+		saveNum := nameSegments[len(nameSegments)-1]
+		digit, err := strconv.Atoi(saveNum)
+		if err == nil {
+			baseName := strings.Join(
+				nameSegments[0:len(nameSegments)-1], "-")
+			if len(ext) > 0 {
+				return fmt.Sprintf("%s-%d.%s", baseName, digit+1, ext)
+			} else {
+				return fmt.Sprintf("%s-%d", baseName, digit+1)
+			}
+		}
+	}
+
+	newName := nameOnly + "-1"
+	if len(ext) == 0 {
+		return newName
+	}
+
+	return strings.Join([]string{newName, ext}, ".")
 }

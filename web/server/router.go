@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"yeetfile/shared/endpoints"
 	"yeetfile/web/utils"
 )
 
@@ -15,7 +16,7 @@ type Route struct {
 
 type RouteDef struct {
 	Methods HttpMethod
-	Path    string
+	Path    endpoints.Endpoint
 	Handler http.HandlerFunc
 }
 
@@ -42,14 +43,16 @@ func (r *router) AddRoutes(routes []RouteDef) {
 				continue
 			}
 
+			path := string(route.Path)
+
 			// Check for paths with optional segments
-			if strings.Contains(route.Path, "/?") {
-				optPath := strings.Replace(route.Path, "/?", "", 1)
-				wildPath := strings.Replace(route.Path, "/?", "/*", 1)
+			if strings.Contains(path, "/?") {
+				optPath := strings.Replace(path, "/?", "", 1)
+				wildPath := strings.Replace(path, "/?", "/*", 1)
 				r.AddRoute(methodStr, optPath, route.Handler)
 				r.AddRoute(methodStr, wildPath, route.Handler)
 			} else {
-				r.AddRoute(methodStr, route.Path, route.Handler)
+				r.AddRoute(methodStr, path, route.Handler)
 			}
 		}
 	}

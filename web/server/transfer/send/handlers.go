@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 	"yeetfile/web/cache"
 	"yeetfile/web/db"
 	"yeetfile/web/server/transfer"
@@ -20,7 +21,8 @@ import (
 // up a file for uploading. This is defined in the UploadMetadata struct.
 func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	var meta shared.UploadMetadata
-	err := json.NewDecoder(req.Body).Decode(&meta)
+	data, _ := utils.LimitedReader(w, req.Body)
+	err := json.Unmarshal(data, &meta)
 	if err != nil {
 		log.Printf("%v\n", req.Body)
 		log.Printf("Error: %v\n", err)
@@ -30,6 +32,9 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 
 	if meta.Chunks == 0 {
 		http.Error(w, "# of chunks cannot be 0", http.StatusBadRequest)
+		return
+	} else if meta.Downloads == 0 {
+		http.Error(w, "# of downloads cannot be 0", http.StatusBadRequest)
 		return
 	}
 
@@ -60,8 +65,11 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 		return
 	}
 
-	// Return ID to user
-	_, _ = io.WriteString(w, id)
+	err = json.NewEncoder(w).Encode(shared.MetadataUploadResponse{ID: id})
+	if err != nil {
+		http.Error(w, "Error sending response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // UploadDataHandler handles the process of uploading file chunks to the server,
@@ -75,7 +83,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 		return
 	}
 
-	data, err := io.ReadAll(req.Body)
+	data, err := utils.LimitedReader(w, req.Body)
 	if err != nil {
 		http.Error(w, "Error", http.StatusBadRequest)
 		return
@@ -97,7 +105,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	}
 
 	// Update user meter
-	err = UpdateUserMeter(len(data)-shared.TotalOverhead, req)
+	err = UpdateUserMeter(len(data)-constants.TotalOverhead, req)
 	if err != nil {
 		// TODO: Maybe just silently accept this? Idk if it's worth an error
 		http.Error(w, "Upload failed", http.StatusInternalServerError)
@@ -112,9 +120,9 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 // UploadPlaintextHandler handles uploading plaintext with a max size of
 // shared.MaxPlaintextLen characters (shared/constants.go).
 func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
-	decoder := json.NewDecoder(req.Body)
+	data, err := utils.LimitedReader(w, req.Body)
 	var plaintextUpload shared.PlaintextUpload
-	err := decoder.Decode(&plaintextUpload)
+	err = json.Unmarshal(data, &plaintextUpload)
 	if err != nil {
 		log.Printf("%v\n", req.Body)
 		log.Printf("Error: %v\n", err)
@@ -122,7 +130,7 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if len(plaintextUpload.Text) > shared.MaxPlaintextLen+shared.TotalOverhead {
+	if len(plaintextUpload.Text) > constants.MaxPlaintextLen+constants.TotalOverhead {
 		http.Error(w, "Invalid upload size", http.StatusBadRequest)
 		return
 	}
@@ -153,7 +161,11 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, _ = io.WriteString(w, id)
+	err = json.NewEncoder(w).Encode(shared.MetadataUploadResponse{ID: id})
+	if err != nil {
+		http.Error(w, "Error sending response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // DownloadHandler fetches metadata for downloading a file, such as the name of

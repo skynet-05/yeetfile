@@ -11,6 +11,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"yeetfile/shared"
 )
 
 //go:embed js/*
@@ -57,6 +58,7 @@ func minifyStaticFiles(assetType string, fn minifyFn) {
 			}(originalFile)
 
 			reader := io.Reader(originalFile)
+
 			minifiedBytes := minifyFile(reader, fn)
 			MinifiedFiles[file.Name()] = minifiedBytes
 		}
@@ -68,4 +70,9 @@ func init() {
 	MinifiedFiles = make(map[string][]byte)
 	minifyStaticFiles("js", js.Minify)
 	minifyStaticFiles("css", css.Minify)
+	consts, endpoints := shared.GenerateSharedJS()
+	MinifiedFiles[shared.ConstsFilename] = minifyFile(
+		strings.NewReader(consts), js.Minify)
+	MinifiedFiles[shared.EndpointsFilename] = minifyFile(
+		strings.NewReader(endpoints), js.Minify)
 }

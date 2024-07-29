@@ -3,7 +3,7 @@ package crypto
 import (
 	"bytes"
 	"testing"
-	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 var data = []byte("data")
@@ -33,24 +33,24 @@ func TestDeriveKey(t *testing.T) {
 }
 
 func TestEncryptChunk(t *testing.T) {
-	plainData := make([]byte, shared.ChunkSize)
+	plainData := make([]byte, constants.ChunkSize)
 	key, _, _, _ := DeriveSendingKey(password, nil, nil)
-	encrypted := EncryptChunk(key, plainData)
+	encrypted, _ := EncryptChunk(key, plainData)
 
-	if len(encrypted) != len(plainData)+shared.TotalOverhead {
+	if len(encrypted) != len(plainData)+constants.TotalOverhead {
 		t.Fatalf("Unexpected encrypted data size\n"+
 			"expected: %d, actual: %d",
-			len(plainData)+shared.TotalOverhead,
+			len(plainData)+constants.TotalOverhead,
 			len(encrypted))
 	}
 
-	storageKey, _ := GenerateStorageKey()
-	storageEncrypted := EncryptChunk(storageKey, data)
+	storageKey, _ := GenerateRandomKey()
+	storageEncrypted, _ := EncryptChunk(storageKey, data)
 
-	if len(storageEncrypted) != len(data)+shared.TotalOverhead {
+	if len(storageEncrypted) != len(data)+constants.TotalOverhead {
 		t.Fatalf("Unexpected encrypted storage data size\n"+
 			"expected: %d, actual: %d",
-			len(data)+shared.TotalOverhead,
+			len(data)+constants.TotalOverhead,
 			len(storageEncrypted))
 	} else {
 		equal := true
@@ -69,7 +69,7 @@ func TestEncryptChunk(t *testing.T) {
 
 func TestDecryptChunk(t *testing.T) {
 	key, salt, pepper, _ := DeriveSendingKey(password, nil, nil)
-	encrypted := EncryptChunk(key, data)
+	encrypted, _ := EncryptChunk(key, data)
 
 	decryptKey, _, _, _ := DeriveSendingKey(password, salt, pepper)
 	decrypted, err := DecryptChunk(decryptKey, encrypted)
@@ -92,7 +92,13 @@ func TestLoginKey(t *testing.T) {
 	newStorageKey := GenerateUserKey(myEmail, myPassword)
 	newLoginKey := GenerateLoginKeyHash(newStorageKey, myPassword)
 
-	if loginKey != newLoginKey {
-		t.Fatalf("Login key hashes do not match")
+	if len(loginKey) != len(newLoginKey) {
+		t.Fatalf("Login key hash lengths do not match")
+	} else {
+		for i, b := range loginKey {
+			if b != newLoginKey[i] {
+				t.Fatal("Login key hash contents don't match")
+			}
+		}
 	}
 }

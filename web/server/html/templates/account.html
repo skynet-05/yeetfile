@@ -31,7 +31,7 @@
           <label>Send:</label>
         </td>
         <td>
-          <span>{{ .SendUsed }} / {{ .SendAvailable }}</span>
+          <span>{{ .SendUsed }} / {{ .SendAvailable }} / month</span>
         </td>
       </tr>
       {{ if .BillingConfigured }}
@@ -101,8 +101,8 @@
           <span><b>${{ .SubscriptionTemplate.YearlyNovicePrice }}/year</b></span><br>
             {{ if .StripeConfigured }}
             <a href="/checkout?type={{ .SubscriptionTemplate.YearlyNovice }}&payment_id={{ .PaymentID }}">
-              <button class="stripe-btn">Purchase</button>
-            </a>
+              <button class="stripe-btn payment-btn">Purchase</button>
+            </a><br class="mobile-only">
             {{ end }}
             {{ if .BTCPayConfigured }}
             <a href="/checkout-btc?type={{ .SubscriptionTemplate.YearlyNovice }}&payment_id={{ .PaymentID }}">
@@ -113,8 +113,8 @@
           <span><b>${{ .SubscriptionTemplate.MonthlyNovicePrice }}/month</b></span><br>
             {{ if .StripeConfigured }}
             <a href="/checkout?type={{ .SubscriptionTemplate.MonthlyNovice }}&payment_id={{ .PaymentID }}">
-              <button class="stripe-btn">Purchase</button>
-            </a>
+              <button class="stripe-btn payment-btn">Purchase</button>
+            </a><br class="mobile-only">
             {{ end }}
             {{ if .BTCPayConfigured }}
             <a href="/checkout-btc?type={{ .SubscriptionTemplate.MonthlyNovice }}&payment_id={{ .PaymentID }}">
@@ -133,8 +133,8 @@
           <span><b>${{ .SubscriptionTemplate.YearlyRegularPrice }}/year</b></span><br>
             {{ if .StripeConfigured }}
             <a href="/checkout?type={{ .SubscriptionTemplate.YearlyRegular }}&payment_id={{ .PaymentID }}">
-              <button class="stripe-btn">Purchase</button>
-            </a>
+              <button class="stripe-btn payment-btn">Purchase</button>
+            </a><br class="mobile-only">
             {{ end }}
             {{ if .BTCPayConfigured }}
             <a href="/checkout-btc?type={{ .SubscriptionTemplate.YearlyRegular }}&payment_id={{ .PaymentID }}">
@@ -145,8 +145,8 @@
           <span><b>${{ .SubscriptionTemplate.MonthlyRegularPrice }}/month</b></span><br>
             {{ if .StripeConfigured }}
             <a href="/checkout?type={{ .SubscriptionTemplate.MonthlyRegular }}&payment_id={{ .PaymentID }}">
-              <button class="stripe-btn">Purchase</button>
-            </a>
+              <button class="stripe-btn payment-btn">Purchase</button>
+            </a><br class="mobile-only">
             {{ end }}
             {{ if .BTCPayConfigured }}
             <a href="/checkout-btc?type={{ .SubscriptionTemplate.MonthlyRegular }}&payment_id={{ .PaymentID }}">
@@ -165,8 +165,8 @@
           <span><b>${{ .SubscriptionTemplate.YearlyAdvancedPrice }}/year</b></span><br>
             {{ if .StripeConfigured }}
             <a href="/checkout?type={{ .SubscriptionTemplate.YearlyAdvanced }}&payment_id={{ .PaymentID }}">
-              <button class="stripe-btn">Purchase</button>
-            </a>
+              <button class="stripe-btn payment-btn">Purchase</button>
+            </a><br class="mobile-only">
             {{ end }}
             {{ if .BTCPayConfigured }}
             <a href="/checkout-btc?type={{ .SubscriptionTemplate.YearlyAdvanced }}&payment_id={{ .PaymentID }}">
@@ -177,8 +177,8 @@
           <span><b>${{ .SubscriptionTemplate.MonthlyAdvancedPrice }}/month</b></span><br>
             {{ if .StripeConfigured }}
             <a href="/checkout?type={{ .SubscriptionTemplate.MonthlyAdvanced }}&payment_id={{ .PaymentID }}">
-              <button class="stripe-btn">Purchase</button>
-            </a>
+              <button class="stripe-btn payment-btn">Purchase</button>
+            </a><br class="mobile-only">
             {{ end }}
             {{ if .BTCPayConfigured }}
             <a href="/checkout-btc?type={{ .SubscriptionTemplate.MonthlyAdvanced }}&payment_id={{ .PaymentID }}">
