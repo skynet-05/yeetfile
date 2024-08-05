@@ -1,13 +1,13 @@
 .idea
 notes.txt
 yeetfile
-yeetfile-web
+yeetfile-server
 *.enc
 test.sh
 lipsum-big.txt
 session*
 !session.go
-!web/server/session
+!backend/server/session
 *.env
 *.swp
 tags

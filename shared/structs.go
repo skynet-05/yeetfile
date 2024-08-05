@@ -39,8 +39,8 @@ type VaultItem struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Size         int       `json:"size"`
-	Modified     time.Time `json:"modified"`
-	ProtectedKey []byte    `json:"protectedKey"`
+	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
+	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 	SharedWith   int       `json:"sharedWith"`
 	SharedBy     string    `json:"sharedBy"`
 	LinkTag      string    `json:"linkTag"`
@@ -51,22 +51,22 @@ type VaultItem struct {
 
 type NewVaultFolder struct {
 	Name         string `json:"name"`
-	ProtectedKey []byte `json:"protectedKey"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 	ParentID     string `json:"parentID"`
 }
 
 type NewPublicVaultFolder struct {
 	ID           string `json:"id"`
-	ProtectedKey []byte `json:"protectedKey"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 	LinkTag      string `json:"linkTag"`
 }
 
 type VaultFolder struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
-	Modified     time.Time `json:"modified"`
+	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 	ParentID     string    `json:"parentID"`
-	ProtectedKey []byte    `json:"protectedKey"`
+	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 	SharedWith   int       `json:"sharedWith"`
 	SharedBy     string    `json:"sharedBy"`
 	LinkTag      string    `json:"linkTag"`
@@ -79,7 +79,7 @@ type VaultFolderResponse struct {
 	Items         []VaultItem   `json:"items"`
 	Folders       []VaultFolder `json:"folders"`
 	CurrentFolder VaultFolder   `json:"folder"`
-	KeySequence   [][]byte      `json:"keySequence"`
+	KeySequence   [][]byte      `json:"keySequence" ts_type:"Uint8Array[]" ts_transform:"__VALUE__.map(base64ToArray)"`
 }
 
 type VaultDownloadResponse struct {
@@ -87,33 +87,33 @@ type VaultDownloadResponse struct {
 	ID           string `json:"id"`
 	Size         int    `json:"size"`
 	Chunks       int    `json:"chunks"`
-	ProtectedKey []byte `json:"protectedKey"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type PlaintextUpload struct {
 	Name       string `json:"name"`
-	Salt       []byte `json:"salt"`
+	Salt       []byte `json:"salt" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 	Downloads  int    `json:"downloads"`
 	Expiration string `json:"expiration"`
-	Text       []byte `json:"text"`
+	Text       []byte `json:"text" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type DownloadResponse struct {
 	Name       string    `json:"name"`
 	ID         string    `json:"id"`
-	Salt       []byte    `json:"salt"`
+	Salt       []byte    `json:"salt" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 	Size       int       `json:"size"`
 	Chunks     int       `json:"chunks"`
 	Downloads  int       `json:"downloads"`
-	Expiration time.Time `json:"expiration"`
+	Expiration time.Time `json:"expiration" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 }
 
 type Signup struct {
 	Identifier    string `json:"identifier"`
-	LoginKeyHash  []byte `json:"loginKeyHash"`
-	PublicKey     []byte `json:"publicKey"`
-	ProtectedKey  []byte `json:"protectedKey"`
-	RootFolderKey []byte `json:"rootFolderKey"`
+	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type SignupResponse struct {
@@ -125,20 +125,20 @@ type SignupResponse struct {
 type VerifyAccount struct {
 	ID            string `json:"id"`
 	Code          string `json:"code"`
-	LoginKeyHash  []byte `json:"loginKeyHash"`
-	ProtectedKey  []byte `json:"protectedKey"`
-	PublicKey     []byte `json:"publicKey"`
-	RootFolderKey []byte `json:"rootFolderKey"`
+	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type Login struct {
 	Identifier   string `json:"identifier"`
-	LoginKeyHash []byte `json:"loginKeyHash"`
+	LoginKeyHash []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type LoginResponse struct {
-	PublicKey    []byte `json:"publicKey"`
-	ProtectedKey []byte `json:"protectedKey"`
+	PublicKey    []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type SessionInfo struct {
@@ -153,11 +153,11 @@ type ResetPassword struct {
 	Email           string `json:"email"`
 	Code            string `json:"code"`
 	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirm-password"`
+	ConfirmPassword string `json:"confirmPassword"`
 }
 
 type PubKeyResponse struct {
-	PublicKey []byte `json:"publicKey"`
+	PublicKey []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
 }
 
 type ShareItemRequest struct {

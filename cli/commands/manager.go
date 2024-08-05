@@ -111,13 +111,20 @@ func Entrypoint(args []string) {
 	}
 
 	// Check session state and ensure server is reachable
-	sessionErr := validateCurrentSession()
-	if _, ok := sessionErr.(*net.OpError); ok {
-		utils.HandleCLIError("Unable to connect to the server", sessionErr)
+	authErr := validateAuth()
+	if _, ok := authErr.(*net.OpError); ok {
+		utils.HandleCLIError("Unable to connect to the server", authErr)
 		return
-	} else if !isAuthCommand(command) && sessionErr != nil {
+	} else if !isAuthCommand(command) && authErr != nil {
 		styles.PrintErrStr("You are not logged in. " +
 			"Use the 'login' or 'signup' commands to continue.")
+		return
+	}
+
+	sessionErr := validateCurrentSession()
+	if sessionErr != nil {
+		errStr := fmt.Sprintf("Error validating session: %v", sessionErr)
+		styles.PrintErrStr(errStr)
 		return
 	}
 
@@ -135,7 +142,7 @@ func Entrypoint(args []string) {
 	}
 }
 
-func validateCurrentSession() error {
+func validateAuth() error {
 	if loggedIn, err := auth.IsUserAuthenticated(); !loggedIn || err != nil {
 		if err != nil {
 			return err
@@ -143,6 +150,10 @@ func validateCurrentSession() error {
 		return errors.New("not logged in")
 	}
 
+	return nil
+}
+
+func validateCurrentSession() error {
 	encPrivateKey, publicKey, err := config.UserConfigPaths.GetKeys()
 	if err != nil {
 		errMsg := fmt.Sprintf("Error reading key files: %v\n", err)

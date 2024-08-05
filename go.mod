@@ -49,6 +49,8 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/tdewolff/parse/v2 v2.7.12 // indirect
+	github.com/tkrajina/go-reflector v0.5.5 // indirect
+	github.com/tkrajina/typescriptify-golang-structs v0.1.11 // indirect
 	github.com/wayneashleyberry/terminal-dimensions v1.1.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/sync v0.7.0 // indirect

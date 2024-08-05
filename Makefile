@@ -1,7 +1,23 @@
-.PHONY: web cli
+.PHONY: backend web cli
 
 web:
-	go build -ldflags="-s -w" -tags yeetfile-web -o yeetfile-web ./web
+	@echo -----------------------------------------
+	@echo "   Generating TypeScript files from go..."
+	@echo -----------------------------------------
+	go run utils/generate_typescript.go ./web/ts
+	@echo -----------------------------------------
+	@echo "   Compiling TypeScript to JavaScript..."
+	@echo -----------------------------------------
+	tsc --removeComments
+
+backend: web
+	@echo -----------------------------------------
+	@echo "   Building backend..."
+	@echo -----------------------------------------
+	go build -ldflags="-s -w" -tags yeetfile-server -o yeetfile-server ./backend
+	@echo -----------------------------------------
+	@echo "   Build complete: ./yeetfile-server"
+	@echo -----------------------------------------
 
 cli:
 	go build -ldflags="-s -w" -tags yeetfile -o yeetfile ./cli

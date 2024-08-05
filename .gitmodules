@@ -1,3 +1,3 @@
-[submodule "web/static/stream_saver"]
-	path = web/static/stream_saver
+[submodule "backend/static/stream_saver"]
+	path = backend/static/stream_saver
 	url = https://github.com/jimmywarting/StreamSaver.js.git

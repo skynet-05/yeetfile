@@ -6,11 +6,10 @@ import (
 	"yeetfile/shared/endpoints"
 )
 
-const ConstsFilename = "constants.js"
-const EndpointsFilename = "endpoints.js"
 const DBFilename = "db.js"
 
-const constsJS = `// Auto-generated from shared/js.go. Don't edit this manually.
+const constsJS = `
+// Auto-generated from shared/js.go. Don't edit this manually.
 
 export const IVSize = %d;
 export const KeySize = %d;
@@ -21,20 +20,30 @@ export const PlaintextIDPrefix = "%s";
 export const FileIDPrefix = "%s";
 export const VerificationCodeLength = %d;`
 
-const endpointsJS = `// Auto-generated from shared/js.go. Don't edit this manually.
+const endpointsHeadJS = `
+// Auto-generated from shared/js.go. Don't edit this manually.
 
-export const format = (endpoint, ...args) => {
-    for (let arg of args) {
-        endpoint = endpoint.replace("*", arg);
-    }
-
-    return endpoint;
+export type Endpoint = {
+    path: string
 }
 
+export class Endpoints {`
+
+const endpointsTailJS = `
+
+    static format(endpoint: Endpoint, ...args: string[]): string {
+        let path = endpoint.path;
+        for (let arg of args) {
+            path = path.replace("*", arg);
+        }
+
+        return path;
+    }
+}
 `
 
-const endpointStr = `export const %s = "%s";
-`
+const endpointEntry = `
+    static %s: Endpoint = {path: "%s"};`
 
 func GenerateSharedJS() (string, string) {
 	jsConsts := fmt.Sprintf(constsJS,
@@ -47,10 +56,11 @@ func GenerateSharedJS() (string, string) {
 		constants.FileIDPrefix,
 		constants.VerificationCodeLength)
 
-	jsEndpoints := endpointsJS
+	jsEndpoints := endpointsHeadJS
 	for apiEndpoint, varName := range endpoints.JSVarNameMap {
-		jsEndpoints += fmt.Sprintf(endpointStr, varName, apiEndpoint)
+		jsEndpoints += fmt.Sprintf(endpointEntry, varName, apiEndpoint)
 	}
 
+	jsEndpoints += endpointsTailJS
 	return jsConsts, jsEndpoints
 }
