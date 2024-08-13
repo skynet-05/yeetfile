@@ -26,9 +26,7 @@ Contents
     1. [YeetFile Send](#yeetfile-send)
     1. [Accounts](#accounts)
     1. [Other](#other)
-1. [How It Works](#how-it-works)
-    1. [Uploading and Downloading](#uploading-and-downloading)
-    1. [Billing](#billing)
+1. [How It Works / Security](#how-it-works--security)
 1. [Self-Hosting](#self-hosting)
 1. [Development](#development)
     1. [Requirements](#requirements)
@@ -80,54 +78,9 @@ locally, and the server is incapable of decrypting any transmitted content.
 - Easily self-hosted
   - Official CLI can be configured to use any server
 
-## How It Works
+## How It Works / Security
 
-### Uploading and Downloading
-
-When uploading a file with YeetFile, an optional password is provided by the user to protect the file contents.
-Whether or not a password is provided, however, a "pepper" (an additional secret value added prior to hashing)
-will be generated using 3 random works from a list of ~1K words, as well as a random digit placed either before
-or after any of the 3 words. This pepper + (optional) password value is used to derive a key via PBKDF2 with
-SHA-512 hashing. The file is then split into individual 5MB chunks, and the key is used to encrypt each individual
-chunk using AES-GCM before uploading the encrypted chunk to the server.
-
-On the server side, a file ID is generated for the upload process and is used to associate individual file
-chunks together. As file chunks are uploaded, the server forwards these chunks to a Backblaze B2 bucket. Once
-the upload is complete, the server returns a link to the uploader that contains the file ID. For example:
-
-<pre>https://yeetfile.com/file_8z74nn1spdni</pre>
-
-This link is then formatted (by the client) with the pepper that the client generated before uploading:
-
-<pre>https://yeetfile.com/file_8z74nn1spdni<b>#neither-unarmored-uncle9</b></pre>
-
-The pepper is appended as part of a URL's "fragment", which is never sent to the server when making a request.
-
-When the recipient opens the link (in web or CLI), the pepper is extracted from the link and used by iteself to
-perform an initial decryption attempt of the filename. If it fails to decrypt the filename, it means that the
-uploader set a password during the upload process, and the web or CLI client will prompt the recipient to enter
-a password. Once the download is complete, the download
-
-With this model, the server never sees the file's decrypted contents or filename, and it never sees the randomly
-generated pepper required for decrypting file contents. In addition to not having the ability to decrypt any file,
-YeetFile is also not able to determine which file was uploaded by a particular account. The user's account ID is
-never tied to an uploaded file ID in the database, and the file's size is rounded down to the nearest megabyte
-when adjusting the user's file transfer usage (to avoid correlating size of an upload to a user's modified
-transfer limit).
-
-Note: Uploading text works the same way, just with a single chunk limited to 1K characters.
-
-### Billing
-
-Each user starts with a payment ID that is separate from their account ID. When they purchase either a membership
-or a file transfer upgrade, the payment ID is used in place of their account ID for the checkout process. If the
-checkout is successful, a record of their purchase is added to a table in the database that corresponds to how
-the user made the purchase (either via Stripe or BTCPay). At the same time, the user's payment ID is updated to
-an entirely new ID, without the ability to recover what their old payment ID. The checkout confirmation will
-display the original payment ID to help with any billing issues, but unless the user provides that payment ID in
-correspondence with YeetFile, YeetFile has no way of knowing which payment ID belongs to which user.
-
-Note: This functions the same when checking out via Stripe or BTCPay.
+See: [https://docs.yeetfile.com/security](https://docs.yeetfile.com/security/)
 
 ## Self-Hosting
 
