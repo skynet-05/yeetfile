@@ -1,19 +1,19 @@
 <div align="center">
-  <img style="width: 500px; padding-bottom: 20px;" src="https://github.com/meddlehead/yeetfile/blob/main/web/static/img/yeetfile-logo.png?raw=true">
+  <img style="width: 500px; padding-bottom: 20px;" src="https://github.com/benbusby/yeetfile/blob/main/web/static/img/yeetfile-logo.png?raw=true">
   <br><br>
 
   <p>A private and secure temporary file + text sharing service</p>
 
-[![Latest Release](https://img.shields.io/github/v/release/meddlehead/yeetfile)](https://github.com/meddlehead/yeetfile/releases)
-[![License: AGPLv3](https://img.shields.io/github/license/meddlehead/yeetfile)](https://opensource.org/license/agpl-v3)
+[![Latest Release](https://img.shields.io/github/v/release/benbusby/yeetfile)](https://github.com/benbusby/yeetfile/releases)
+[![License: AGPLv3](https://img.shields.io/github/license/benbusby/yeetfile)](https://opensource.org/license/agpl-v3)
 
 [![Tests (CLI)](https://github.com/benbusby/yeetfile/actions/workflows/go-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/go-tests.yml)
-[![Tests (JS)](https://github.com/meddlehead/yeetfile/actions/workflows/js-tests.yml/badge.svg)](https://github.com/meddlehead/yeetfile/actions/workflows/js-tests.yml)
+[![Tests (JS)](https://github.com/benbusby/yeetfile/actions/workflows/ts-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/ts-tests.yml)
 
 <table>
   <tr>
     <td><a href="https://sr.ht/~benbusby/yeetfile">SourceHut</a></td>
-    <td><a href="https://github.com/meddlehead/yeetfile">GitHub</a></td>
+    <td><a href="https://github.com/benbusby/yeetfile">GitHub</a></td>
   </tr>
 </table>
 </div>
@@ -34,7 +34,7 @@ Contents
 ## About
 
 YeetFile is a text and file transferring service, with both a [web](https://yeetfile.com) and
-[CLI client](https://github.com/meddlehead/yeetfile/releases) officially supported.
+[CLI client](https://github.com/benbusby/yeetfile/releases) officially supported.
 
 ### Features
 
