@@ -12,8 +12,8 @@ import (
 	"yeetfile/cli/commands/download"
 	"yeetfile/cli/commands/send"
 	"yeetfile/cli/commands/vault"
-	"yeetfile/cli/config"
 	"yeetfile/cli/crypto"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
 )
@@ -92,8 +92,8 @@ func Entrypoint(args []string) {
 	if len(args) < 2 {
 		if loggedIn, err := auth.IsUserAuthenticated(); !loggedIn || err != nil {
 			command = Auth
-		} else if len(config.UserConfig.DefaultView) > 0 {
-			command = Command(config.UserConfig.DefaultView)
+		} else if len(globals.Config.DefaultView) > 0 {
+			command = Command(globals.Config.DefaultView)
 		} else {
 			styles.PrintErrStr("-- Missing command")
 			printHelp()
@@ -121,11 +121,13 @@ func Entrypoint(args []string) {
 		return
 	}
 
-	sessionErr := validateCurrentSession()
-	if sessionErr != nil {
-		errStr := fmt.Sprintf("Error validating session: %v", sessionErr)
-		styles.PrintErrStr(errStr)
-		return
+	if !isAuthCommand(command) {
+		sessionErr := validateCurrentSession()
+		if sessionErr != nil {
+			errStr := fmt.Sprintf("Error validating session: %v", sessionErr)
+			styles.PrintErrStr(errStr)
+			return
+		}
 	}
 
 	// Set up logging output (can't log to stdout while bubbletea is running)
@@ -154,36 +156,14 @@ func validateAuth() error {
 }
 
 func validateCurrentSession() error {
-	encPrivateKey, publicKey, err := config.UserConfigPaths.GetKeys()
-	if err != nil {
-		errMsg := fmt.Sprintf("Error reading key files: %v\n", err)
-		styles.PrintErrStr(errMsg)
-	}
-
 	cliKey := crypto.ReadCLIKey()
 	if cliKey == nil || len(cliKey) == 0 {
 		errMsg := fmt.Sprintf(`Missing '%[1]s' environment variable.
 You must include the value returned for this variable either in your shell
-config file (.bashrc, .zshrc, etc) or prefix commands with the variable (i.e.
-%[1]s=xxxx yeetfile vault`, crypto.CLIKeyEnvVar)
+config file (.bashrc, .zshrc, etc), run 'export %[1]s=xxxx' in your current 
+session, or prefix commands with the variable (i.e. %[1]s=xxxx yeetfile vault)`,
+			crypto.CLIKeyEnvVar)
 		return errors.New(errMsg)
-	}
-
-	if privateKey, err := crypto.DecryptChunk(cliKey, encPrivateKey); err == nil {
-		crypto.IngestKeys(privateKey, publicKey)
-	} else {
-		var cliKeyFunc func(errMsgs ...string)
-		cliKeyFunc = func(errMsgs ...string) {
-			cliPassword := vault.ShowVaultPasswordPromptModel(errMsgs...)
-			key := crypto.DerivePBKDFKey(cliPassword, cliKey)
-			if privateKey, err := crypto.DecryptChunk(key, encPrivateKey); err == nil {
-				crypto.IngestKeys(privateKey, publicKey)
-			} else {
-				cliKeyFunc("Incorrect password")
-			}
-		}
-
-		cliKeyFunc()
 	}
 
 	return nil

@@ -1,22 +1,15 @@
 package logout
 
 import (
-	"errors"
-	"net/http"
-	"yeetfile/cli/config"
-	"yeetfile/cli/requests"
-	"yeetfile/shared/endpoints"
+	"yeetfile/cli/globals"
 )
 
 func LogOut() error {
-	url := endpoints.Logout.Format(config.UserConfig.Server)
-	response, err := requests.GetRequest(url)
+	err := globals.API.LogOut()
 	if err != nil {
 		return err
-	} else if response.StatusCode >= http.StatusBadRequest {
-		return errors.New("error logging out")
 	}
 
-	err = config.UserConfigPaths.Reset()
+	err = globals.Config.Reset()
 	return err
 }

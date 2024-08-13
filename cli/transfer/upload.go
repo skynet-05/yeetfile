@@ -3,18 +3,13 @@ package transfer
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"sync"
-	"yeetfile/cli/config"
 	"yeetfile/cli/crypto"
-	"yeetfile/cli/requests"
+	"yeetfile/cli/globals"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
@@ -80,28 +75,8 @@ func CreateVaultFolder(
 		ParentID:     folderID,
 	}
 
-	reqData, err := json.Marshal(newFolder)
-	if err != nil {
-		return shared.NewFolderResponse{}, err
-	}
-
-	url := endpoints.VaultFolder.Format(config.UserConfig.Server)
-	resp, err := requests.PostRequest(url, reqData)
-	if err != nil {
-		return shared.NewFolderResponse{}, err
-	} else if resp.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("server error %d - %s", resp.StatusCode)
-		return shared.NewFolderResponse{}, errors.New(msg)
-	}
-
-	var folderResponse shared.NewFolderResponse
-	err = json.NewDecoder(resp.Body).Decode(&folderResponse)
-	if err != nil {
-		log.Println("error decoding new folder response")
-		return shared.NewFolderResponse{}, err
-	}
-
-	return folderResponse, nil
+	folderResponse, err := globals.API.CreateVaultFolder(newFolder)
+	return folderResponse, err
 }
 
 // InitVaultFile initializes a vault file's metadata, which is required prior to
@@ -129,25 +104,8 @@ func InitVaultFile(
 		ProtectedKey: protectedKey,
 	}
 
-	reqData, err := json.Marshal(upload)
+	metaResponse, err := globals.API.InitVaultFile(upload)
 	if err != nil {
-		return PendingUpload{}, err
-	}
-
-	url := endpoints.UploadVaultFileMetadata.Format(config.UserConfig.Server)
-	resp, err := requests.PostRequest(url, reqData)
-	if err != nil {
-		return PendingUpload{}, err
-	} else if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		msg := fmt.Sprintf("server error [%d]: %s", resp.StatusCode, body)
-		return PendingUpload{}, errors.New(msg)
-	}
-
-	var metaResponse shared.MetadataUploadResponse
-	err = json.NewDecoder(resp.Body).Decode(&metaResponse)
-	if err != nil {
-		log.Println("Error decoding server response: ", err)
 		return PendingUpload{}, err
 	}
 
@@ -166,25 +124,8 @@ func InitSendFile(
 	meta shared.UploadMetadata,
 	key []byte,
 ) (PendingUpload, error) {
-	reqData, err := json.Marshal(meta)
+	metaResponse, err := globals.API.InitSendFile(meta)
 	if err != nil {
-		return PendingUpload{}, err
-	}
-
-	url := endpoints.UploadSendFileMetadata.Format(config.UserConfig.Server)
-	resp, err := requests.PostRequest(url, reqData)
-	if err != nil {
-		return PendingUpload{}, err
-	} else if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		msg := fmt.Sprintf("server error [%d]: %s", resp.StatusCode, body)
-		return PendingUpload{}, errors.New(msg)
-	}
-
-	var metaResponse shared.MetadataUploadResponse
-	err = json.NewDecoder(resp.Body).Decode(&metaResponse)
-	if err != nil {
-		log.Println("Error decoding server response: ", err)
 		return PendingUpload{}, err
 	}
 
@@ -254,7 +195,7 @@ func (p PendingUpload) UploadData(progress func()) (string, error) {
 // to send the chunk to.
 func (p PendingUpload) prepareChunk(chunk int, size int64) (FileChunk, error) {
 	endpoint := p.UnformattedEndpoint.Format(
-		config.UserConfig.Server,
+		globals.Config.Server,
 		p.ID,
 		strconv.Itoa(chunk+1))
 
@@ -275,49 +216,7 @@ func (p PendingUpload) prepareChunk(chunk int, size int64) (FileChunk, error) {
 
 // sendChunk sends the encrypted file data to the server
 func sendChunk(fileChunk FileChunk) (string, error) {
-	resp, err := requests.PostRequest(fileChunk.Endpoint, fileChunk.EncryptedData)
-	if err != nil {
-		log.Printf("Error sending data: %v\n", err)
-		return "", err
-	} else if resp.StatusCode != http.StatusOK {
-		log.Printf("Error sending data (status %d)\n", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("Error parsing chunk response: %v\n", err)
-		return "", err
-	}
-
-	if len(body) > 0 {
-		return string(body), nil
-	}
-
-	return "", nil
-}
-
-func UploadEncryptedText(upload shared.PlaintextUpload) (string, error) {
-	reqData, err := json.Marshal(upload)
-	if err != nil {
-		return "", err
-	}
-
-	url := endpoints.UploadSendText.Format(config.UserConfig.Server)
-	resp, err := requests.PostRequest(url, reqData)
-	if err != nil {
-		return "", err
-	} else if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		msg := fmt.Sprintf("server error [%d]: %s", resp.StatusCode, body)
-		return "", errors.New(msg)
-	}
-
-	var metaResponse shared.MetadataUploadResponse
-	err = json.NewDecoder(resp.Body).Decode(&metaResponse)
-	if err != nil {
-		log.Println("Error decoding server response: ", err)
-		return "", err
-	}
-
-	return metaResponse.ID, nil
+	return globals.API.UploadFileChunk(
+		fileChunk.Endpoint,
+		fileChunk.EncryptedData)
 }

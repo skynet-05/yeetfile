@@ -2,22 +2,15 @@ package files
 
 import (
 	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"io"
-	"log"
-	"net/http"
 	"os"
 	"time"
-	"yeetfile/cli/config"
 	"yeetfile/cli/crypto"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/models"
-	"yeetfile/cli/requests"
 	"yeetfile/cli/transfer"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
-	"yeetfile/shared/endpoints"
 )
 
 var folderContexts = make(map[string]*VaultContext)
@@ -31,28 +24,19 @@ type VaultContext struct {
 	Content  []models.VaultItem
 }
 
+var keyPair crypto.KeyPair
+
 func FetchVaultContext(folderID string) (*VaultContext, error) {
 	if context, ok := folderContexts[folderID]; ok {
 		return context, nil
 	}
 
-	url := endpoints.VaultFolder.Format(config.UserConfig.Server, folderID)
-	response, err := requests.GetRequest(url)
-	if err != nil {
-		log.Fatal(err)
-	} else if response.StatusCode != http.StatusOK {
-		return &VaultContext{}, errors.New(response.Status)
-	}
-
-	body, err := io.ReadAll(response.Body)
-
-	var folderResp shared.VaultFolderResponse
-	err = json.Unmarshal(body, &folderResp)
+	folderResp, err := globals.API.FetchFolderContents(folderID)
 	if err != nil {
 		return &VaultContext{}, err
 	}
 
-	cryptCtx, err := crypto.DeriveVaultCryptoContext(folderResp.KeySequence)
+	cryptCtx, err := keyPair.DeriveVaultCryptoContext(folderResp.KeySequence)
 	if err != nil {
 		return &VaultContext{}, err
 	}
@@ -145,7 +129,7 @@ func (ctx *VaultContext) CreateFolder(folderName string) error {
 }
 
 func (ctx *VaultContext) Delete(item models.VaultItem) error {
-	err := transfer.DeleteItem(item.ID, item.IsFolder)
+	err := transfer.DeleteItem(item.ID, len(item.SharedBy) > 0, item.IsFolder)
 	if err != nil {
 		return err
 	}
@@ -170,12 +154,12 @@ func (ctx *VaultContext) Rename(newName string, item models.VaultItem) error {
 	}
 
 	hexEncName := hex.EncodeToString(encName)
-	err = transfer.RenameItem(item.ID, hexEncName, item.IsFolder)
+	err = transfer.RenameItem(ctx.getItemID(item), hexEncName, item.IsFolder)
 	if err != nil {
 		return err
 	}
 
-	ctx.renameItem(item.ID, newName)
+	ctx.renameItem(ctx.getItemID(item), newName)
 	return nil
 }
 
@@ -200,7 +184,7 @@ func (ctx *VaultContext) Download(
 		return "", err
 	}
 
-	p, err := transfer.InitVaultDownload(item.ID, key, file)
+	p, err := transfer.InitVaultDownload(ctx.getItemID(item), key, file)
 	if err != nil {
 		return "", err
 	}
@@ -236,7 +220,7 @@ func (ctx *VaultContext) removeItem(itemID string) {
 
 func (ctx *VaultContext) renameItem(itemID, newName string) {
 	for i, item := range ctx.Content {
-		if item.ID == itemID {
+		if item.RefID == itemID {
 			ctx.Content[i].Name = newName
 			ctx.Content[i].Modified = time.Now()
 			return
@@ -328,4 +312,12 @@ func (ctx *VaultContext) parseFiles() ([]models.VaultItem, error) {
 	}
 
 	return fileModels, nil
+}
+
+func (ctx *VaultContext) getItemID(item models.VaultItem) string {
+	if len(ctx.FolderID) > 0 {
+		return item.ID
+	} else {
+		return item.RefID
+	}
 }

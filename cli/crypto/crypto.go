@@ -19,6 +19,14 @@ import (
 
 type CryptFunc func([]byte, []byte) ([]byte, error)
 
+type SignupKeys struct {
+	UserKey                []byte
+	LoginKeyHash           []byte
+	ProtectedPrivateKey    []byte
+	PublicKey              []byte
+	ProtectedRootFolderKey []byte
+}
+
 // DeriveSendingKey uses PBKDF2 to derive a key for sending a file. Both the
 // salt and the pepper can be left nil in order to randomly generate both values.
 func DeriveSendingKey(
@@ -151,7 +159,6 @@ func EncryptRSA(key []byte, data []byte) ([]byte, error) {
 func DecryptRSA(key []byte, data []byte) ([]byte, error) {
 	privateKey, err := x509.ParsePKCS8PrivateKey(key)
 	if err != nil {
-		log.Printf("Error parsing private key: %v", err)
 		return nil, err
 	}
 
@@ -163,7 +170,6 @@ func DecryptRSA(key []byte, data []byte) ([]byte, error) {
 		data,
 		[]byte(""))
 	if err != nil {
-		log.Printf("Error decrypting message: %v", err)
 		return nil, err
 	}
 
@@ -240,4 +246,37 @@ func GenerateUserKeys(identifier, password string) ([]byte, []byte) {
 	loginKeyHash := GenerateLoginKeyHash(userKey, []byte(password))
 
 	return userKey, loginKeyHash
+}
+
+// GenerateSignupKeys generates the main user key, the login key hash, the
+// private/public key pair, and the encrypted root folder key
+func GenerateSignupKeys(identifier, password string) (SignupKeys, error) {
+	userKey, loginKeyHash := GenerateUserKeys(identifier, password)
+	privateKey, publicKey, err := GenerateRSAKeyPair()
+	if err != nil {
+		return SignupKeys{}, err
+	}
+
+	protectedKey, err := EncryptChunk(userKey, privateKey)
+	if err != nil {
+		return SignupKeys{}, err
+	}
+
+	rootFolderKey, err := GenerateRandomKey()
+	if err != nil {
+		return SignupKeys{}, err
+	}
+
+	protectedRootFolderKey, err := EncryptRSA(publicKey, rootFolderKey)
+	if err != nil {
+		return SignupKeys{}, err
+	}
+
+	return SignupKeys{
+		UserKey:                userKey,
+		LoginKeyHash:           loginKeyHash,
+		ProtectedPrivateKey:    protectedKey,
+		PublicKey:              publicKey,
+		ProtectedRootFolderKey: protectedRootFolderKey,
+	}, nil
 }

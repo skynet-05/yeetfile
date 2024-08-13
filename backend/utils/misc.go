@@ -67,7 +67,7 @@ func GetEnvVarBool(key string, fallback bool) bool {
 	return fallback
 }
 
-func StrToDuration(str string) time.Duration {
+func StrToDuration(str string, isDebug bool) time.Duration {
 	unit := string(str[len(str)-1])
 	length, _ := strconv.Atoi(str[:len(str)-1])
 
@@ -78,6 +78,11 @@ func StrToDuration(str string) time.Duration {
 	} else if unit == "m" {
 		return time.Duration(length) * time.Minute
 	} else if unit == "s" {
+		if !isDebug {
+			// N sec expiry is only available in debug mode
+			return time.Minute
+		}
+
 		return time.Duration(length) * time.Second
 	}
 

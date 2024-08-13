@@ -118,7 +118,7 @@ func ModifyFolderHandler(w http.ResponseWriter, req *http.Request, userID string
 	var modErr error
 	switch req.Method {
 	case http.MethodPut:
-		var folderMod shared.ModifyVaultFolder
+		var folderMod shared.ModifyVaultItem
 		modErr = json.NewDecoder(req.Body).Decode(&folderMod)
 		if modErr != nil {
 			break
@@ -127,7 +127,7 @@ func ModifyFolderHandler(w http.ResponseWriter, req *http.Request, userID string
 		modErr = updateVaultFolder(id, userID, folderMod)
 		break
 	case http.MethodDelete:
-		modErr = deleteVaultFolder(id, userID, isShared)
+		modErr = DeleteVaultFolder(id, userID, isShared)
 		break
 	}
 
@@ -147,7 +147,7 @@ func ModifyFileHandler(w http.ResponseWriter, req *http.Request, userID string) 
 	var modResponse []byte
 	switch req.Method {
 	case http.MethodPut:
-		var fileMod shared.ModifyVaultFile
+		var fileMod shared.ModifyVaultItem
 		modErr = json.NewDecoder(req.Body).Decode(&fileMod)
 		if modErr != nil {
 			utils.Logf("Error updating file: %v\n", modErr)

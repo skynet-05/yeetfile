@@ -10,7 +10,7 @@ import (
 	"yeetfile/shared/constants"
 )
 
-func updateVaultFile(id, userID string, mod shared.ModifyVaultFile) error {
+func updateVaultFile(id, userID string, mod shared.ModifyVaultItem) error {
 	if len(mod.Name) > 0 {
 		err := db.UpdateVaultFileName(id, userID, mod.Name)
 		if err != nil {
@@ -21,7 +21,7 @@ func updateVaultFile(id, userID string, mod shared.ModifyVaultFile) error {
 	return nil
 }
 
-func updateVaultFolder(id, userID string, mod shared.ModifyVaultFolder) error {
+func updateVaultFolder(id, userID string, mod shared.ModifyVaultItem) error {
 	if len(mod.Name) > 0 {
 		err := db.UpdateVaultFolderName(id, userID, mod.Name)
 		if err != nil {
@@ -79,7 +79,7 @@ func shareVaultItem(
 	}, shareErr
 }
 
-func deleteVaultFolder(id, userID string, isShared bool) error {
+func DeleteVaultFolder(id, userID string, isShared bool) error {
 	if isShared {
 		// Delete shared folder reference and return
 		return db.DeleteSharedFolder(id, userID)
@@ -91,7 +91,7 @@ func deleteVaultFolder(id, userID string, isShared bool) error {
 	}
 
 	for _, sub := range subfolders {
-		err = deleteVaultFolder(sub.ID, userID, isShared)
+		err = DeleteVaultFolder(sub.ID, userID, isShared)
 		if err != nil {
 			return err
 		}
@@ -128,15 +128,19 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 		return 0, err
 	}
 
-	b2Info := db.GetB2UploadValues(metadata.ID)
-	if !service.B2.DeleteFile(metadata.B2ID, b2Info.Name) {
-		log.Printf("Failed to delete vault file from b2: '%s'", metadata.B2ID)
-		//return errors.New("failed to delete")
-	}
+	if len(metadata.B2ID) > 0 {
+		b2Info := db.GetB2UploadValues(metadata.ID)
+		if !service.B2.DeleteFile(metadata.B2ID, b2Info.Name) {
+			log.Printf(
+				"Unable to delete vault file from b2: '%s'",
+				metadata.B2ID)
+		}
 
-	if !db.DeleteB2Uploads(metadata.ID) {
-		log.Printf("Failed to delete b2 records for vault file: '%s'", metadata.ID)
-		//return errors.New("failed to delete b2 records")
+		if !db.DeleteB2Uploads(metadata.ID) {
+			log.Printf(
+				"Failed to delete b2 records for vault file: '%s'",
+				metadata.ID)
+		}
 	}
 
 	vaultDeleteErr := db.DeleteVaultFile(id, userID)

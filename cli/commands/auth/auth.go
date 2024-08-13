@@ -1,27 +1,19 @@
 package auth
 
 import (
-	"net/http"
-	"yeetfile/cli/config"
-	"yeetfile/cli/requests"
-	"yeetfile/shared/endpoints"
+	"yeetfile/cli/globals"
 )
 
-func RemoveUserKeys() error {
-	return config.UserConfigPaths.Reset()
-}
-
 func IsUserAuthenticated() (bool, error) {
-	url := endpoints.Session.Format(config.UserConfig.Server)
-	response, err := requests.GetRequest(url)
-	if err != nil || response.StatusCode != http.StatusOK {
+	_, err := globals.API.GetSession()
+	if err != nil {
 		// Ensure keys are removed
-        resetErr := RemoveUserKeys()
-        if resetErr != nil {
-            return false, resetErr
-        }
+		resetErr := globals.Config.Reset()
+		if resetErr != nil {
+			return false, resetErr
+		}
 
-        return false, err
+		return false, err
 	}
 
 	return true, nil

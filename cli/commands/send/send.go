@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/cli/crypto"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/transfer"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
@@ -81,7 +82,7 @@ func createTextLink(upload textUpload) (string, string, error) {
 		Text:       encText,
 	}
 
-	id, err := transfer.UploadEncryptedText(encTextUpload)
+	id, err := globals.API.UploadText(encTextUpload)
 	if err != nil {
 		return "", "", err
 	}

@@ -51,8 +51,7 @@ func main() {
 	converter := typescriptify.New().
 		Add(shared.UploadMetadata{}).
 		Add(shared.VaultUpload{}).
-		Add(shared.ModifyVaultFolder{}).
-		Add(shared.ModifyVaultFile{}).
+		Add(shared.ModifyVaultItem{}).
 		Add(shared.MetadataUploadResponse{}).
 		Add(shared.NewFolderResponse{}).
 		Add(shared.VaultItem{}).

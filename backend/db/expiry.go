@@ -11,6 +11,8 @@ type FileExpiry struct {
 	Date      time.Time
 }
 
+var expiryLock bool
+
 func SetFileExpiry(id string, downloads int, date time.Time) {
 	s := `INSERT INTO expiry
 	      (id, downloads, date)
@@ -93,8 +95,9 @@ func DeleteExpiry(id string) bool {
 // CheckExpiry inspects each entry in the expiry table to see if a file's
 // expiration date has been surpassed. If it has, the file is deleted. Runs
 // recursively once per second and should be called in a background thread.
+// TODO: Add lock to ensure this isn't ever run simultaneously
 func CheckExpiry() {
-	s := `SELECT id, date FROM expiry`
+	s := `SELECT id FROM expiry WHERE date < CURRENT_TIMESTAMP at time zone 'UTC'`
 	rows, err := db.Query(s)
 
 	if err != nil {
@@ -105,24 +108,21 @@ func CheckExpiry() {
 	defer rows.Close()
 	for rows.Next() {
 		var id string
-		var date time.Time
 
-		err = rows.Scan(&id, &date)
+		err = rows.Scan(&id)
 
 		if err != nil {
 			log.Printf("Error scanning rows: %v\n", err)
-			return
+			continue
 		}
 
-		if time.Now().UTC().After(date.UTC()) {
-			// File has expired, remove from the DB and B2
-			log.Printf("%s has expired, removing now\n", id)
-			metadata, err := RetrieveMetadata(id)
-			if err != nil {
-				log.Printf("Metadata not found for id: " + id)
-			} else {
-				DeleteFileByMetadata(metadata)
-			}
+		// File has expired, remove from the DB and B2
+		log.Printf("%s has expired, removing now\n", id)
+		metadata, err := RetrieveMetadata(id)
+		if err != nil {
+			log.Printf("Metadata not found for id: " + id)
+		} else {
+			DeleteFileByMetadata(metadata)
 		}
 	}
 

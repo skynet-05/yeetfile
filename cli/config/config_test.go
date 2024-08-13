@@ -29,16 +29,17 @@ func TestReadSession(t *testing.T) {
 		t.Fatal("Failed to set up temporary config directories")
 	}
 
-	err = paths.SetSession(session)
+	config, _ := ReadConfig(paths)
+	err = config.SetSession(session)
 	if err != nil {
 		t.Fatal("Failed to set user session")
 	}
 
-	readSession := paths.ReadSession()
+	readSession := config.ReadSession()
 	if len(readSession) == 0 {
 		t.Fatal("Failed to read user session")
-	} else if readSession != session {
+	} else if string(readSession) != session {
 		t.Fatalf("Unexpected session value\n"+
-			"(expected %s, got %s)", session, readSession)
+			"(expected %s, got %s)", session, string(readSession))
 	}
 }

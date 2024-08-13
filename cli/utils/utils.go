@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"golang.org/x/term"
@@ -17,23 +16,9 @@ import (
 	"yeetfile/shared"
 )
 
-var LineDecorator = "========================================"
+var httpErrorCodeFormat = "[code: %d]"
 var separator = "-"
 var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-// StringPrompt prompts the user for string input
-func StringPrompt(label string) string {
-	var s string
-	r := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Fprint(os.Stderr, label+" ")
-		s, _ = r.ReadString('\n')
-		if s != "" {
-			break
-		}
-	}
-	return strings.TrimSpace(s)
-}
 
 // GeneratePassphrase generates a 3 word passphrase with a randomly placed
 // number, and each word separated by the `separator` character
@@ -225,6 +210,7 @@ func LocalTimeFromUTC(utcTime time.Time) time.Time {
 
 func ParseHTTPError(response *http.Response) error {
 	body, _ := io.ReadAll(response.Body)
-	msg := fmt.Sprintf("server error [%d]: %s", response.StatusCode, body)
+	errCode := fmt.Sprintf(httpErrorCodeFormat, response.StatusCode)
+	msg := fmt.Sprintf("server error %s: %s", errCode, body)
 	return errors.New(msg)
 }

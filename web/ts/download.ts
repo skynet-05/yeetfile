@@ -1,18 +1,18 @@
 import * as crypto from "./crypto.js";
 import * as transfer from "./transfer.js";
+import * as interfaces from "./interfaces.js";
 import {Endpoints} from "./endpoints.js";
 
 const init = () => {
     let xhr = new XMLHttpRequest();
     let id = window.location.pathname.split("/").slice(-1)[0];
-    console.log(id);
     let url = Endpoints.format(Endpoints.DownloadSendFileMetadata, id);
     xhr.open("GET", url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
 
     xhr.onreadystatechange = async () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            let download = JSON.parse(xhr.responseText);
+            let download = new interfaces.DownloadResponse(xhr.responseText);
             await handleMetadata(download);
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             alert(`Error ${xhr.status}: ${xhr.responseText}`);
@@ -23,9 +23,9 @@ const init = () => {
     xhr.send();
 };
 
-const handleMetadata = async (download) => {
+const handleMetadata = async (download: interfaces.DownloadResponse) => {
     // Attempt to decrypt without a password first
-    let salt = base64ToArray(download.salt);
+    let salt = download.salt;
     let pepper = location.hash.slice(1);
 
     let [key, _] = await crypto.deriveSendingKey("", salt, pepper)

@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/huh/spinner"
 	"os"
 	"strings"
-	"yeetfile/cli/config"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/transfer"
 	"yeetfile/cli/utils"
@@ -48,7 +48,7 @@ func ShowDownloadModel() {
 	if !strings.HasPrefix(downloadLink, "http") {
 		downloadSegments := strings.Split(downloadLink, "/")
 		if len(downloadSegments) == 1 {
-			downloadLink = config.UserConfig.Server + "/" + downloadLink
+			downloadLink = globals.Config.Server + "/" + downloadLink
 		}
 	}
 

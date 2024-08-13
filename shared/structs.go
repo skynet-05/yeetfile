@@ -19,11 +19,7 @@ type VaultUpload struct {
 	ProtectedKey []byte `json:"protectedKey"`
 }
 
-type ModifyVaultFolder struct {
-	Name string `json:"name"`
-}
-
-type ModifyVaultFile struct {
+type ModifyVaultItem struct {
 	Name string `json:"name"`
 }
 
@@ -40,7 +36,7 @@ type VaultItem struct {
 	Name         string    `json:"name"`
 	Size         int       `json:"size"`
 	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
-	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	SharedWith   int       `json:"sharedWith"`
 	SharedBy     string    `json:"sharedBy"`
 	LinkTag      string    `json:"linkTag"`
@@ -51,13 +47,13 @@ type VaultItem struct {
 
 type NewVaultFolder struct {
 	Name         string `json:"name"`
-	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	ParentID     string `json:"parentID"`
 }
 
 type NewPublicVaultFolder struct {
 	ID           string `json:"id"`
-	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	LinkTag      string `json:"linkTag"`
 }
 
@@ -66,7 +62,7 @@ type VaultFolder struct {
 	Name         string    `json:"name"`
 	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 	ParentID     string    `json:"parentID"`
-	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	SharedWith   int       `json:"sharedWith"`
 	SharedBy     string    `json:"sharedBy"`
 	LinkTag      string    `json:"linkTag"`
@@ -87,21 +83,21 @@ type VaultDownloadResponse struct {
 	ID           string `json:"id"`
 	Size         int    `json:"size"`
 	Chunks       int    `json:"chunks"`
-	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type PlaintextUpload struct {
 	Name       string `json:"name"`
-	Salt       []byte `json:"salt" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	Salt       []byte `json:"salt" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	Downloads  int    `json:"downloads"`
 	Expiration string `json:"expiration"`
-	Text       []byte `json:"text" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	Text       []byte `json:"text" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type DownloadResponse struct {
 	Name       string    `json:"name"`
 	ID         string    `json:"id"`
-	Salt       []byte    `json:"salt" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	Salt       []byte    `json:"salt" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	Size       int       `json:"size"`
 	Chunks     int       `json:"chunks"`
 	Downloads  int       `json:"downloads"`
@@ -110,10 +106,10 @@ type DownloadResponse struct {
 
 type Signup struct {
 	Identifier    string `json:"identifier"`
-	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type SignupResponse struct {
@@ -125,20 +121,20 @@ type SignupResponse struct {
 type VerifyAccount struct {
 	ID            string `json:"id"`
 	Code          string `json:"code"`
-	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type Login struct {
 	Identifier   string `json:"identifier"`
-	LoginKeyHash []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	LoginKeyHash []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type LoginResponse struct {
-	PublicKey    []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
-	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	PublicKey    []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type SessionInfo struct {
@@ -157,7 +153,7 @@ type ResetPassword struct {
 }
 
 type PubKeyResponse struct {
-	PublicKey []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"base64ToArray(__VALUE__)"`
+	PublicKey []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type ShareItemRequest struct {
@@ -200,4 +196,8 @@ type ShareEdit struct {
 
 type DeleteResponse struct {
 	FreedSpace int `json:"freedSpace"`
+}
+
+type DeleteAccount struct {
+	Identifier string `json:"identifier"`
 }

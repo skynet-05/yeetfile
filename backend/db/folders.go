@@ -478,7 +478,7 @@ func DeleteVaultFolder(id, ownerID string) error {
 	ownership, err := CheckFolderOwnership(ownerID, id)
 	if err != nil {
 		return err
-	} else if !ownership.CanModify {
+	} else if !ownership.IsOwner {
 		return errors.New("unable to modify read-only shared folder")
 	}
 

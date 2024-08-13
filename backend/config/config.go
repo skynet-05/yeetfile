@@ -11,6 +11,10 @@ import (
 // General configuration
 // =============================================================================
 
+const LocalStorage = "local"
+const B2Storage = "b2"
+
+var storageType = utils.GetEnvVar("YEETFILE_STORAGE", B2Storage)
 var callbackDomain = os.Getenv("YEETFILE_CALLBACK_DOMAIN")
 var defaultUserStorage = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_STORAGE", 0)
 var defaultUserSend = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_SEND", 0)
@@ -140,6 +144,7 @@ var btcPayBilling = BTCPayBillingConfig{
 // =============================================================================
 
 type ServerConfig struct {
+	StorageType        string
 	CallbackDomain     string
 	DefaultUserStorage int
 	DefaultUserSend    int
@@ -162,6 +167,7 @@ func init() {
 		!utils.IsStructMissingAnyField(btcPayBilling)
 
 	YeetFileConfig = ServerConfig{
+		StorageType:        storageType,
 		CallbackDomain:     callbackDomain,
 		DefaultUserStorage: defaultUserStorage,
 		DefaultUserSend:    defaultUserSend,
@@ -180,4 +186,10 @@ func init() {
 		email.Configured,
 		stripeBilling.Configured,
 		btcPayBilling.Configured)
+
+	if IsDebugMode {
+		log.Printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n")
+		log.Printf("DEBUG MODE IS ACTIVE! DO NOT USE THIS SETTING IN PRODUCTION!\n\n")
+		log.Printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+	}
 }

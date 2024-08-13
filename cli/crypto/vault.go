@@ -7,10 +7,6 @@ import (
 )
 
 var CLIKeyEnvVar = "YEETFILE_CLI_KEY"
-
-var pubKey []byte
-var privKey []byte
-
 var KeysNotIngestedError = errors.New("keys have not been ingested")
 
 type CryptoCtx struct {
@@ -18,6 +14,11 @@ type CryptoCtx struct {
 	DecryptionKey []byte
 	EncryptFunc   CryptFunc
 	DecryptFunc   CryptFunc
+}
+
+type KeyPair struct {
+	PrivateKey []byte
+	PublicKey  []byte
 }
 
 func ReadCLIKey() []byte {
@@ -31,16 +32,18 @@ func ReadCLIKey() []byte {
 
 // IngestKeys takes the private and public keys and stores them as pubKey
 // and privKey
-func IngestKeys(privateKey, publicKey []byte) {
-	privKey = privateKey
-	pubKey = publicKey
+func IngestKeys(privateKey, publicKey []byte) KeyPair {
+	return KeyPair{
+		PrivateKey: privateKey,
+		PublicKey:  publicKey,
+	}
 }
 
 // DeriveVaultCryptoContext decrypts a vault item's specific key using the key
 // sequence returned from the server and returns the key alongside the proper
 // functions for encrypting and decrypting content
-func DeriveVaultCryptoContext(keySequence [][]byte) (CryptoCtx, error) {
-	if pubKey == nil || privKey == nil {
+func (kp KeyPair) DeriveVaultCryptoContext(keySequence [][]byte) (CryptoCtx, error) {
+	if kp.PublicKey == nil || kp.PrivateKey == nil {
 		return CryptoCtx{}, KeysNotIngestedError
 	}
 
@@ -50,13 +53,13 @@ func DeriveVaultCryptoContext(keySequence [][]byte) (CryptoCtx, error) {
 	var decryptFunc CryptFunc
 	var encryptFunc CryptFunc
 	if len(keySequence) > 0 {
-		decryptedFolderKey, err = UnwindKeySequence(keySequence)
+		decryptedFolderKey, err = kp.UnwindKeySequence(keySequence)
 		encryptKey = decryptedFolderKey
 		decryptFunc = DecryptChunk
 		encryptFunc = EncryptChunk
 	} else {
-		decryptedFolderKey = privKey
-		encryptKey = pubKey
+		decryptedFolderKey = kp.PrivateKey
+		encryptKey = kp.PublicKey
 		decryptFunc = DecryptRSA
 		encryptFunc = EncryptRSA
 	}
@@ -72,12 +75,12 @@ func DeriveVaultCryptoContext(keySequence [][]byte) (CryptoCtx, error) {
 // UnwindKeySequence takes the key sequence for a vault folder and decrypts
 // each one in order, returning the final key which can be used to decrypt the
 // current folder key
-func UnwindKeySequence(keySequence [][]byte) ([]byte, error) {
+func (kp KeyPair) UnwindKeySequence(keySequence [][]byte) ([]byte, error) {
 	var parentKey []byte
 	var err error
 	for _, key := range keySequence {
 		if parentKey == nil {
-			parentKey, err = DecryptRSA(privKey, key)
+			parentKey, err = DecryptRSA(kp.PrivateKey, key)
 			if err != nil {
 				log.Println("Error decrypting root folder key")
 				return nil, err

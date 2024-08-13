@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"yeetfile/cli/config"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
@@ -300,9 +300,7 @@ func showLinkModel(title, id, pepper string) {
 	resource := fmt.Sprintf("%s#%s",
 		shared.EscapeString(id),
 		shared.EscapeString(pepper))
-	link := fmt.Sprintf("%s/%s",
-		config.UserConfig.Server,
-		resource)
+	link := fmt.Sprintf("%s/%s", globals.Config.Server, resource)
 
 	err := huh.NewForm(huh.NewGroup(
 		huh.NewNote().Title(utils.GenerateTitle(title)),

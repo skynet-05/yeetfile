@@ -161,11 +161,6 @@ func AddVaultItem(userID string, item shared.VaultUpload) (string, error) {
 		return "", errors.New("file length cannot be 0")
 	}
 
-	itemID := shared.GenRandomString(VaultIDLength)
-	for VaultItemIDExists(itemID) {
-		itemID = shared.GenRandomString(VaultIDLength)
-	}
-
 	if len(item.FolderID) == 0 {
 		// Assume user's root folder
 		item.FolderID = userID
@@ -177,6 +172,11 @@ func AddVaultItem(userID string, item shared.VaultUpload) (string, error) {
 		return "", err
 	} else if !ownership.CanModify {
 		return "", ReadOnlyError
+	}
+
+	itemID := shared.GenRandomString(VaultIDLength)
+	for VaultItemIDExists(itemID) {
+		itemID = shared.GenRandomString(VaultIDLength)
 	}
 
 	s := `INSERT INTO vault
@@ -347,8 +347,17 @@ func DeleteSharedFileByRefID(id, ownerID string) error {
 
 // GetFileFolderID returns the parent folder ID for a particular file
 func GetFileFolderID(fileID, ownerID string) (string, error) {
-	s := `SELECT folder_id FROM vault WHERE id = $1`
-	rows, err := db.Query(s, fileID)
+	s := `WITH result_count AS (
+	          SELECT COUNT(*) AS c FROM vault WHERE ref_id = $1
+	      )
+	      SELECT folder_id
+	      FROM vault
+	      WHERE ref_id = $1
+	      AND (CASE
+	          WHEN (SELECT c FROM result_count) = 1 THEN TRUE
+	          ELSE owner_id = $2
+	      END);`
+	rows, err := db.Query(s, fileID, ownerID)
 	if err != nil {
 		log.Printf("Error retrieving folder ID: %v\n", err)
 		return "", err
@@ -389,7 +398,7 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 
 	s := `SELECT id, b2_id, ref_id, name, length, chunks, protected_key
 	      FROM vault
-	      WHERE id = $1`
+	      WHERE ref_id = $1`
 
 	var rows *sql.Rows
 	if folderID == ownerID {

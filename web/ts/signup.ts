@@ -162,7 +162,7 @@ const submitSignupForm = (submitBtn, email, userKeys) => {
         sendData.rootFolderKey = Uint8Array.from(userKeys["rootFolderKey"])
     }
 
-    xhr.send(JSON.stringify(sendData));
+    xhr.send(JSON.stringify(sendData, jsonReplacer));
 }
 
 const generateAccountIDSignupHTML = (id, img) => {

@@ -425,7 +425,7 @@ const loadVault = async (data) => {
         let tmpKey = await crypto.importKey(itemKey);
         item.name = await crypto.decryptString(tmpKey, hexToBytes(item.name));
 
-        vaultItems[item.id] = {
+        vaultItems[item.refID] = {
             id: item.id,
             name: item.name,
             encKey: item.protectedKey,
@@ -481,13 +481,13 @@ const generateFolderRow = async (item) => {
 
 const generateItemRow = async (item) => {
     let classes = item.sharedBy.length > 0 ? "shared-link" : "file-link";
-    let link = `<a id="${itemIDPrefix}-${item.id}" class="${classes}" href="#">${item.name}</a>`
+    let link = `<a id="${itemIDPrefix}-${item.refID}" class="${classes}" href="#">${item.name}</a>`
     return generateRow(
         link,
         item.name,
         calcFileSize(item.size - constants.TotalOverhead),
         formatDate(item.modified),
-        item.id,
+        item.refID,
         false,
         item.sharedWith,
         item.sharedBy);

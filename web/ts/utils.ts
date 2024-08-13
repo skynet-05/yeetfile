@@ -191,3 +191,17 @@ const updateButton = (
     btn.disabled = disabled;
     btn.innerText = label;
 }
+
+/**
+ * Replace JSON fields with true arrays instead of objects when parsing
+ * Uint8Array elements.
+ * @param key
+ * @param value
+ */
+const jsonReplacer = (key: string, value: any) => {
+    if (value instanceof Uint8Array) {
+        return value.length === 0 ? [] : Array.from(value);
+    }
+
+    return value;
+}

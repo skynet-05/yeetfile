@@ -2,19 +2,12 @@ package transfer
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"sync"
-	"yeetfile/cli/config"
 	"yeetfile/cli/crypto"
-	"yeetfile/cli/requests"
-	"yeetfile/cli/utils"
-	"yeetfile/shared"
+	"yeetfile/cli/globals"
 	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
@@ -37,7 +30,12 @@ type DownloadChunk struct {
 
 // worker sends chunked and encrypted file data to the endpoint specified in the
 // provided FileChunk.
-func downloadWorker(wCtx WorkerCtx, chunks <-chan DownloadChunk, progress func(), wg *sync.WaitGroup) {
+func downloadWorker(
+	wCtx WorkerCtx,
+	chunks <-chan DownloadChunk,
+	progress func(),
+	wg *sync.WaitGroup,
+) {
 	defer wg.Done()
 	for chunk := range chunks {
 		select {
@@ -59,14 +57,11 @@ func downloadWorker(wCtx WorkerCtx, chunks <-chan DownloadChunk, progress func()
 }
 
 func fetchChunk(chunk DownloadChunk) ([]byte, error) {
-	resp, err := requests.GetRequest(chunk.Endpoint)
+	body, err := globals.API.DownloadFileChunk(chunk.Endpoint)
 	if err != nil {
 		return nil, err
-	} else if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("server error")
 	}
 
-	body, _ := io.ReadAll(resp.Body)
 	decryptedData, err := crypto.DecryptChunk(chunk.Key, body)
 	if err != nil {
 		return nil, err
@@ -118,21 +113,12 @@ func InitVaultDownload(
 	key []byte,
 	file *os.File,
 ) (PendingDownload, error) {
-	url := endpoints.DownloadVaultFileMetadata.Format(config.UserConfig.Server, id)
-	resp, err := requests.GetRequest(url)
-	if err != nil {
-		return PendingDownload{}, err
-	} else if resp.StatusCode != http.StatusOK {
-		return PendingDownload{}, utils.ParseHTTPError(resp)
-	}
-
-	var metadata shared.VaultDownloadResponse
-	err = json.NewDecoder(resp.Body).Decode(&metadata)
+	metadata, err := globals.API.GetVaultItemMetadata(id)
 	if err != nil {
 		return PendingDownload{}, err
 	}
 
-	p := initDownload(id, config.UserConfig.Server, key, file, metadata.Chunks)
+	p := initDownload(id, globals.Config.Server, key, file, metadata.Chunks)
 	p.UnformattedEndpoint = endpoints.DownloadVaultFileData
 	return p, nil
 }
@@ -191,14 +177,7 @@ func (p PendingDownload) DownloadData(progress func()) error {
 
 func DownloadText(id, server string, key []byte) ([]byte, error) {
 	url := endpoints.DownloadSendFileData.Format(server, id, "1")
-	resp, err := requests.GetRequest(url)
-	if err != nil {
-		return nil, err
-	} else if resp.StatusCode != http.StatusOK {
-		return nil, utils.ParseHTTPError(resp)
-	}
-
-	body, _ := io.ReadAll(resp.Body)
+	body, err := globals.API.DownloadFileChunk(url)
 	decryptedData, err := crypto.DecryptChunk(key, body)
 	if err != nil {
 		return nil, err

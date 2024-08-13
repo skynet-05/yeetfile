@@ -2,21 +2,17 @@ package download
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/charmbracelet/huh"
-	"io"
-	"net/http"
 	"strings"
 	"time"
 	"yeetfile/cli/crypto"
-	"yeetfile/cli/requests"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
-	"yeetfile/shared/endpoints"
 )
 
 var decryptError = errors.New("decryption error")
@@ -88,23 +84,7 @@ func prepDownload(link string) (PreparedDownload, error) {
 }
 
 func (d DownloadResource) fetchMetadata() (shared.DownloadResponse, error) {
-	url := endpoints.DownloadSendFileMetadata.Format(d.Server, d.ItemID)
-	resp, err := requests.GetRequest(url)
-	if err != nil {
-		return shared.DownloadResponse{}, err
-	} else if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		msg := fmt.Sprintf("server error [%d]: %s", resp.StatusCode, body)
-		return shared.DownloadResponse{}, errors.New(msg)
-	}
-
-	var downloadResponse shared.DownloadResponse
-	err = json.NewDecoder(resp.Body).Decode(&downloadResponse)
-	if err != nil {
-		return shared.DownloadResponse{}, err
-	}
-
-	return downloadResponse, nil
+	return globals.API.FetchSendFileMetadata(d.Server, d.ItemID)
 }
 
 func getPassword(err error) (string, error) {

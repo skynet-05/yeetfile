@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/mail"
 	"yeetfile/backend/server/html"
 	"yeetfile/backend/server/session"
+	"yeetfile/backend/server/transfer/vault"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
 )
@@ -122,22 +124,46 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // AccountHandler handles fetching and returning the user's account information.
-func AccountHandler(w http.ResponseWriter, req *http.Request) {
+func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 	if !session.IsValidSession(req) {
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
 		return
 	}
 
-	s, _ := session.GetSession(req)
-	id := session.GetSessionUserID(s)
-	user, err := db.GetUserByID(id)
-	if err != nil {
-		log.Printf("Error fetching user by id: %v\n", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	switch req.Method {
+	case http.MethodDelete:
+		if !config.IsDebugMode {
+			// Currently only allow deleting account in debug mode
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-	_, _ = w.Write([]byte("TODO: " + user.Email))
+		err := vault.DeleteVaultFolder(id, id, false)
+		if err != nil {
+			log.Printf("Error deleting user root folder: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		err = db.DeleteUser(id)
+		if err != nil {
+			log.Printf("Error deleting user: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	case http.MethodGet:
+		user, err := db.GetUserByID(id)
+		if err != nil {
+			log.Printf("Error fetching user by id: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		_, _ = w.Write([]byte("TODO: " + user.Email))
+	}
 }
 
 // VerifyEmailHandler handles account verification using the link sent to a user's

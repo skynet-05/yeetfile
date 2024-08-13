@@ -68,7 +68,7 @@ func Run(addr string) {
 		{GET, endpoints.Logout, auth.LogoutHandler},
 		{POST, endpoints.Login, auth.LoginHandler},
 		{POST, endpoints.Signup, auth.SignupHandler},
-		{GET | PUT, endpoints.Account, auth.AccountHandler},
+		{GET | PUT | DELETE, endpoints.Account, AuthMiddleware(auth.AccountHandler)},
 		{GET | POST, endpoints.Forgot, auth.ForgotPasswordHandler},
 		{POST, endpoints.Reset, auth.ResetPasswordHandler},
 		{GET, endpoints.PubKey, LimiterMiddleware(AuthMiddleware(auth.PubKeyHandler))},

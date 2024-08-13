@@ -712,6 +712,16 @@ func ExpDateRollover(now time.Time, exp time.Time) bool {
 	return exp.Day() > now.Day() && now.AddDate(0, 0, 1).Month() > now.Month()
 }
 
+func DeleteUser(id string) error {
+	s := `DELETE FROM users WHERE id=$1`
+	_, err := db.Exec(s, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func init() {
 	var err error
 	defaultExp, err = time.Parse(time.RFC1123, time.RFC1123)

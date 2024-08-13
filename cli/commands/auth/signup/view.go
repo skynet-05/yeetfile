@@ -11,6 +11,7 @@ import (
 	"image"
 	"log"
 	"strings"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
@@ -104,7 +105,7 @@ func showEmailSignupModel(email, password string) {
 	err := spinner.New().Title("Creating account...").Action(
 		func() {
 			signup := CreateSignupRequest(email, password)
-			_, signupErr = SubmitSignupForm(signup)
+			_, signupErr = globals.API.SubmitSignup(signup)
 		}).Run()
 	utils.HandleCLIError("", err)
 	utils.HandleCLIError("error creating account", signupErr)
@@ -141,7 +142,7 @@ func showEmailSignupModel(email, password string) {
 		var verifyErr error
 		err = spinner.New().Title("Verifying account...").Action(
 			func() {
-				verifyErr = VerifyEmailAccount(email, code)
+				verifyErr = globals.API.VerifyEmail(email, code)
 			}).Run()
 		utils.HandleCLIError("", err)
 
@@ -167,13 +168,17 @@ func showIDOnlySignupModel(password string) {
 	var signupErr error
 	err := spinner.New().Title("Creating account...").Action(
 		func() {
-			response, signupErr = SubmitSignupForm(shared.Signup{
-				Identifier:    "",
-				LoginKeyHash:  nil,
-				PublicKey:     nil,
-				ProtectedKey:  nil,
-				RootFolderKey: nil,
-			})
+			// Submit blank signup form to indicate an account ID
+			// only signup
+			response, signupErr = globals.API.SubmitSignup(
+				shared.Signup{
+					Identifier:    "",
+					LoginKeyHash:  nil,
+					PublicKey:     nil,
+					ProtectedKey:  nil,
+					RootFolderKey: nil,
+				},
+			)
 		}).Run()
 	utils.HandleCLIError("", err)
 	utils.HandleCLIError("error creating account", signupErr)
@@ -191,7 +196,7 @@ func showIDOnlySignupModel(password string) {
 						response.Identifier,
 						password,
 						verificationCode)
-					verifyErr = FinalizeAccount(verify)
+					verifyErr = globals.API.VerifyAccount(verify)
 				}).Run()
 			utils.HandleCLIError("", err)
 			if verifyErr != nil && verifyErr != huh.ErrUserAborted {

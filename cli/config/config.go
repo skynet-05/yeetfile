@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"yeetfile/cli/utils"
 )
@@ -23,11 +24,8 @@ type Paths struct {
 type Config struct {
 	Server      string `yaml:"server,omitempty"`
 	DefaultView string `yaml:"default_view,omitempty"`
+	Paths       Paths
 }
-
-var UserConfig Config
-var UserConfigPaths Paths
-var Session string
 
 var baseConfigPath = filepath.Join(".config", "yeetfile")
 
@@ -40,17 +38,29 @@ const publicKeyName = "pub-key"
 //go:embed config.yml
 var defaultConfig string
 
-// SetupConfigDir ensures that the directory necessary for yeetfile's config
+// setupConfigDir ensures that the directory necessary for yeetfile's config
 // have been created. This path defaults to $HOME/.config/yeetfile.
-func SetupConfigDir() (Paths, error) {
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		return Paths{}, err
+func setupConfigDir() (Paths, error) {
+	var localConfig string
+	var configErr error
+	if runtime.GOOS == "windows" {
+		baseDir, err := os.UserConfigDir()
+		if err != nil {
+			return Paths{}, err
+		}
+
+		localConfig, configErr = makeConfigDirectories(baseDir, "yeetfile")
+	} else {
+		baseDir, err := os.UserHomeDir()
+		if err != nil {
+			return Paths{}, err
+		}
+
+		localConfig, configErr = makeConfigDirectories(baseDir, baseConfigPath)
 	}
 
-	localConfig, err := makeConfigDirectories(dirname)
-	if err != nil {
-		return Paths{}, err
+	if configErr != nil {
+		return Paths{}, configErr
 	}
 
 	return Paths{
@@ -66,7 +76,7 @@ func SetupConfigDir() (Paths, error) {
 // OS's temporary directory. Used for testing.
 func setupTempConfigDir() (Paths, error) {
 	dirname := os.TempDir()
-	localConfig, err := makeConfigDirectories(dirname)
+	localConfig, err := makeConfigDirectories(dirname, baseConfigPath)
 	if err != nil {
 		return Paths{}, err
 	}
@@ -82,8 +92,8 @@ func setupTempConfigDir() (Paths, error) {
 
 // makeConfigDirectories creates the necessary directories for storing the
 // user's local yeetfile config
-func makeConfigDirectories(dirname string) (string, error) {
-	localConfig := filepath.Join(dirname, baseConfigPath)
+func makeConfigDirectories(baseDir, configPath string) (string, error) {
+	localConfig := filepath.Join(baseDir, configPath)
 	err := os.MkdirAll(localConfig, os.ModePerm)
 	if err != nil {
 		return "", err
@@ -93,10 +103,10 @@ func makeConfigDirectories(dirname string) (string, error) {
 }
 
 // ReadConfig reads the config file (config.yml) for current configuration
-func ReadConfig(paths Paths) (Config, error) {
-	if _, err := os.Stat(paths.config); err == nil {
-		config := Config{}
-		data, err := os.ReadFile(paths.config)
+func ReadConfig(p Paths) (Config, error) {
+	if _, err := os.Stat(p.config); err == nil {
+		config := Config{Paths: p}
+		data, err := os.ReadFile(p.config)
 		if err != nil {
 			return config, err
 		}
@@ -113,18 +123,18 @@ func ReadConfig(paths Paths) (Config, error) {
 
 		return config, nil
 	} else {
-		err := setupDefaultConfig(paths)
+		err = setupDefaultConfig(p)
 		if err != nil {
 			return Config{}, err
 		}
-		return ReadConfig(paths)
+		return ReadConfig(p)
 	}
 }
 
 // setupDefaultConfig copies default config files from the repo to the user's
 // config directory
-func setupDefaultConfig(paths Paths) error {
-	err := utils.CopyToFile(defaultConfig, paths.config)
+func setupDefaultConfig(p Paths) error {
+	err := utils.CopyToFile(defaultConfig, p.config)
 	if err != nil {
 		return err
 	}
@@ -134,12 +144,12 @@ func setupDefaultConfig(paths Paths) error {
 %s
 %s`, sessionName, encPrivateKeyName, publicKeyName)
 
-	err = utils.CopyToFile(defaultGitignore, paths.gitignore)
+	err = utils.CopyToFile(defaultGitignore, p.gitignore)
 	if err != nil {
 		return err
 	}
 
-	err = utils.CopyToFile("", paths.session)
+	err = utils.CopyToFile("", p.session)
 	if err != nil {
 		return err
 	}
@@ -149,9 +159,8 @@ func setupDefaultConfig(paths Paths) error {
 
 // SetSession sets the session to the value returned by the server when signing
 // up or logging in, and saves it to a (gitignored) file in the config directory
-func (paths Paths) SetSession(sessionVal string) error {
-	Session = sessionVal
-	err := utils.CopyToFile(sessionVal, paths.session)
+func (c Config) SetSession(sessionVal string) error {
+	err := utils.CopyToFile(sessionVal, c.Paths.session)
 	if err != nil {
 		return err
 	}
@@ -160,38 +169,38 @@ func (paths Paths) SetSession(sessionVal string) error {
 }
 
 // ReadSession reads the value in $config_path/session
-func (paths Paths) ReadSession() string {
-	if _, err := os.Stat(paths.session); err == nil {
-		session, err := os.ReadFile(paths.session)
+func (c Config) ReadSession() []byte {
+	if _, err := os.Stat(c.Paths.session); err == nil {
+		session, err := os.ReadFile(c.Paths.session)
 		if err != nil {
-			return ""
+			return nil
 		}
 
-		return string(session)
+		return session
 	} else {
-		return ""
+		return nil
 	}
 }
 
-func (paths Paths) Reset() error {
-	if _, err := os.Stat(paths.session); err == nil {
-		err := os.Remove(paths.session)
+func (c Config) Reset() error {
+	if _, err := os.Stat(c.Paths.session); err == nil {
+		err := os.Remove(c.Paths.session)
 		if err != nil {
 			log.Println("error removing session file")
 			return err
 		}
 	}
 
-	if _, err := os.Stat(paths.encPrivateKey); err == nil {
-		err = os.Remove(paths.encPrivateKey)
+	if _, err := os.Stat(c.Paths.encPrivateKey); err == nil {
+		err = os.Remove(c.Paths.encPrivateKey)
 		if err != nil {
 			log.Println("error removing private key")
 			return err
 		}
 	}
 
-	if _, err := os.Stat(paths.publicKey); err == nil {
-		err = os.Remove(paths.publicKey)
+	if _, err := os.Stat(c.Paths.publicKey); err == nil {
+		err = os.Remove(c.Paths.publicKey)
 		if err != nil {
 			log.Println("error removing public key")
 			return err
@@ -203,31 +212,31 @@ func (paths Paths) Reset() error {
 
 // SetKeys writes the encrypted private key bytes and the (unencrypted) public
 // key bytes to their respective file paths
-func (paths Paths) SetKeys(encPrivateKey, publicKey []byte) error {
-	err := utils.CopyBytesToFile(encPrivateKey, paths.encPrivateKey)
+func (c Config) SetKeys(encPrivateKey, publicKey []byte) error {
+	err := utils.CopyBytesToFile(encPrivateKey, c.Paths.encPrivateKey)
 	if err != nil {
 		return err
 	}
 
-	err = utils.CopyBytesToFile(publicKey, paths.publicKey)
+	err = utils.CopyBytesToFile(publicKey, c.Paths.publicKey)
 	return err
 }
 
 // GetKeys returns the user's encrypted private key and their public key from
 // the config directory. Returns private key, public key, and error.
-func (paths Paths) GetKeys() ([]byte, []byte, error) {
+func (c Config) GetKeys() ([]byte, []byte, error) {
 	var privateKey []byte
 	var publicKey []byte
 
-	_, privKeyErr := os.Stat(paths.encPrivateKey)
-	_, pubKeyErr := os.Stat(paths.publicKey)
+	_, privKeyErr := os.Stat(c.Paths.encPrivateKey)
+	_, pubKeyErr := os.Stat(c.Paths.publicKey)
 
 	if privKeyErr != nil || pubKeyErr != nil {
 		return nil, nil, errors.New("key files do not exist in config dir")
 	}
 
-	privateKey, privKeyErr = os.ReadFile(paths.encPrivateKey)
-	publicKey, pubKeyErr = os.ReadFile(paths.publicKey)
+	privateKey, privKeyErr = os.ReadFile(c.Paths.encPrivateKey)
+	publicKey, pubKeyErr = os.ReadFile(c.Paths.publicKey)
 
 	if privKeyErr != nil || pubKeyErr != nil {
 		errMsg := fmt.Sprintf("error reading key files:\n"+
@@ -239,19 +248,19 @@ func (paths Paths) GetKeys() ([]byte, []byte, error) {
 	return privateKey, publicKey, nil
 }
 
-func init() {
+func InitConfig() *Config {
 	var err error
 
 	// Setup config dir
-	UserConfigPaths, err = SetupConfigDir()
+	userConfigPaths, err := setupConfigDir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	UserConfig, err = ReadConfig(UserConfigPaths)
+	userConfig, err := ReadConfig(userConfigPaths)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	Session = UserConfigPaths.ReadSession()
+	return &userConfig
 }

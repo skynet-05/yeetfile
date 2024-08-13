@@ -1,20 +1,30 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.20 as builder
+FROM alpine:latest AS builder
 
 WORKDIR /app
+
+RUN apk add --update go npm make
+RUN npm install -g typescript
 
 COPY go.mod go.sum ./
 RUN go mod download
 
+COPY backend/ ./backend
+COPY utils/ ./utils
 COPY web/ ./web
 COPY shared/ ./shared
+COPY tsconfig.json .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -tags yeetfile-web -o /yeetfile-web ./web
+COPY Makefile .
+
+RUN make backend
 
 # Server image
 FROM alpine:latest
-COPY --from=builder /yeetfile-web /
+WORKDIR /app
+COPY --from=builder /app/yeetfile-server /app
+RUN chmod +x /app/yeetfile-server
 EXPOSE 8090
 
-CMD ["/yeetfile-web"]
+CMD ["/app/yeetfile-server"]

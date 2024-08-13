@@ -1,8 +1,10 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"time"
+	"yeetfile/backend/config"
 	"yeetfile/shared"
 )
 
@@ -70,8 +72,18 @@ func NewVerification(
 // table. If the code matches the user's password hash and protected key are
 // returned so that a new user can be added to the `users` table.
 func VerifyUser(identity string, code string) (NewAccountValues, error) {
-	rows, err := db.Query(`SELECT pw_hash, protected_key, public_key, root_folder_key FROM verify 
+	var rows *sql.Rows
+	var err error
+
+	// Skip code verification in debug mode
+	if config.IsDebugMode {
+		rows, err = db.Query(`SELECT pw_hash, protected_key, public_key, root_folder_key FROM verify 
+                               WHERE identity = $1`, identity)
+	} else {
+		rows, err = db.Query(`SELECT pw_hash, protected_key, public_key, root_folder_key FROM verify 
                                WHERE identity = $1 AND code = $2`, identity, code)
+	}
+
 	if err != nil {
 		return NewAccountValues{}, err
 	}

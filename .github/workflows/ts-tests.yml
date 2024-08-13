@@ -1,0 +1,19 @@
+on: [push, pull_request]
+name: Tests (TypeScript)
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 21
+      - run: |
+          npm install --yes typescript
+          go run utils/generate_typescript.go ./web/ts
+          tsc --project tsconfig.tests.json
+          node web/ts/tests/tests.js

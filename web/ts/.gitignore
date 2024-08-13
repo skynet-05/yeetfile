@@ -1,3 +1,4 @@
 endpoints.ts
 constants.ts
 interfaces.ts
+*.js

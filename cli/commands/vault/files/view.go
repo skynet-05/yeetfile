@@ -7,12 +7,16 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"os"
 	"strings"
 	"yeetfile/cli/commands/vault/internal"
+	"yeetfile/cli/crypto"
+	"yeetfile/cli/globals"
 	"yeetfile/cli/models"
 	"yeetfile/cli/styles"
+	"yeetfile/cli/utils"
 )
 
 type Model struct {
@@ -406,7 +410,41 @@ func NewModel(folderID string) (Model, error) {
 	return m, err
 }
 
+func ShowVaultPasswordPromptModel(errorMsgs ...string) ([]byte, error) {
+	var password string
+	desc := "Enter your vault session password below to continue"
+	if len(errorMsgs) > 0 {
+		desc = errorMsgs[0]
+	}
+
+	err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().Title(utils.GenerateTitle(
+				"Vault Session Password")).
+				Description(desc),
+			huh.NewInput().Title("Password").
+				EchoMode(huh.EchoModePassword).
+				Value(&password),
+			huh.NewConfirm().Affirmative("Submit").Negative(""),
+		),
+	).WithTheme(styles.Theme).Run()
+
+	return []byte(password), err
+}
+
 func RunFilesModel(m Model, event internal.Event) (Model, error) {
+	if keyPair.PublicKey == nil || keyPair.PrivateKey == nil {
+		var keyErr error
+		keyPair, keyErr = unlockVaultKeys()
+		if keyErr != nil {
+			errMsg := fmt.Sprintf(
+				"Error unlocking vault keys: %v\n",
+				keyErr)
+			styles.PrintErrStr(errMsg)
+			os.Exit(1)
+		}
+	}
+
 	if m.init == false {
 		m, _ = NewModel("")
 	}
@@ -417,4 +455,40 @@ func RunFilesModel(m Model, event internal.Event) (Model, error) {
 	p := tea.NewProgram(m)
 	model, err := p.Run()
 	return model.(Model), err
+}
+
+func unlockVaultKeys() (crypto.KeyPair, error) {
+	var kp crypto.KeyPair
+
+	cliKey := crypto.ReadCLIKey()
+	encPrivateKey, publicKey, err := globals.Config.GetKeys()
+	if err != nil {
+		errMsg := fmt.Sprintf("Error reading key files: %v\n", err)
+		styles.PrintErrStr(errMsg)
+	}
+	if privateKey, err := crypto.DecryptChunk(cliKey, encPrivateKey); err == nil {
+		kp = crypto.IngestKeys(privateKey, publicKey)
+	} else {
+		var cliKeyFunc func(errMsgs ...string) error
+		cliKeyFunc = func(errMsgs ...string) error {
+			cliPassword, err := ShowVaultPasswordPromptModel(errMsgs...)
+			if err != nil {
+				return err
+			}
+			key := crypto.DerivePBKDFKey(cliPassword, cliKey)
+			if privateKey, err := crypto.DecryptChunk(key, encPrivateKey); err == nil {
+				kp = crypto.IngestKeys(privateKey, publicKey)
+				return nil
+			} else {
+				return cliKeyFunc("Incorrect password")
+			}
+		}
+
+		err = cliKeyFunc()
+		if err != nil {
+			return crypto.KeyPair{}, err
+		}
+	}
+
+	return kp, nil
 }

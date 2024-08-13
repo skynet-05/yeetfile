@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/backend/cache"
+	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/transfer"
 	"yeetfile/backend/utils"
@@ -50,7 +51,7 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, meta.Salt, false)
 	b2Upload := db.CreateNewUpload(id, meta.Name)
 
-	exp := utils.StrToDuration(meta.Expiration)
+	exp := utils.StrToDuration(meta.Expiration, config.IsDebugMode)
 	db.SetFileExpiry(id, meta.Downloads, time.Now().Add(exp).UTC())
 
 	var b2Err error
@@ -138,7 +139,7 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	id, _ := db.InsertMetadata(1, plaintextUpload.Name, plaintextUpload.Salt, true)
 	b2Upload := db.CreateNewUpload(id, plaintextUpload.Name)
 
-	exp := utils.StrToDuration(plaintextUpload.Expiration)
+	exp := utils.StrToDuration(plaintextUpload.Expiration, config.IsDebugMode)
 	db.SetFileExpiry(id, plaintextUpload.Downloads, time.Now().Add(exp).UTC())
 
 	err = transfer.InitB2Upload(b2Upload)

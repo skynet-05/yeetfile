@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
+	"yeetfile/backend/config"
 	"yeetfile/backend/utils"
 )
 
@@ -13,15 +13,11 @@ var B2 b2.Service
 var B2BucketID string
 
 const defaultStoragePath = "uploads"
-const localStorageKey = "local"
-const b2StorageKey = "b2"
 
 func init() {
 	var err error
 
-	storageEnvVar := utils.GetEnvVar("YEETFILE_STORAGE", b2StorageKey)
-	storageType := strings.ToLower(storageEnvVar)
-	if storageType == localStorageKey {
+	if config.YeetFileConfig.StorageType == config.LocalStorage {
 		log.Println("Setting up local storage...")
 		// Storage will bypass B2 and just store encrypted files on the
 		// machine in the specified path or "uploads/"
@@ -41,7 +37,7 @@ func init() {
 		} else {
 			B2, err = b2.AuthorizeDummyAccount(path)
 		}
-	} else if storageType == b2StorageKey {
+	} else if config.YeetFileConfig.StorageType == config.B2Storage {
 		B2BucketID = os.Getenv("B2_BUCKET_ID")
 
 		if len(B2BucketID) == 0 {
@@ -55,7 +51,8 @@ func init() {
 	} else {
 		log.Fatalf("Invalid storage type '%s', "+
 			"should be either '%s' or '%s'",
-			storageType, b2StorageKey, localStorageKey)
+			config.YeetFileConfig.StorageType,
+			config.B2Storage, config.LocalStorage)
 	}
 
 	if err != nil {

@@ -88,7 +88,7 @@ func ShowLoginModel() {
 			)
 		}
 
-		err = LogIn(identifier, password, vaultKey)
+		err = LogIn(identifier, password, sessionKey, vaultKey)
 		if err != nil {
 			return runFunc(err.Error())
 		}
