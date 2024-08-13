@@ -136,7 +136,7 @@ You can quickly create your own instance of YeetFile using `docker compose`:
 `docker compose up`
 
 This will create the Postgres db and the server running on http://localhost:8090. You can modify the docker-compose.yml
-to use an external data volume by running `docker volume create --name=yeetfile-data` and including the following in
+to use an external data volume by running `docker volume create --name=yeetfile_data` and including the following in
 your docker-compose.yml:
 
 ```
@@ -145,8 +145,8 @@ volumes:
     external: true
 ```
 
-You should create your own `.env` file with whichever variables needed to customize your instance 
-(see: [Environment Variables](#environment-variables)). 
+You should create your own `.env` file with whichever variables needed to customize your instance
+(see: [Environment Variables](#environment-variables)).
 
 ## Development
 
@@ -246,8 +246,8 @@ in the official YeetFile instance.
 
 ## Support
 
-For feature requests and bugs, you can [create an issue on 
-GitHub](https://github.com/benbusby/yeetfile/issues), or [submit 
+For feature requests and bugs, you can [create an issue on
+GitHub](https://github.com/benbusby/yeetfile/issues), or [submit
 a ticket on SourceHut (account not required)](https://todo.sr.ht/~benbusby/yeetfile).
 
 For issues related to the official YeetFile instance (https://yeetfile.com),

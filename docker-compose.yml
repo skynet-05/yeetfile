@@ -5,7 +5,7 @@ services:
     container_name: database
     hostname: postgres
     volumes:
-      - data:/var/lib/postgresql/data
+      - yeetfile_data:/var/lib/postgresql/data
       - ./backend/db/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       POSTGRES_HOST_AUTH_METHOD: md5
@@ -32,6 +32,6 @@ services:
       YEETFILE_DB_HOST: "db"
 
 volumes:
-  data:
+  yeetfile_data:
     external: false
-    #external: true # Run "docker volume create --name=yeetfile-data" beforehand
+    #external: true # Run "docker volume create --name=yeetfile_data" beforehand
