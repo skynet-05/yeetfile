@@ -45,13 +45,21 @@ locally, and the server is incapable of decrypting any transmitted content.
 
 ### YeetFile Vault
 
+![vault example](https://docs.yeetfile.com/images/vault-example.png)
+
 - File storage + folder creation
 - File + folder sharing w/ YeetFile users
   - Read/write permissions per user
 - No upload size limit
 
+___
+
 ### YeetFile Send
 
+![send example](https://docs.yeetfile.com/images/send-example.png)
+
+- Send files and text with shareable links
+  - Links don't require an account to open
 - Configurable upload settings
   - Expiration date/time
     - Configurable to N minutes/hours/days
@@ -60,6 +68,8 @@ locally, and the server is incapable of decrypting any transmitted content.
     - Max 10 downloads
   - Optional password protection
 - Free text transfers (up to 2000 characters)
+
+___
 
 ### Accounts
 
@@ -71,6 +81,8 @@ locally, and the server is incapable of decrypting any transmitted content.
   - Available for <$3/month
   - Not required when self-hosting
   - Ability to rotate payment ID to remove record of payment
+
+___
 
 ### Other
 
