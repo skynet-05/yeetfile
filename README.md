@@ -141,7 +141,7 @@ your docker-compose.yml:
 
 ```
 volumes:
-  data:
+  yeetfile_data:
     external: true
 ```
 
