@@ -61,11 +61,8 @@ ___
 - Send files and text with shareable links
   - Links don't require an account to open
 - Configurable upload settings
-  - Expiration date/time
-    - Configurable to N minutes/hours/days
-      - Max 30 days
-  - Number of downloads
-    - Max 10 downloads
+  - Expiration date/time configurable to X minutes/hours/days (max 30 days)
+  - Number of downloads (max 10)
   - Optional password protection
 - Free text transfers (up to 2000 characters)
 
