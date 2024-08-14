@@ -1,5 +1,5 @@
 <div align="center">
-  <img style="width: 500px; padding-bottom: 20px;" src="./backend/static/img/yeetfile-logo.png?raw=true">
+  <img style="width: 500px; padding-bottom: 20px;" src="https://docs.yeetfile.com/images/yeetfile-banner.png">
   <br><br>
 
   <p>A private and secure file vault + temporary file/text sharing service</p>
