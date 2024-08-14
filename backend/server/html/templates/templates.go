@@ -26,6 +26,11 @@ type Template struct {
 	Base BaseTemplate
 }
 
+type SignupTemplate struct {
+	Base                   BaseTemplate
+	ServerPasswordRequired bool
+}
+
 type LoginTemplate struct {
 	Base  BaseTemplate
 	Meter int

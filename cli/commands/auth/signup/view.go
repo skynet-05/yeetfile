@@ -11,6 +11,7 @@ import (
 	"image"
 	"log"
 	"strings"
+	"yeetfile/cli/api"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
@@ -92,22 +93,29 @@ func ShowSignupModel() {
 	utils.HandleCLIError("", err)
 
 	if signupType == signupIDOnly {
-		showIDOnlySignupModel(password)
+		showIDOnlySignupModel(password, "")
 	} else if signupType == signupEmail {
-		showEmailSignupModel(email, password)
+		showEmailSignupModel(email, password, "")
 	}
 }
 
 // showEmailSignupModel shows a spinner while the user's account is created
 // and finalized.
-func showEmailSignupModel(email, password string) {
+func showEmailSignupModel(email, password, serverPw string) {
 	var signupErr error
 	err := spinner.New().Title("Creating account...").Action(
 		func() {
-			signup := CreateSignupRequest(email, password)
+			signup := CreateSignupRequest(email, password, serverPw)
 			_, signupErr = globals.API.SubmitSignup(signup)
 		}).Run()
 	utils.HandleCLIError("", err)
+
+	if signupErr == api.ServerPasswordError {
+		serverPassword := showServerPasswordPrompt()
+		showEmailSignupModel(email, password, serverPassword)
+		return
+	}
+
 	utils.HandleCLIError("error creating account", signupErr)
 
 	var code string
@@ -163,7 +171,7 @@ func showEmailSignupModel(email, password string) {
 
 // showIDOnlySignupModel shows a spinner while the user's ID-only account is
 // created and finalized.
-func showIDOnlySignupModel(password string) {
+func showIDOnlySignupModel(password, serverPw string) {
 	var response shared.SignupResponse
 	var signupErr error
 	err := spinner.New().Title("Creating account...").Action(
@@ -172,15 +180,23 @@ func showIDOnlySignupModel(password string) {
 			// only signup
 			response, signupErr = globals.API.SubmitSignup(
 				shared.Signup{
-					Identifier:    "",
-					LoginKeyHash:  nil,
-					PublicKey:     nil,
-					ProtectedKey:  nil,
-					RootFolderKey: nil,
+					Identifier:     "",
+					LoginKeyHash:   nil,
+					PublicKey:      nil,
+					ProtectedKey:   nil,
+					RootFolderKey:  nil,
+					ServerPassword: serverPw,
 				},
 			)
 		}).Run()
 	utils.HandleCLIError("", err)
+
+	if signupErr == api.ServerPasswordError {
+		serverPassword := showServerPasswordPrompt()
+		showIDOnlySignupModel(password, serverPassword)
+		return
+	}
+
 	utils.HandleCLIError("error creating account", signupErr)
 
 	if len(response.Captcha) > 0 {
@@ -260,4 +276,23 @@ func showAccountConfirmationModel(id string) {
 		),
 	).WithTheme(styles.Theme).WithShowHelp(true).Run()
 	utils.HandleCLIError("error showing confirmation", err)
+}
+
+func showServerPasswordPrompt() string {
+	var serverPw string
+	msg := fmt.Sprintf("This server (%s) is password protected.\nPlease enter"+
+		" the server password below, or use a different server.",
+		globals.Config.Server)
+	err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().Title(utils.GenerateTitle("Server Password")).
+				Description(msg),
+			huh.NewInput().Title("Password").
+				EchoMode(huh.EchoModePassword).
+				Value(&serverPw),
+			huh.NewConfirm().Affirmative("Submit").Negative(""),
+		),
+	).WithTheme(styles.Theme).WithShowHelp(true).Run()
+	utils.HandleCLIError("", err)
+	return serverPw
 }

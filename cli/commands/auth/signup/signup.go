@@ -10,7 +10,7 @@ import (
 // signup. Note that for signup requests without email, an empty signup struct
 // is valid since the request has to be generated after the server provides
 // an account ID for the user.
-func CreateSignupRequest(identifier, password string) shared.Signup {
+func CreateSignupRequest(identifier, password, serverPw string) shared.Signup {
 	if len(identifier) == 0 {
 		return shared.Signup{}
 	}
@@ -21,16 +21,17 @@ func CreateSignupRequest(identifier, password string) shared.Signup {
 	}
 
 	return shared.Signup{
-		Identifier:    identifier,
-		LoginKeyHash:  signupKeys.LoginKeyHash,
-		PublicKey:     signupKeys.PublicKey,
-		ProtectedKey:  signupKeys.ProtectedPrivateKey,
-		RootFolderKey: signupKeys.ProtectedRootFolderKey,
+		Identifier:     identifier,
+		LoginKeyHash:   signupKeys.LoginKeyHash,
+		PublicKey:      signupKeys.PublicKey,
+		ProtectedKey:   signupKeys.ProtectedPrivateKey,
+		RootFolderKey:  signupKeys.ProtectedRootFolderKey,
+		ServerPassword: serverPw,
 	}
 }
 
 func CreateVerificationRequest(identifier, password, code string) shared.VerifyAccount {
-	signup := CreateSignupRequest(identifier, password)
+	signup := CreateSignupRequest(identifier, password, "")
 	return shared.VerifyAccount{
 		ID:            signup.Identifier,
 		Code:          code,

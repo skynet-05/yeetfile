@@ -9,6 +9,14 @@
     <input type="radio" id="id-signup" name="signup">
     <label for="id-signup">Account ID Only</label><br>
     <hr>
+    {{ if .ServerPasswordRequired }}
+    <span>This server is password protected. Please enter the server password below
+    to create an account.</span><br>
+    <input type="password" id="server-password" placeholder="Server Password">
+    <hr>
+    {{ else }}
+    <input type="password" id="server-password" placeholder="Server Password" hidden>
+    {{ end }}
     <div id="email-div">
         <form method="post" id="email-signup-form" action="/signup">
             <input type="text" id="email" name="email" placeholder="Email"><br>

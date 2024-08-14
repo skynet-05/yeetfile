@@ -11,6 +11,8 @@ import (
 	"yeetfile/shared/endpoints"
 )
 
+var ServerPasswordError = errors.New("signup is password restricted on this server")
+
 // Login logs a user into a YeetFile server, returning the server response,
 // the session cookie, and any errors.
 func (ctx *Context) Login(login shared.Login) (shared.LoginResponse, string, error) {
@@ -81,6 +83,11 @@ func (ctx *Context) SubmitSignup(signup shared.Signup) (shared.SignupResponse, e
 	response, err := requests.PostRequest(ctx.Session, url, reqData)
 	if err != nil {
 		return shared.SignupResponse{}, err
+	} else if response.StatusCode != http.StatusOK {
+		if response.StatusCode == http.StatusForbidden {
+			return shared.SignupResponse{}, ServerPasswordError
+		}
+		return shared.SignupResponse{}, utils.ParseHTTPError(response)
 	}
 
 	decoder := json.NewDecoder(response.Body)

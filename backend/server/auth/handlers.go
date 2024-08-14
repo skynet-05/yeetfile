@@ -81,6 +81,19 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Check if server has a password
+	if config.YeetFileConfig.PasswordHash != nil {
+		err := bcrypt.CompareHashAndPassword(
+			config.YeetFileConfig.PasswordHash,
+			[]byte(signupData.ServerPassword))
+
+		if err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte("Missing or invalid server password"))
+			return
+		}
+	}
+
 	var response shared.SignupResponse
 	status := http.StatusOK
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
 	"yeetfile/backend/utils"
@@ -19,6 +20,8 @@ var callbackDomain = os.Getenv("YEETFILE_CALLBACK_DOMAIN")
 var defaultUserStorage = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_STORAGE", 0)
 var defaultUserSend = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_SEND", 0)
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
+var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
+
 var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 
 // =============================================================================
@@ -155,6 +158,7 @@ type ServerConfig struct {
 	BTCPayBilling      BTCPayBillingConfig
 	BillingEnabled     bool
 	Version            string
+	PasswordHash       []byte
 }
 
 var YeetFileConfig ServerConfig
@@ -165,6 +169,15 @@ func init() {
 		!utils.IsStructMissingAnyField(stripeBilling)
 	btcPayBilling.Configured = email.Configured &&
 		!utils.IsStructMissingAnyField(btcPayBilling)
+
+	var passwordHash []byte
+	var err error
+	if len(password) > 0 {
+		passwordHash, err = bcrypt.GenerateFromPassword(password, 8)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	YeetFileConfig = ServerConfig{
 		StorageType:        storageType,
@@ -177,6 +190,7 @@ func init() {
 		BTCPayBilling:      btcPayBilling,
 		BillingEnabled:     stripeBilling.Configured || btcPayBilling.Configured,
 		Version:            constants.VERSION,
+		PasswordHash:       passwordHash,
 	}
 
 	log.Printf("Configuration:\n"+
@@ -185,7 +199,8 @@ func init() {
 		"  Billing (BTCPay): %v\n",
 		email.Configured,
 		stripeBilling.Configured,
-		btcPayBilling.Configured)
+		btcPayBilling.Configured,
+	)
 
 	if IsDebugMode {
 		log.Printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n")

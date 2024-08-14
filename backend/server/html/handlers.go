@@ -108,14 +108,17 @@ func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.SignupHTML,
-		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn:     session.IsValidSession(req),
-			Title:        "Create Account",
-			ErrorMessage: w.Header().Get(ErrorHeader),
-			Javascript:   []string{"signup.js"},
-			CSS:          []string{"auth.css"},
-			Config:       config.YeetFileConfig,
-		}},
+		templates.SignupTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "Create Account",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   []string{"signup.js"},
+				CSS:          []string{"auth.css"},
+				Config:       config.YeetFileConfig,
+			},
+			ServerPasswordRequired: config.YeetFileConfig.PasswordHash != nil,
+		},
 	)
 
 	handleError(w, err)
@@ -126,15 +129,17 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
 		w,
 		templates.LoginHTML,
-		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn:       session.IsValidSession(req),
-			Title:          "Log In",
-			SuccessMessage: w.Header().Get(SuccessHeader),
-			ErrorMessage:   w.Header().Get(ErrorHeader),
-			Javascript:     []string{"login.js"},
-			CSS:            []string{"auth.css"},
-			Config:         config.YeetFileConfig,
-		}},
+		templates.Template{
+			Base: templates.BaseTemplate{
+				LoggedIn:       session.IsValidSession(req),
+				Title:          "Log In",
+				SuccessMessage: w.Header().Get(SuccessHeader),
+				ErrorMessage:   w.Header().Get(ErrorHeader),
+				Javascript:     []string{"login.js"},
+				CSS:            []string{"auth.css"},
+				Config:         config.YeetFileConfig,
+			},
+		},
 	)
 
 	handleError(w, err)

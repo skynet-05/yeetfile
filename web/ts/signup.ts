@@ -5,9 +5,12 @@ import * as interfaces from "./interfaces.js";
 
 let emailToggle;
 let idToggle;
+let serverPassword;
 
 const init = () => {
     setupToggles();
+
+    serverPassword = document.getElementById("server-password") as HTMLInputElement;
 
     // Email signup
     let emailSignupButton = document.getElementById("create-email-account");
@@ -86,15 +89,19 @@ const generateKeys = async (identifier, password) => {
     }
 }
 
+const inputsEnabled = (enabled: boolean) => {
+    document.querySelectorAll("input").forEach(
+        (value) => {
+       value.disabled = !enabled;
+    });
+}
+
 const emailSignup = async (btn) => {
     let emailInput = document.getElementById("email") as HTMLInputElement;
     let passwordInput = document.getElementById("password") as HTMLInputElement;
     let confirmPasswordInput = document.getElementById("confirm-password") as HTMLInputElement;
 
     if (emailInput.value && passwordIsValid(passwordInput.value, confirmPasswordInput.value)) {
-        passwordInput.disabled = true;
-        confirmPasswordInput.disabled = true;
-
         let userKeys = await generateKeys(emailInput.value, passwordInput.value);
 
         await new YeetFileDB().insertVaultKeyPair(userKeys["privateKey"], userKeys["publicKey"], "", success => {
@@ -131,7 +138,8 @@ const accountIDOnlySignup = (btn) => {
  * }}
  */
 const submitSignupForm = (submitBtn, email, userKeys) => {
-    submitBtn.disabled = true;
+    inputsEnabled(false);
+    clearMessages();
 
     let xhr = new XMLHttpRequest();
     xhr.open("POST", Endpoints.Signup.path, false);
@@ -147,19 +155,20 @@ const submitSignupForm = (submitBtn, email, userKeys) => {
                 addVerifyHTML(html);
             }
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            submitBtn.disabled = false;
-            showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
+            inputsEnabled(true);
+            showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
         }
     };
 
     let sendData = new interfaces.Signup();
-    sendData.identifier = email ? email : "";
+    sendData.identifier = email;
+    sendData.serverPassword = serverPassword.value;
 
     if (userKeys) {
-        sendData.loginKeyHash = Uint8Array.from(userKeys["loginKeyHash"])
-        sendData.protectedKey = Uint8Array.from(userKeys["protectedKey"])
-        sendData.publicKey = Uint8Array.from(userKeys["publicKey"])
-        sendData.rootFolderKey = Uint8Array.from(userKeys["rootFolderKey"])
+        sendData.loginKeyHash = Uint8Array.from(userKeys["loginKeyHash"]);
+        sendData.protectedKey = Uint8Array.from(userKeys["protectedKey"]);
+        sendData.publicKey = Uint8Array.from(userKeys["publicKey"]);
+        sendData.rootFolderKey = Uint8Array.from(userKeys["rootFolderKey"]);
     }
 
     xhr.send(JSON.stringify(sendData, jsonReplacer));
@@ -172,10 +181,12 @@ const generateAccountIDSignupHTML = (id, img) => {
         }
     });
 
-    return `
+    return `<br>
     <img src="data:image/jpeg;base64,${img}"<br>
-    <p>Please enter the 6-digit code above to verify your account.</p>
-    <input type="text" id="account-code" name="code" placeholder="Code"><br>
+    <p style="margin-bottom: 0;">
+    Please enter the 6-digit code above to verify your account.
+    </p>
+    <input type="text" id="account-code" name="code" placeholder="Code"><br><br>
     <button id="verify-account">Verify</button>
     `;
 }
@@ -187,8 +198,8 @@ const generateSuccessHTML = (id) => {
         }
     });
 
-    return `<p>Your account ID is: <b>${id}</b> -- write this down!
-    This is what you will use to log in, and will not be shown again.</p>
+    return `<p>Your account ID is: <b>${id}</b> -- write this down!<br>
+    This is what you will use to log in, and <b>will not be shown again.</b></p>
     <button id="goto-account">Go To Account</button>`
 }
 
@@ -217,7 +228,7 @@ const verifyAccountID = async id => {
             addVerifyHTML(html);
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             button.disabled = false;
-            showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
+            showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
         }
     };
 
@@ -239,15 +250,16 @@ const addVerifyHTML = html => {
 
 const passwordIsValid = (password, confirm) => {
     if (!password || !confirm) {
-        showErrorMessage("You must fill out all available fields");
+        showMessage("You must fill out all available fields", true);
         return false;
     } else if (password !== confirm) {
-        showErrorMessage("Passwords do not match");
+        showMessage("Passwords do not match", true);
         return false;
     } else if (password.length < 7) {
-        showErrorMessage("Password must be at least 7 characters long");
+        showMessage("Password must be at least 7 characters long", true);
         return false;
     } else {
+        clearMessages();
         return true;
     }
 }

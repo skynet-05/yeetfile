@@ -75,7 +75,7 @@ const login = async () => {
                 });
             }
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            showErrorMessage("Error " + xhr.status + ": " + xhr.responseText);
+            showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
             btn.disabled = false;
             btn.value = "Log In";
         }
@@ -92,7 +92,7 @@ const isValidIdentifier = (identifier) => {
         return true;
     } else {
         if (identifier.length !== 16) {
-            showErrorMessage("Missing email or 16-digit account ID");
+            showMessage("Missing email or 16-digit account ID", true);
             loginBtn.disabled = false;
             loginBtn.value = buttonLabel;
             return false;
