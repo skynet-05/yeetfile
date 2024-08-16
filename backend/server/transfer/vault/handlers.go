@@ -222,18 +222,18 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 
 	data, err := utils.LimitedReader(w, req.Body)
 	if err != nil {
-		utils.Logf("Error reading uploaded data: %v\n", err)
+		utils.Logf("[YF Vault] Error reading uploaded data: %v\n", err)
 		http.Error(w, "Error reading request", http.StatusBadRequest)
 		return
 	}
 
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
-		utils.Logf("Error fetching metadata: %v\n", err)
+		utils.Logf("[YF Vault] Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	} else if chunkNum > metadata.Chunks {
-		utils.Logf("User uploading allocated number of chunks")
+		utils.Logf("[YF Vault] User uploading beyond stated # of chunks")
 		http.Error(w, "Attempting to upload more chunks than specified", http.StatusBadRequest)
 		return
 	}
@@ -244,7 +244,8 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 
 	if err != nil {
 		http.Error(w, "Error uploading file", http.StatusBadRequest)
-		log.Printf("Error uploading file: %v\n", err)
+		log.Printf("[YF Vault] Error uploading file: %v\n", err)
+		metadata.B2ID = b2Values.UploadID
 		db.DeleteFileByMetadata(metadata)
 		return
 	}

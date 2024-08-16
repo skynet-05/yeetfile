@@ -86,12 +86,14 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 
 	data, err := utils.LimitedReader(w, req.Body)
 	if err != nil {
+		log.Printf("[YF Send] Chunk reader err: %v\n", err)
 		http.Error(w, "Error", http.StatusBadRequest)
 		return
 	}
 
 	metadata, err := db.RetrieveMetadata(id)
 	if err != nil {
+		log.Printf("[YF Send] Metadata err: %v\n", err)
 		http.Error(w, "No metadata found for file", http.StatusBadRequest)
 		return
 	}
@@ -101,13 +103,17 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	done, err := upload.Upload(b2Values)
 
 	if err != nil {
+		log.Printf("[YF Send] Chunk upload err: %v\n", err)
 		http.Error(w, "Upload error", http.StatusBadRequest)
+		metadata.B2ID = b2Values.UploadID
+		db.DeleteFileByMetadata(metadata)
 		return
 	}
 
 	// Update user meter
 	err = UpdateUserMeter(len(data)-constants.TotalOverhead, req)
 	if err != nil {
+		log.Printf("[YF Send] Error updating user meter: %v\n", err)
 		// TODO: Maybe just silently accept this? Idk if it's worth an error
 		http.Error(w, "Upload failed", http.StatusInternalServerError)
 		return
