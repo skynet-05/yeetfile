@@ -52,6 +52,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/robfig/cron/v3 v3.0.0 // indirect
 	github.com/tdewolff/parse/v2 v2.7.12 // indirect
 	github.com/tkrajina/go-reflector v0.5.5 // indirect
 	github.com/wayneashleyberry/terminal-dimensions v1.1.0 // indirect

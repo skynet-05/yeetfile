@@ -125,7 +125,4 @@ func CheckExpiry() {
 			DeleteFileByMetadata(metadata)
 		}
 	}
-
-	time.Sleep(1 * time.Second)
-	CheckExpiry()
 }

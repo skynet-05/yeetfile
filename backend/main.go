@@ -3,6 +3,10 @@ package main
 import (
 	"fmt"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/robfig/cron/v3"
+	"log"
+	"time"
+	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server"
 	"yeetfile/backend/utils"
@@ -10,8 +14,49 @@ import (
 
 func main() {
 	defer db.Close()
-	go db.CheckExpiry()
-	go db.CheckMemberships()
+
+	c := cron.New()
+	var expiryCronID cron.EntryID
+	var memberCronID cron.EntryID
+	var err error
+	if config.IsDebugMode {
+		expiryCronID, err = c.AddFunc("@every 1s", db.CheckExpiry)
+	} else {
+		expiryCronID, err = c.AddFunc("@every 30s", db.CheckExpiry)
+	}
+
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("Expiry cron task added!")
+
+	if config.YeetFileConfig.BillingEnabled {
+		// Enable membership inspection if billing is enabled
+		memberCronID, err = c.AddFunc("@daily", db.CheckMemberships)
+		if err != nil {
+			panic(err)
+		}
+
+		log.Println("Membership cron task added!")
+	}
+
+	if len(c.Entries()) > 0 && config.IsDebugMode {
+		_, _ = c.AddFunc("@every 1m", func() {
+			log.Println("~~ CRON MONITOR ~~")
+			for _, e := range c.Entries() {
+				if e.ID == expiryCronID {
+					log.Println("Expiry | next run: " +
+						e.Next.Format(time.RFC1123))
+				} else if e.ID == memberCronID {
+					log.Println("Memberships | next run: " +
+						e.Next.Format(time.RFC1123))
+				}
+			}
+		})
+	}
+
+	c.Start()
 
 	host := utils.GetEnvVar("YEETFILE_HOST", "localhost")
 	port := utils.GetEnvVar("YEETFILE_PORT", "8090")

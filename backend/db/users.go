@@ -631,7 +631,7 @@ func UpdateUserSendUsed(id string, size int) error {
 // CheckMemberships inspects each user's membership and updates their available
 // transfer if their membership is still valid
 func CheckMemberships() {
-	s := `SELECT id, member_expiration FROM users
+	s := `SELECT id, sub_type, member_expiration FROM users
               WHERE last_upgraded_month != $1`
 	rows, err := db.Query(s, int(time.Now().Month()))
 	if err != nil {
@@ -639,16 +639,19 @@ func CheckMemberships() {
 		return
 	}
 
-	var upgradeIDs []string
+	var noviceUpgradeIDs []string
+	var regularUpgradeIDs []string
+	var advancedUpgradeIDs []string
 	var revertIDs []string
 	now := time.Now()
 
 	defer rows.Close()
 	for rows.Next() {
 		var id string
+		var subType string
 		var exp time.Time
 
-		err = rows.Scan(&id, &exp)
+		err = rows.Scan(&id, &subType, &exp)
 
 		if err != nil {
 			log.Printf("Error scanning user rows: %v", err)
@@ -662,35 +665,73 @@ func CheckMemberships() {
 			continue
 		} else if now.Day() == exp.Day() || ExpDateRollover(now, exp) {
 			// User has an active membership
-			upgradeIDs = append(upgradeIDs, id)
+			switch subType {
+			case subscriptions.TypeNovice:
+				noviceUpgradeIDs = append(noviceUpgradeIDs, id)
+			case subscriptions.TypeRegular:
+				regularUpgradeIDs = append(regularUpgradeIDs, id)
+			case subscriptions.TypeAdvanced:
+				advancedUpgradeIDs = append(advancedUpgradeIDs, id)
+			}
 		}
 	}
 
-	if len(revertIDs) > 0 {
-		// Add the default send and storage amount to all users whose
-		// memberships are no longer active
+	upgradeFunc := func(
+		ids []string,
+		sendAvailable,
+		storageAvailable int,
+	) error {
+		if ids == nil || len(ids) == 0 {
+			return nil
+		}
+
+		idStr := fmt.Sprintf("{%s}", strings.Join(ids, ","))
+
 		u := `UPDATE users
 		      SET send_used=0,
 		          send_available=$1,
 		          storage_available=$2,
 		          last_upgraded_month=$3
 		      WHERE id=ANY($4)`
-
-		ids := fmt.Sprintf("{%s}", strings.Join(revertIDs, ","))
-		_, err = db.Exec(u,
-			config.YeetFileConfig.DefaultUserSend,
-			config.YeetFileConfig.DefaultUserStorage,
+		_, err := db.Exec(u,
+			sendAvailable,
+			storageAvailable,
 			int(now.Month()),
-			ids)
-		if err != nil {
-			panic(err)
-		}
+			idStr)
+		return err
 	}
 
-	// TODO: Implement membership check and update storage/send appropriately
+	err = upgradeFunc(
+		revertIDs,
+		config.YeetFileConfig.DefaultUserSend,
+		config.YeetFileConfig.DefaultUserStorage)
+	if err != nil {
+		log.Printf("Error resetting unpaid user storage/send")
+	}
 
-	time.Sleep(3600 * time.Second)
-	CheckMemberships()
+	err = upgradeFunc(
+		noviceUpgradeIDs,
+		subscriptions.SendAmountMap[subscriptions.TypeNovice],
+		subscriptions.StorageAmountMap[subscriptions.TypeNovice])
+	if err != nil {
+		log.Printf("Error updating novice member storage/send")
+	}
+
+	err = upgradeFunc(
+		regularUpgradeIDs,
+		subscriptions.SendAmountMap[subscriptions.TypeRegular],
+		subscriptions.StorageAmountMap[subscriptions.TypeRegular])
+	if err != nil {
+		log.Printf("Error updating regular member storage/send")
+	}
+
+	err = upgradeFunc(
+		advancedUpgradeIDs,
+		subscriptions.SendAmountMap[subscriptions.TypeAdvanced],
+		subscriptions.StorageAmountMap[subscriptions.TypeAdvanced])
+	if err != nil {
+		log.Printf("Error updating novice member storage/send")
+	}
 }
 
 // ExpDateRollover checks to see if the user's membership expiration date takes
