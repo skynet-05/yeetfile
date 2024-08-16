@@ -36,6 +36,7 @@ type PreparedDownload struct {
 }
 
 func parseLink(link string) DownloadResource {
+	link = strings.Replace(link, "/send/", "/", 1)
 	linkSegments := strings.Split(link, "/")
 	server := strings.Join(linkSegments[0:len(linkSegments)-1], "/")
 	resource := strings.Split(linkSegments[len(linkSegments)-1], "#")
