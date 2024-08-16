@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
 	"yeetfile/cli/requests"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
@@ -12,6 +13,25 @@ import (
 )
 
 var ServerPasswordError = errors.New("signup is password restricted on this server")
+
+// GetAccountInfo fetches the current user's account info
+func (ctx *Context) GetAccountInfo() (shared.AccountResponse, error) {
+	url := endpoints.Account.Format(ctx.Server)
+	resp, err := requests.GetRequest(ctx.Session, url)
+	if err != nil {
+		return shared.AccountResponse{}, err
+	} else if resp.StatusCode != http.StatusOK {
+		return shared.AccountResponse{}, utils.ParseHTTPError(resp)
+	}
+
+	var accountResponse shared.AccountResponse
+	err = json.NewDecoder(resp.Body).Decode(&accountResponse)
+	if err != nil {
+		return shared.AccountResponse{}, err
+	}
+
+	return accountResponse, nil
+}
 
 // Login logs a user into a YeetFile server, returning the server response,
 // the session cookie, and any errors.
@@ -25,14 +45,14 @@ func (ctx *Context) Login(login shared.Login) (shared.LoginResponse, string, err
 	resp, err := requests.PostRequest(ctx.Session, url, reqData)
 	if err != nil {
 		return shared.LoginResponse{}, "", err
+	} else if resp.StatusCode != http.StatusOK {
+		return shared.LoginResponse{}, "", utils.ParseHTTPError(resp)
 	}
 
 	var loginResponse shared.LoginResponse
 	err = json.NewDecoder(resp.Body).Decode(&loginResponse)
 	if err != nil {
 		return shared.LoginResponse{}, "", err
-	} else if resp.StatusCode != http.StatusOK {
-		return shared.LoginResponse{}, "", utils.ParseHTTPError(resp)
 	}
 
 	var session string
@@ -156,9 +176,14 @@ func (ctx *Context) LogOut() error {
 
 // DeleteAccount removes the current user's YeetFile account.
 // NOTE: Currently available only in debug-mode.
-func (ctx *Context) DeleteAccount() error {
+func (ctx *Context) DeleteAccount(id string) error {
 	url := endpoints.Account.Format(ctx.Server)
-	response, err := requests.DeleteRequest(ctx.Session, url)
+	reqData, err := json.Marshal(shared.DeleteAccount{Identifier: id})
+	if err != nil {
+		return err
+	}
+
+	response, err := requests.DeleteRequest(ctx.Session, url, reqData)
 	if err != nil {
 		return err
 	} else if response.StatusCode != http.StatusOK {

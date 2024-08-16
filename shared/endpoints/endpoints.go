@@ -47,6 +47,7 @@ var JSVarNameMap = map[Endpoint]string{
 	Forgot:        "Forgot",
 	Reset:         "Reset",
 	Session:       "Session",
+	Account:       "Account",
 	VerifyAccount: "VerifyAccount",
 	VerifyEmail:   "VerifyEmail",
 

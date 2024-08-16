@@ -5,6 +5,7 @@ import (
 	"log"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/subscriptions"
+	"yeetfile/shared/constants"
 )
 
 type Invoice struct {
@@ -47,7 +48,7 @@ func FinalizeInvoice(invoice Invoice) error {
 		err = db.SetUserSubscription(
 			invoice.Metadata.OrderID,
 			orderType,
-			subscriptions.SubMethodBTCPay,
+			constants.SubMethodBTCPay,
 			exp,
 			storage,
 			send)

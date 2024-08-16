@@ -23,9 +23,6 @@ const NoviceSend = 10
 const RegularSend = 25
 const AdvancedSend = 50
 
-const SubMethodStripe = "stripe"
-const SubMethodBTCPay = "btcpay"
-
 var MonthlyNovice = fmt.Sprintf("%s-%s", monthly, TypeNovice)
 var MonthlyRegular = fmt.Sprintf("%s-%s", monthly, TypeRegular)
 var MonthlyAdvanced = fmt.Sprintf("%s-%s", monthly, TypeAdvanced)

@@ -143,7 +143,7 @@ func (ctx *Context) ModifyVaultFolder(
 }
 
 func deleteItem(session, url string) error {
-	resp, err := requests.DeleteRequest(session, url)
+	resp, err := requests.DeleteRequest(session, url, nil)
 	if err != nil {
 		return err
 	} else if resp.StatusCode != http.StatusOK {

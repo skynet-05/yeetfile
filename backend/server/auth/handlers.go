@@ -145,13 +145,26 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 
 	switch req.Method {
 	case http.MethodDelete:
-		if !config.IsDebugMode {
-			// Currently only allow deleting account in debug mode
+		var deleteAccount shared.DeleteAccount
+		if json.NewDecoder(req.Body).Decode(&deleteAccount) != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("error decoding request"))
 			return
 		}
 
-		err := vault.DeleteVaultFolder(id, id, false)
+		accountID := deleteAccount.Identifier
+		var err error
+		if strings.Contains(deleteAccount.Identifier, "@") {
+			accountID, err = db.GetUserIDByEmail(accountID)
+		}
+
+		if err != nil || accountID != id {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("error verifying account"))
+			return
+		}
+
+		err = vault.DeleteVaultFolder(id, id, false)
 		if err != nil {
 			log.Printf("Error deleting user root folder: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -165,7 +178,9 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			return
 		}
 
+		_ = session.RemoveSession(w, req)
 		w.WriteHeader(http.StatusOK)
+
 		return
 	case http.MethodGet:
 		user, err := db.GetUserByID(id)
@@ -175,7 +190,14 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			return
 		}
 
-		_, _ = w.Write([]byte("TODO: " + user.Email))
+		_ = json.NewEncoder(w).Encode(shared.AccountResponse{
+			Email:            user.Email,
+			StorageAvailable: user.StorageAvailable,
+			StorageUsed:      user.StorageUsed,
+			SendAvailable:    user.SendAvailable,
+			SendUsed:         user.SendUsed,
+			SubscriptionExp:  user.MemberExp,
+		})
 	}
 }
 

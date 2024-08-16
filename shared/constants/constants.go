@@ -14,3 +14,5 @@ const FileIDPrefix = "file"
 const VerificationCodeLength = 6
 const MaxTransferThreads = 3
 const MaxSendAgeDays = 30 //days
+const SubMethodStripe = "stripe"
+const SubMethodBTCPay = "btcpay"

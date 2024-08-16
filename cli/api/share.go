@@ -155,7 +155,7 @@ func removeSharedUsers(
 	var removed []shared.ShareInfo
 	for _, share := range remove {
 		deleteURL := fmt.Sprintf("%s?id=%s", url, share.ID)
-		resp, err := requests.DeleteRequest(session, deleteURL)
+		resp, err := requests.DeleteRequest(session, deleteURL, nil)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to remove %s -- %s",
 				share.Recipient, err.Error())

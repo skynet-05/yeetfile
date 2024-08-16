@@ -77,7 +77,8 @@ func main() {
 		Add(shared.FolderOwnershipInfo{}).
 		Add(shared.ShareInfo{}).
 		Add(shared.ShareEdit{}).
-		Add(shared.DeleteResponse{})
+		Add(shared.DeleteResponse{}).
+		Add(shared.DeleteAccount{})
 
 	converter.WithBackupDir("")
 	err = converter.ConvertToFile(structsOut)

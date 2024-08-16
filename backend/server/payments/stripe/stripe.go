@@ -14,6 +14,7 @@ import (
 	"yeetfile/backend/db"
 	"yeetfile/backend/mail"
 	"yeetfile/backend/server/subscriptions"
+	"yeetfile/shared/constants"
 )
 
 var LinkMapping = map[string]string{
@@ -288,7 +289,7 @@ func setUserSubscription(paymentID, productID string) error {
 		err = db.SetUserSubscription(
 			paymentID,
 			tag,
-			subscriptions.SubMethodStripe,
+			constants.SubMethodStripe,
 			exp,
 			storage,
 			send)

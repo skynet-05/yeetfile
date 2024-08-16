@@ -119,7 +119,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 }
 
 // UploadPlaintextHandler handles uploading plaintext with a max size of
-// shared.MaxPlaintextLen characters (shared/constants.go).
+// shared.MaxPlaintextLen characters (constants.go).
 func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	data, err := utils.LimitedReader(w, req.Body)
 	var plaintextUpload shared.PlaintextUpload

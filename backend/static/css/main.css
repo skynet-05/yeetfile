@@ -150,7 +150,7 @@ dialog::backdrop {
 }
 
 details {
-    cursor: pointer;
+    cursor: default;
     margin: 10px;
 }
 
@@ -171,6 +171,7 @@ details:after {
 }
 
 summary {
+    cursor: pointer;
     font-weight: bold;
     padding-bottom: 10px;
 }
@@ -201,6 +202,11 @@ button, input:is([type="button"], [type="reset"]) {
     padding: 10px;
     font-size: medium;
     color: black;
+}
+
+.red-button {
+    background-color: var(--destructive-color);
+    color: white;
 }
 
 input[type=submit]:disabled,

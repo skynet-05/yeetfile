@@ -10,6 +10,7 @@ import (
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/server/subscriptions"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 const ErrorHeader = "ErrorMsg"
@@ -179,7 +180,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 			StorageAvailable: shared.ReadableFileSize(user.StorageAvailable),
 			StorageUsed:      shared.ReadableFileSize(user.StorageUsed),
 			IsYearly:         isYearly,
-			IsStripeUser:     user.SubscriptionMethod == subscriptions.SubMethodStripe,
+			IsStripeUser:     user.SubscriptionMethod == constants.SubMethodStripe,
 			StripeConfigured: config.YeetFileConfig.StripeBilling.Configured,
 			BTCPayConfigured: config.YeetFileConfig.BTCPayBilling.Configured,
 			BillingConfigured: config.YeetFileConfig.StripeBilling.Configured ||

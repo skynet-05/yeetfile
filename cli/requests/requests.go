@@ -17,8 +17,8 @@ func PutRequest(session, url string, data []byte) (*http.Response, error) {
 	return sendRequest(session, http.MethodPut, url, data)
 }
 
-func DeleteRequest(session, url string) (*http.Response, error) {
-	return sendRequest(session, http.MethodDelete, url, nil)
+func DeleteRequest(session, url string, data []byte) (*http.Response, error) {
+	return sendRequest(session, http.MethodDelete, url, data)
 }
 
 func sendRequest(session, method, url string, data []byte) (*http.Response, error) {

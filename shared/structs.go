@@ -2,6 +2,16 @@ package shared
 
 import "time"
 
+type AccountResponse struct {
+	Email              string    `json:"email"`
+	StorageAvailable   int       `json:"storageAvailable"`
+	StorageUsed        int       `json:"storageUsed"`
+	SendAvailable      int       `json:"sendAvailable"`
+	SendUsed           int       `json:"sendUsed"`
+	SubscriptionExp    time.Time `json:"subscriptionExp" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
+	SubscriptionMethod string    `json:"subscriptionMethod"`
+}
+
 type UploadMetadata struct {
 	Name       string `json:"name"`
 	Chunks     int    `json:"chunks"`

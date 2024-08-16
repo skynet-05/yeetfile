@@ -48,15 +48,8 @@
         </td>
       </tr>
       {{ end }}
-      <tr>
-        <td>
-          <label for="actions">Actions:</label>
-        </td>
-        <td>
-          <span id="actions"><a id="logout-btn" class="red-link" href="#">Log Out</a></span>
-        </td>
-      </tr>
     </table>
+    <button id="logout-btn">Log Out</button>
     <details>
       <summary>Advanced</summary>
       <table>
@@ -66,6 +59,8 @@
           <td>{{ .PaymentID }}</td>
         </tr>
       </table>
+      <br>
+      <button id="delete-btn" class="red-button">Delete Account</button>
     </details>
   </div>
   {{ template "messages.html" . }}

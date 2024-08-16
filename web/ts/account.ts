@@ -1,9 +1,14 @@
 import {Endpoints} from "./endpoints.js";
 import {YeetFileDB} from "./db.js";
+import * as endpoints from "./endpoints.js";
+import * as interfaces from "./interfaces.js";
 
 const init = () => {
     let logoutBtn = document.getElementById("logout-btn");
     logoutBtn.addEventListener("click", logout);
+
+    let deleteBtn = document.getElementById("delete-btn");
+    deleteBtn.addEventListener("click", deleteAccount);
 
     // let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
     // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
@@ -25,6 +30,43 @@ const logout = () => {
                 alert("Error removing keys");
             }
         });
+    }
+}
+
+const deleteAccount = () => {
+    let confirmMsg = "Are you sure you want to delete your account? This can " +
+        "not be undone."
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    let promptMsg = "Enter your login email or account ID -- below to delete " +
+        "your account."
+
+    let id = prompt(promptMsg);
+    if (id.length > 0) {
+        let request = new interfaces.DeleteAccount();
+        request.identifier = id;
+
+        fetch(Endpoints.Account.path, {
+            method: "DELETE",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        }).then(async response => {
+            if (response.ok) {
+                alert("Your account has been permanently yeeted.");
+                window.location.assign("/");
+            } else {
+                let errMsg = await response.text()
+                alert("There was an error deleting your account: " + errMsg);
+                return;
+            }
+        }).catch(error => {
+            console.error(error);
+            alert("There was an error deleting your account!");
+        })
     }
 }
 

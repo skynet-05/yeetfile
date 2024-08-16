@@ -3,8 +3,11 @@ package commands
 import (
 	"errors"
 	"fmt"
-	tea "github.com/charmbracelet/bubbletea"
 	"net"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"yeetfile/cli/commands/account"
 	"yeetfile/cli/commands/auth"
 	"yeetfile/cli/commands/auth/login"
 	"yeetfile/cli/commands/auth/logout"
@@ -28,6 +31,7 @@ const (
 	Vault    Command = "vault"
 	Send     Command = "send"
 	Download Command = "download"
+	Account  Command = "account"
 	Help     Command = "help"
 )
 
@@ -39,6 +43,7 @@ var CommandMap = map[Command][]func(){
 	Vault:    {vault.ShowVaultModel},
 	Send:     {send.ShowSendModel},
 	Download: {download.ShowDownloadModel},
+	Account:  {account.ShowAccountModel},
 	Help:     {printHelp},
 }
 
@@ -49,6 +54,7 @@ var AuthHelp = []string{
 }
 
 var ActionHelp = []string{
+	fmt.Sprintf("%s  | Manage your YeetFile account", Account),
 	fmt.Sprintf("%s    | Manage files and folders in your YeetFile Vault\n"+
 		"             - Example: yeetfile vault", Vault),
 	fmt.Sprintf("%s     | Create an end-to-end encrypted shareable link to a file or text\n"+
@@ -88,13 +94,23 @@ Action Commands:`
 
 // Entrypoint is the main entrypoint to the CLI
 func Entrypoint(args []string) {
+	var isLoggedIn bool
+	var err error
 	var command Command
 	if len(args) < 2 {
-		if loggedIn, err := auth.IsUserAuthenticated(); !loggedIn || err != nil {
+		if isLoggedIn, err = auth.IsUserAuthenticated(); !isLoggedIn || err == nil {
 			command = Auth
 		} else if len(globals.Config.DefaultView) > 0 {
 			command = Command(globals.Config.DefaultView)
 		} else {
+			if _, ok := err.(*net.OpError); ok {
+				utils.HandleCLIError("Unable to connect to the server", err)
+				return
+			} else if err != nil {
+				utils.HandleCLIError("Error initializing CLI tool", err)
+				return
+			}
+
 			styles.PrintErrStr("-- Missing command")
 			printHelp()
 			return
@@ -108,17 +124,22 @@ func Entrypoint(args []string) {
 		styles.PrintErrStr(fmt.Sprintf("-- Invalid command '%s'", command))
 		printHelp()
 		return
+	} else if command == Help {
+		printHelp()
+		return
 	}
 
 	// Check session state and ensure server is reachable
-	authErr := validateAuth()
-	if _, ok := authErr.(*net.OpError); ok {
-		utils.HandleCLIError("Unable to connect to the server", authErr)
-		return
-	} else if !isAuthCommand(command) && authErr != nil {
-		styles.PrintErrStr("You are not logged in. " +
-			"Use the 'login' or 'signup' commands to continue.")
-		return
+	if !isLoggedIn && err == nil {
+		authErr := validateAuth()
+		if _, ok := authErr.(*net.OpError); ok {
+			utils.HandleCLIError("Unable to connect to the server", authErr)
+			return
+		} else if !isAuthCommand(command) && authErr != nil {
+			styles.PrintErrStr("You are not logged in. " +
+				"Use the 'login' or 'signup' commands to continue.")
+			return
+		}
 	}
 
 	if !isAuthCommand(command) {
@@ -171,5 +192,5 @@ session, or prefix commands with the variable (i.e. %[1]s=xxxx yeetfile vault)`,
 
 // isAuthCommand checks if the provided command is related to authentication
 func isAuthCommand(cmd Command) bool {
-	return cmd == Login || cmd == Signup || cmd == Logout
+	return cmd == Login || cmd == Signup || cmd == Logout || cmd == Auth
 }

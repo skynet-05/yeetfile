@@ -272,7 +272,12 @@ func showAccountConfirmationModel(id string) {
 		huh.NewGroup(
 			huh.NewNote().Title(utils.GenerateTitle("Your Account ID")).
 				Description(msg),
-			huh.NewConfirm().Affirmative("Log In").Negative(""),
+			huh.NewConfirm().
+				Title("Warning").
+				Description("Do not continue without writing "+
+					"your account ID down. This will not "+
+					"be shown again.").
+				Affirmative("Log In").Negative(""),
 		),
 	).WithTheme(styles.Theme).WithShowHelp(true).Run()
 	utils.HandleCLIError("error showing confirmation", err)

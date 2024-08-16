@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/term"
 	"io"
 	"math/rand"
 	"net/http"
@@ -12,13 +11,18 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/term"
+
 	"yeetfile/cli/styles"
 	"yeetfile/shared"
 )
 
-var httpErrorCodeFormat = "[code: %d]"
-var separator = "-"
-var r = rand.New(rand.NewSource(time.Now().UnixNano()))
+var (
+	httpErrorCodeFormat = "[code: %d]"
+	separator           = "-"
+	r                   = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
 
 // GeneratePassphrase generates a 3 word passphrase with a randomly placed
 // number, and each word separated by the `separator` character
@@ -103,7 +107,7 @@ func CopyToFile(contents string, to string) error {
 }
 
 func CopyBytesToFile(contents []byte, to string) error {
-	err := os.WriteFile(to, contents, 0644)
+	err := os.WriteFile(to, contents, 0o644)
 	if err != nil {
 		return err
 	}
@@ -184,7 +188,37 @@ func GenerateTitle(s string) string {
 		"╔"+verticalEdge+"╗\n"+
 			"║ %s%s ║\n"+
 			"╚"+verticalEdge+"╝", prefix, s))
-	return fmt.Sprintf("%s", title)
+	return title
+}
+
+// GenerateDescription generates a text box with the provided description
+func GenerateDescription(desc string, minLen int) string {
+	return GenerateDescriptionSection("", desc, minLen)
+}
+
+// GenerateDescriptionSection generates a text box with a title positioned
+// above the provided description.
+func GenerateDescriptionSection(title, desc string, minLen int) string {
+	var out string
+	split := strings.Split(desc, "\n")
+	maxLen := minLen
+	for _, s := range split {
+		maxLen = max(maxLen, len(s))
+	}
+
+	verticalEdge := strings.Repeat("─", maxLen+2)
+	out += styles.BoldStyle.Render("┌"+verticalEdge+"┐") + "\n"
+	if len(title) > 0 {
+		out += styles.BoldStyle.Render("│ ") + title + strings.Repeat(" ", maxLen-len(title)) + styles.BoldStyle.Render(" │") + "\n"
+		out += styles.BoldStyle.Render("│ ") + strings.Repeat("-", maxLen) + styles.BoldStyle.Render(" │") + "\n"
+	}
+
+	for _, s := range split {
+		out += styles.BoldStyle.Render("│ ") + s + (strings.Repeat(" ", maxLen-len(s))) + styles.BoldStyle.Render(" │") + "\n"
+	}
+	out += styles.BoldStyle.Render("└" + verticalEdge + "┘")
+
+	return out
 }
 
 func GetFilenameFromPath(path string) string {
