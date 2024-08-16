@@ -5,6 +5,16 @@ import {Endpoints} from "./endpoints.js";
 
 let pepper = "";
 
+type SendForm = {
+    files: FileList,
+    password: string,
+    passwordConfirm: string,
+    downloads: number,
+    expiration: number,
+    expUnits: ExpUnits,
+    text: string,
+}
+
 const init = () => {
     setupTypeToggles();
 
@@ -69,11 +79,12 @@ const init = () => {
                 pepper = passphrase;
 
                 updateProgress("Initializing");
-                let [key, salt] = await crypto.deriveSendingKey(formValues.pw, undefined, passphrase);
+                let [key, salt] = await crypto.deriveSendingKey(formValues.password, undefined, passphrase);
 
                 if (isFileUpload()) {
                     if (formValues.files.length > 1) {
-                        await submitFormMulti(formValues, key, salt, allowReset);
+                        alert("Feature not supported");
+                        // await submitFormMulti(formValues, key, salt, allowReset);
                     } else {
                         await submitFormSingle(formValues, key, salt, allowReset);
                     }
@@ -113,14 +124,17 @@ const resetForm = () => {
     setFormEnabled(true);
 }
 
-const getFormValues = () => {
+/**
+ * Parses the HTMLFormElement fields into a SendForm struct
+ */
+const getFormValues = (): SendForm => {
     let files = (document.getElementById("upload") as HTMLInputElement).files;
     let pw = (document.getElementById("password") as HTMLInputElement).value;
     let pwConfirm = (document.getElementById("confirm-password") as HTMLInputElement).value;
     let downloads = (document.getElementById("downloads") as HTMLInputElement).value;
     let exp = (document.getElementById("expiration") as HTMLInputElement).value;
     let unit = indexToExpUnit((document.getElementById("duration-unit") as HTMLSelectElement).selectedIndex);
-    let plaintext = (document.getElementById("upload-text-content") as HTMLTextAreaElement).value;
+    let text = (document.getElementById("upload-text-content") as HTMLTextAreaElement).value;
 
     // If the password checkbox isn't checked, unset password
     let usePassword = (document.getElementById("use-password") as HTMLInputElement).checked;
@@ -128,10 +142,18 @@ const getFormValues = () => {
         pw = pwConfirm = "";
     }
 
-    return { files, pw, pwConfirm, downloads, exp, unit, plaintext };
+    return {
+        files: files,
+        password: pw,
+        passwordConfirm: pwConfirm,
+        downloads: parseInt(downloads),
+        expiration: parseInt(exp),
+        expUnits: unit,
+        text: text,
+    };
 }
 
-const validateForm = (form) => {
+const validateForm = (form: SendForm) => {
     let files = form.files;
 
     if (isFileUpload() && (!files || files.length === 0)) {
@@ -139,12 +161,12 @@ const validateForm = (form) => {
         return false;
     }
 
-    if (!validatePassword(form.pw, form.pwConfirm)) {
+    if (!validatePassword(form.password, form.passwordConfirm)) {
         alert("Passwords don't match");
         return false;
     }
 
-    if (!validateExpiration(form.exp, form.unit)) {
+    if (!validateExpiration(form.expiration, form.expUnits)) {
         return false;
     }
 
@@ -156,7 +178,20 @@ const validateForm = (form) => {
     return true;
 }
 
-const submitFormMulti = async (form, key, salt, callback) => {
+/**
+ * Submits a multi-file form, zipping the contents together and then encrypting
+ * the zip file.
+ * @param form {SendForm} - The form values being submitted
+ * @param key {CryptoKey} - The key to use for encrypting the zip file
+ * @param salt {Uint8Array} - The salt used when generating the key
+ * @param callback {function()} - The callback function indicating success
+ */
+const submitFormMulti = async (
+    form: SendForm,
+    key: CryptoKey,
+    salt: Uint8Array,
+    callback: () => void,
+) => {
     let nameField = document.getElementById("name") as HTMLInputElement;
     let name = nameField.value || "download.zip";
     if (name.endsWith(".zip.zip")) {
@@ -173,8 +208,10 @@ const submitFormMulti = async (form, key, salt, callback) => {
         let file = form.files[i];
 
         if (file.webkitRelativePath) {
+            // @ts-ignore
             zip.file(file.webkitRelativePath, file);
         } else {
+            // @ts-ignore
             zip.file(file.name, file);
         }
 
@@ -185,14 +222,14 @@ const submitFormMulti = async (form, key, salt, callback) => {
 
     let hexName = toHexString(encryptedName);
     let chunks = getNumChunks(size);
-    let expString = getExpString(form.exp, form.unit);
+    let expString = getExpString(form.expiration, form.expUnits);
 
     updateProgress("Uploading file...");
     transfer.uploadSendMetadata(new interfaces.UploadMetadata({
         name: hexName,
         chunks: chunks,
         salt: Array.from(salt),
-        downloads: parseInt(form.downloads),
+        downloads: form.downloads,
         size: size,
         expiration: expString
     }), (id) => {
@@ -204,20 +241,31 @@ const submitFormMulti = async (form, key, salt, callback) => {
     });
 }
 
-const submitFormSingle = async (form, key, salt, callback) => {
+/**
+ * Submit a single file to YeetFile Send
+ * @param form {SendForm} - The send form that is being submitted
+ * @param key {CryptoKey} - The randomly generated file key
+ * @param salt {Uint8Array} - The generated salt
+ * @param callback {function()} - The function to run after finishing
+ */
+const submitFormSingle = async (
+    form: SendForm,
+    key: CryptoKey,
+    salt: Uint8Array,
+    callback: () => void,
+) => {
     let file = form.files[0];
     let encryptedName = await crypto.encryptString(key, file.name);
 
     let hexName = toHexString(encryptedName);
     let chunks = getNumChunks(file.size);
-    let expString = getExpString(form.exp, form.unit);
-    console.log(expString);
+    let expString = getExpString(form.expiration, form.expUnits);
 
     transfer.uploadSendMetadata(new interfaces.UploadMetadata({
         name: hexName,
         chunks: chunks,
         salt: Array.from(salt),
-        downloads: parseInt(form.downloads),
+        downloads: form.downloads,
         size: file.size,
         expiration: expString
     }), (id) => {
@@ -233,15 +281,27 @@ const submitFormSingle = async (form, key, salt, callback) => {
     });
 }
 
-const submitFormText = async (form, key, salt, callback) => {
-    let encryptedText = await crypto.encryptString(key, form.plaintext);
+/**
+ * Submits the text-only upload form
+ * @param form {HTMLFormElement} - The form being submitted
+ * @param key {CryptoKey} - The key used for encrypting the text
+ * @param salt {Uint8Array} - The salt generated when creating the key
+ * @param callback {function()} - The callback indicating upload status
+ */
+const submitFormText = async (
+    form: SendForm,
+    key: CryptoKey,
+    salt: Uint8Array,
+    callback: () => void,
+) => {
+    let encryptedText = await crypto.encryptString(key, form.text);
     let encryptedName = await crypto.encryptString(key, genRandomString(10));
 
     let hexName = toHexString(encryptedName);
-    let expString = getExpString(form.exp, form.unit);
-    let downloads = parseInt(form.downloads);
+    let expString = getExpString(form.expiration, form.expUnits);
+    let downloads = form.downloads;
 
-    uploadPlaintext(hexName, encryptedText, salt, downloads, expString, (tag) => {
+    uploadTextOnly(hexName, encryptedText, salt, downloads, expString, (tag) => {
         if (tag) {
             showFileTag(tag);
             callback();
@@ -255,7 +315,7 @@ const uploadZip = async (id, key, zip, chunks) => {
     let i = 0;
     let zipData = new Uint8Array(0);
 
-    zip.generateInternalStream({type:"uint8array"}).on ('data', async (data, metadata) => {
+    zip.generateInternalStream({type:"uint8array"}).on("data", async (data: Uint8Array) => {
         zipData = concatTypedArrays(zipData, data);
         if (zipData.length >= chunkSize) {
             let slice = zipData.subarray(0, chunkSize);
@@ -289,30 +349,22 @@ const uploadZip = async (id, key, zip, chunks) => {
     }).resume();
 }
 
-const uploadFileChunks = async (id, key, file, chunks) => {
-    for (let i = 0; i < chunks; i++) {
-        let start = i * chunkSize;
-        let end = (i + 1) * chunkSize;
-
-        if (end > file.size) {
-            end = file.size;
-        }
-
-        let data = await file.slice(start, end).arrayBuffer();
-        let blob = await crypto.encryptChunk(key, new Uint8Array(data));
-
-        updateProgress(`Uploading file... ${i + 1}/${chunks}`)
-        transfer.sendChunk(Endpoints.UploadSendFileData, blob, id, i + 1, (tag) => {
-            if (tag) {
-                showFileTag(tag);
-            }
-        }, () => {
-            alert("Error uploading file!");
-        });
-    }
-}
-
-const uploadPlaintext = (name, text, salt, downloads, exp, callback) => {
+/**
+ * Uploads text (not a file) to YeetFile Send
+ * @param name {string} - The pseudo-name for the text (not shown to recipient)
+ * @param text {Uint8Array} - The encrypted text content
+ * @param salt {Uint8Array} - The salt used when encrypting the text
+ * @param downloads {number} - The number of possible downloads
+ * @param exp {string} - The expiration string
+ * @param callback {function(string)} - The function indicating upload completion
+ */
+const uploadTextOnly = (
+    name: string,
+    text: Uint8Array,
+    salt: Uint8Array,
+    downloads: number,
+    exp: string,
+    callback: (string) => void) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", Endpoints.UploadSendText.path, false);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -323,7 +375,7 @@ const uploadPlaintext = (name, text, salt, downloads, exp, callback) => {
             callback(response.id);
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             alert(`Error ${xhr.status}: ${xhr.responseText}`);
-            callback();
+            callback("");
         }
     };
 

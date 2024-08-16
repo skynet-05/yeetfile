@@ -63,17 +63,28 @@ const readChunk = (file, start, end): Promise<ArrayBuffer> => {
 }
 
 /**
- * uploadChunks encrypts and uploads individual file chunks to the server until the entire file
- * has been uploaded
- * @param endpoint {string} - The string endpoint to use for uploading chunks (vault or send)
- * @param id {string} - The file ID returned during the initial file metadata creation step beforehand
+ * uploadChunks encrypts and uploads individual file chunks to the server until
+ * the entire file has been uploaded
+ * @param endpoint {string} - The string endpoint to use for uploading chunks
+ * @param id {string} - The file ID returned from uploading metadata
  * @param file {File} - The file object being uploaded
  * @param key {CryptoKey} - The key to use for encrypting each file chunk
- * @param callback {function(boolean)} - A callback returning true when the file is finished uploading
- * @param errorCallback {function(string)} - An error callback for any errors with uploading the file
+ * @param callback {function(boolean)} - A callback indicating successful upload
+ * @param errorCallback {function(string)} - A callback with an error message
  */
-const uploadChunks = async (endpoint, id, file, key, callback, errorCallback) => {
+const uploadChunks = async (
+    endpoint: Endpoint,
+    id: string,
+    file: File,
+    key: CryptoKey,
+    callback: (boolean) => void,
+    errorCallback: (string) => void,
+) => {
+    const maxConcurrentUploads = 3; // Number of workers
+    const activeUploads: Set<Promise<any>> = new Set();
+
     let chunks = getNumChunks(file.size);
+    let progressAmount = 0;
     let progressBar = document.getElementById("item-bar") as HTMLProgressElement;
     if (progressBar && chunks > 1) {
         progressBar.value = 0;
@@ -83,34 +94,65 @@ const uploadChunks = async (endpoint, id, file, key, callback, errorCallback) =>
     }
 
     const uploadChunk = async (chunk) => {
-        let progress = ((chunk + 1) / chunks) * 100;
-        console.log("Uploading: " + progress + "%");
-        if (progressBar && chunks > 1) {
-            progressBar.value = progress;
-        }
-
-        let start = chunk * chunkSize;
-        let end = (chunk + 1) * chunkSize;
-
-        if (end > file.size) {
-            end = file.size;
-        }
-
-        let data = await readChunk(file, start, end);
-        let blob = await crypto.encryptChunk(key, new Uint8Array(data));
-
-        sendChunk(endpoint, blob, id, chunk + 1, (response) => {
-            if (response.length > 0) {
-                callback(true);
-            } else {
-                uploadChunk(chunk + 1);
+        return new Promise(async (resolve, reject) => {
+            console.log("Uploading chunk " + chunk);
+            progressAmount += 0.5;
+            let progress = (progressAmount / chunks) * 100;
+            if (progressBar && chunks > 1) {
+                progressBar.value = progress;
             }
-        }, errorMessage => {
-            errorCallback(errorMessage);
+
+            let start = chunk * chunkSize;
+            let end = (chunk + 1) * chunkSize;
+
+            if (end > file.size) {
+                end = file.size;
+            }
+
+            let data = await readChunk(file, start, end);
+            let blob = await crypto.encryptChunk(key, new Uint8Array(data));
+
+            sendChunk(endpoint, blob, id, chunk + 1, (response) => {
+                resolve("");
+                progressAmount += 0.5;
+                let progress = (progressAmount / chunks) * 100;
+                if (progressBar && chunks > 1) {
+                    progressBar.value = progress;
+                }
+
+                if (response.length > 0) {
+                    callback(true);
+                }
+            }, errorMessage => {
+                reject();
+                errorCallback(errorMessage);
+            });
         });
     }
 
-    await uploadChunk(0);
+    if (chunks === 1) {
+        await uploadChunk(0);
+    } else {
+        for (let i = 0; i < chunks - 1; i++) {
+            while (activeUploads.size >= maxConcurrentUploads) {
+                await Promise.race(activeUploads);
+            }
+
+            const uploadPromise = uploadChunk(i)
+                .then(() => {
+                    activeUploads.delete(uploadPromise);
+                })
+                .catch((error) => {
+                    activeUploads.delete(uploadPromise);
+                    console.error(`Error uploading chunk ${i + 1}:`, error);
+                });
+
+            activeUploads.add(uploadPromise);
+        }
+
+        await Promise.all(activeUploads);
+        await uploadChunk(chunks - 1);
+    }
 }
 
 /**
