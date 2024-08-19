@@ -1,7 +1,9 @@
 package account
 
 import (
+	"errors"
 	"fmt"
+	"github.com/charmbracelet/huh/spinner"
 	"time"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
@@ -12,20 +14,22 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-type AccountAction int
+type Action int
 
 const (
-	ChangeEmail AccountAction = iota
+	ChangeEmail Action = iota
 	ChangePassword
 	ManageSubscription
 	PurchaseSubscription
 	DeleteAccount
 )
 
+var actionMap map[Action]func()
+
 func ShowAccountModel() {
 	account, accountDetails := FetchAccountDetails()
 	options := generateSelectOptions(account)
-	var action AccountAction
+	var action Action
 
 	err := huh.NewForm(
 		huh.NewGroup(
@@ -34,21 +38,100 @@ func ShowAccountModel() {
 				Description(utils.GenerateDescriptionSection(
 					"Info",
 					accountDetails, 21)),
-			huh.NewSelect[AccountAction]().
+			huh.NewSelect[Action]().
 				Title("Actions").
 				Options(options...).
 				Value(&action),
 		)).WithTheme(styles.Theme).Run()
 	utils.HandleCLIError("Error displaying account model", err)
 
-	switch action {
-	case DeleteAccount:
-		startAccountDeletion()
-		return
+	actionViewFunc, ok := actionMap[action]
+	if ok {
+		actionViewFunc()
 	}
 }
 
-func startAccountDeletion() {
+func showChangePasswordView() {
+	var identifier string
+	var currentPassword string
+	var newPassword string
+	var confirmed bool
+
+	var changed bool
+	var formErr error
+
+	changePasswordForm := func(prevErr error) (bool, error) {
+		var errMsg string
+		if prevErr != nil {
+			errMsg = prevErr.Error()
+		}
+		err := huh.NewForm(huh.NewGroup(
+			huh.NewNote().
+				Title("Change Password").
+				Description("Enter your current login"),
+			huh.NewInput().
+				Title("Identifier").
+				Placeholder("Email / Account ID").
+				Value(&identifier),
+			huh.NewInput().
+				Title("Current Password").
+				EchoMode(huh.EchoModePassword).
+				Value(&currentPassword),
+			huh.NewInput().
+				Title("New Password").
+				EchoMode(huh.EchoModePassword).
+				Value(&newPassword),
+			huh.NewInput().
+				Title("Confirm New Password").
+				EchoMode(huh.EchoModePassword).
+				Validate(func(s string) error {
+					if s == newPassword {
+						return nil
+					}
+
+					return errors.New("passwords don't match")
+				}),
+			huh.NewConfirm().
+				Description(styles.ErrStyle.Render(errMsg)).
+				Affirmative("Change Password").
+				Negative("Cancel").
+				Value(&confirmed))).WithTheme(styles.Theme).Run()
+
+		utils.HandleCLIError("Error showing password form", err)
+
+		if !confirmed {
+			ShowAccountModel()
+			return false, nil
+		}
+
+		_ = spinner.New().Title("Changing password...").Action(func() {
+			err = changePassword(identifier, currentPassword, newPassword)
+		}).Run()
+
+		return err == nil, err
+	}
+
+	changed, formErr = changePasswordForm(nil)
+	for formErr != nil {
+		changed, formErr = changePasswordForm(formErr)
+	}
+
+	if changed {
+		err := huh.NewForm(huh.NewGroup(
+			huh.NewNote().Title("Change Password").
+				Description("Your password has successfully been changed."),
+			huh.NewConfirm().
+				Affirmative("OK").
+				Negative("")),
+		).WithTheme(styles.Theme).Run()
+		utils.HandleCLIError("Error showing pw confirmation", err)
+		ShowAccountModel()
+	} else {
+		ShowAccountModel()
+	}
+}
+
+func showAccountDeletionView() {
 	deletionFunc := func(errMsg string) (bool, string) {
 		var id string
 		var confirm bool
@@ -98,8 +181,8 @@ func startAccountDeletion() {
 
 func generateSelectOptions(
 	account shared.AccountResponse,
-) []huh.Option[AccountAction] {
-	options := []huh.Option[AccountAction]{
+) []huh.Option[Action] {
+	options := []huh.Option[Action]{
 		huh.NewOption("Change Email", ChangeEmail),
 		huh.NewOption("Change Password", ChangePassword),
 	}
@@ -117,4 +200,11 @@ func generateSelectOptions(
 
 	options = append(options, huh.NewOption("Delete Account", DeleteAccount))
 	return options
+}
+
+func init() {
+	actionMap = map[Action]func(){
+		ChangePassword: showChangePasswordView,
+		DeleteAccount:  showAccountDeletionView,
+	}
 }

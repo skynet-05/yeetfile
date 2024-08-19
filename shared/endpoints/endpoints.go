@@ -10,15 +10,16 @@ const apiVersion = "v1"
 type Endpoint string
 
 var (
-	Signup        = genEndpoint("/api/%s/signup")
-	Login         = genEndpoint("/api/%s/login")
-	Logout        = genEndpoint("/api/%s/logout")
-	Account       = genEndpoint("/api/%s/account")
-	Forgot        = genEndpoint("/api/%s/forgot")
-	Reset         = genEndpoint("/api/%s/reset")
-	Session       = genEndpoint("/api/%s/session")
-	VerifyAccount = genEndpoint("/api/%s/verify")
-	VerifyEmail   = genEndpoint("/verify-email")
+	Signup         = genEndpoint("/api/%s/signup")
+	Login          = genEndpoint("/api/%s/login")
+	Logout         = genEndpoint("/api/%s/logout")
+	Account        = genEndpoint("/api/%s/account")
+	Forgot         = genEndpoint("/api/%s/forgot")
+	Reset          = genEndpoint("/api/%s/reset")
+	Session        = genEndpoint("/api/%s/session")
+	VerifyAccount  = genEndpoint("/api/%s/verify")
+	VerifyEmail    = genEndpoint("/verify-email")
+	ChangePassword = genEndpoint("/api/%s/change_password")
 
 	VaultRoot   = genEndpoint("/api/%s/vault")
 	VaultFolder = genEndpoint("/api/%s/vault/folder/*")
@@ -35,21 +36,25 @@ var (
 	DownloadSendFileMetadata = genEndpoint("/api/%s/send/d/*")
 	DownloadSendFileData     = genEndpoint("/api/%s/send/d/*/*")
 
-	ShareFile   = genEndpoint("/api/%s/share/file/*")
-	ShareFolder = genEndpoint("/api/%s/share/folder/*")
-	PubKey      = genEndpoint("/api/%s/pubkey")
+	ShareFile    = genEndpoint("/api/%s/share/file/*")
+	ShareFolder  = genEndpoint("/api/%s/share/folder/*")
+	PubKey       = genEndpoint("/api/%s/pubkey")
+	ProtectedKey = genEndpoint("/api/%s/protectedkey")
+
+	HTMLChangePassword = genEndpoint("/change_password")
 )
 
 var JSVarNameMap = map[Endpoint]string{
-	Signup:        "Signup",
-	Login:         "Login",
-	Logout:        "Logout",
-	Forgot:        "Forgot",
-	Reset:         "Reset",
-	Session:       "Session",
-	Account:       "Account",
-	VerifyAccount: "VerifyAccount",
-	VerifyEmail:   "VerifyEmail",
+	Signup:         "Signup",
+	Login:          "Login",
+	Logout:         "Logout",
+	Forgot:         "Forgot",
+	Reset:          "Reset",
+	Session:        "Session",
+	Account:        "Account",
+	VerifyAccount:  "VerifyAccount",
+	VerifyEmail:    "VerifyEmail",
+	ChangePassword: "ChangePassword",
 
 	VaultRoot:   "VaultRoot",
 	VaultFolder: "VaultFolder",
@@ -66,9 +71,12 @@ var JSVarNameMap = map[Endpoint]string{
 	DownloadSendFileMetadata: "DownloadSendFileMetadata",
 	DownloadSendFileData:     "DownloadSendFileData",
 
-	ShareFile:   "ShareFile",
-	ShareFolder: "ShareFolder",
-	PubKey:      "PubKey",
+	ShareFile:    "ShareFile",
+	ShareFolder:  "ShareFolder",
+	PubKey:       "PubKey",
+	ProtectedKey: "ProtectedKey",
+
+	HTMLChangePassword: "HTMLChangePassword",
 }
 
 func genEndpoint(fmtStr string) Endpoint {

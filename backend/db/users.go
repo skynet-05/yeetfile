@@ -366,8 +366,8 @@ func GetUserKeys(id string) ([]byte, []byte, error) {
 
 	defer rows.Close()
 	if rows.Next() {
-		var publicKey []byte
 		var protectedKey []byte
+		var publicKey []byte
 		err = rows.Scan(&protectedKey, &publicKey)
 		if err != nil {
 			return nil, nil, err
@@ -756,6 +756,19 @@ func ExpDateRollover(now time.Time, exp time.Time) bool {
 func DeleteUser(id string) error {
 	s := `DELETE FROM users WHERE id=$1`
 	_, err := db.Exec(s, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateUserLogin(id string, loginKeyHash, protectedKey []byte) error {
+	s := `UPDATE users
+          SET pw_hash=$2, protected_key=$3
+          WHERE id=$1`
+
+	_, err := db.Exec(s, id, loginKeyHash, protectedKey)
 	if err != nil {
 		return err
 	}

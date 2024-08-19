@@ -10,6 +10,9 @@ const init = () => {
     let deleteBtn = document.getElementById("delete-btn");
     deleteBtn.addEventListener("click", deleteAccount);
 
+    let changePwBtn = document.getElementById("change-pw-btn");
+    changePwBtn.addEventListener("click", changePassword);
+
     // let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
     // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
 
@@ -80,6 +83,10 @@ const recyclePaymentID = () => {
             alert("Error recycling payment id");
         });
     }
+}
+
+const changePassword = () => {
+    window.location.assign(Endpoints.HTMLChangePassword.path);
 }
 
 if (document.readyState !== 'loading') {

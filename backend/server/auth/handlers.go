@@ -28,34 +28,11 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var userID string
-	identifier := login.Identifier
-	keyHash := login.LoginKeyHash
-
-	if strings.Contains(login.Identifier, "@") {
-		pwHash, err := db.GetUserPasswordHashByEmail(identifier)
-		if err != nil || bcrypt.CompareHashAndPassword(pwHash, keyHash) != nil {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte("User not found, or incorrect password"))
-			return
-		}
-
-		userID, err = db.GetUserIDByEmail(identifier)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte("Internal server error"))
-			return
-		}
-	} else {
-		pwHash, err := db.GetUserPasswordHashByID(identifier)
-		pwError := bcrypt.CompareHashAndPassword(pwHash, keyHash)
-		if err != nil || !db.UserIDExists(identifier) || pwError != nil {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte("User not found, or incorrect password"))
-			return
-		}
-
-		userID = identifier
+	userID, err := ValidateCredentials(login.Identifier, login.LoginKeyHash)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("User not found, or incorrect password"))
+		return
 	}
 
 	protectedKey, publicKey, err := db.GetUserKeys(userID)
@@ -425,6 +402,58 @@ func PubKeyHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	jsonData, _ := json.Marshal(shared.PubKeyResponse{PublicKey: pubKey})
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(jsonData)
+}
+
+// ProtectedKeyHandler returns the user's protected key (private key encrypted
+// with their user key). This is used when updating the protected key when
+// a user changes their email or password.
+func ProtectedKeyHandler(w http.ResponseWriter, _ *http.Request, id string) {
+	protectedKey, _, err := db.GetUserKeys(id)
+	if err != nil {
+		log.Printf("Error fetching user keys: %v\n", err)
+		http.Error(w, "Error fetching protected key", http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, _ := json.Marshal(shared.ProtectedKeyResponse{
+		ProtectedKey: protectedKey,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(jsonData)
+}
+
+// ChangePasswordHandler validates the user's old login information, and uses
+// the ChangePassword request struct to update their login info and protected
+// key with new values.
+func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) {
+	var changePassword shared.ChangePassword
+	if json.NewDecoder(req.Body).Decode(&changePassword) != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Unable to decode request body"))
+		return
+	}
+
+	userID, err := ValidateCredentials(id, changePassword.PrevLoginKeyHash)
+	if err != nil || id != userID {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("Incorrect password"))
+		return
+	}
+
+	bcryptHash, err := bcrypt.GenerateFromPassword(
+		changePassword.NewLoginKeyHash, 8)
+	if err != nil {
+		log.Printf("Error generating bcrypt hash: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = db.UpdateUserLogin(id, bcryptHash, changePassword.ProtectedKey)
+	if err != nil {
+		log.Printf("Error updating user login credentials: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 // RecyclePaymentIDHandler handles replacing the user's current payment ID with

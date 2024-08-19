@@ -167,6 +167,10 @@ type PubKeyResponse struct {
 	PublicKey []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
+type ProtectedKeyResponse struct {
+	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+}
+
 type ShareItemRequest struct {
 	User         string `json:"user"`
 	CanModify    bool   `json:"canModify"`
@@ -211,4 +215,10 @@ type DeleteResponse struct {
 
 type DeleteAccount struct {
 	Identifier string `json:"identifier"`
+}
+
+type ChangePassword struct {
+	PrevLoginKeyHash []byte `json:"prevLoginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	NewLoginKeyHash  []byte `json:"newLoginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedKey     []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }

@@ -72,6 +72,8 @@ func Run(addr string) {
 		{GET | POST, endpoints.Forgot, auth.ForgotPasswordHandler},
 		{POST, endpoints.Reset, auth.ResetPasswordHandler},
 		{GET, endpoints.PubKey, LimiterMiddleware(AuthMiddleware(auth.PubKeyHandler))},
+		{GET, endpoints.ProtectedKey, AuthMiddleware(auth.ProtectedKeyHandler)},
+		{PUT, endpoints.ChangePassword, AuthMiddleware(auth.ChangePasswordHandler)},
 
 		// Payments (Stripe, BTCPay)
 		{POST, "/webhook/stripe", payments.StripeWebhook},
@@ -90,6 +92,7 @@ func Run(addr string) {
 		{GET, "/signup", html.SignupPageHandler},
 		{GET, "/login", html.LoginPageHandler},
 		{GET, "/faq", html.FAQPageHandler},
+		{GET, endpoints.HTMLChangePassword, AuthMiddleware(html.ChangePasswordPageHandler)},
 
 		// Misc
 		{

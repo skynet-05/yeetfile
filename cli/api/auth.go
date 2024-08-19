@@ -174,8 +174,46 @@ func (ctx *Context) LogOut() error {
 	return nil
 }
 
+// GetUserProtectedKey retrieves the user's private key, which has been
+// encrypted with their unique user key before upload.
+func (ctx *Context) GetUserProtectedKey() ([]byte, error) {
+	url := endpoints.ProtectedKey.Format(ctx.Server)
+	resp, err := requests.GetRequest(ctx.Session, url)
+	if err != nil {
+		return nil, err
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, utils.ParseHTTPError(resp)
+	}
+
+	var protectedKey shared.ProtectedKeyResponse
+	err = json.NewDecoder(resp.Body).Decode(&protectedKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return protectedKey.ProtectedKey, err
+}
+
+// ChangePassword changes a user's password, updating their login key hash
+// and their encrypted private key.
+func (ctx *Context) ChangePassword(password shared.ChangePassword) error {
+	url := endpoints.ChangePassword.Format(ctx.Server)
+	reqData, err := json.Marshal(password)
+	if err != nil {
+		return err
+	}
+
+	resp, err := requests.PutRequest(ctx.Session, url, reqData)
+	if err != nil {
+		return err
+	} else if resp.StatusCode != http.StatusOK {
+		return utils.ParseHTTPError(resp)
+	}
+	
+	return nil
+}
+
 // DeleteAccount removes the current user's YeetFile account.
-// NOTE: Currently available only in debug-mode.
 func (ctx *Context) DeleteAccount(id string) error {
 	url := endpoints.Account.Format(ctx.Server)
 	reqData, err := json.Marshal(shared.DeleteAccount{Identifier: id})

@@ -1,12 +1,20 @@
 package account
 
 import (
+	"errors"
 	"fmt"
 	"time"
+	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 )
+
+type ChangePasswordForm struct {
+	Identifier  string
+	OldPassword string
+	NewPassword string
+}
 
 func getSubscriptionString(exp time.Time) string {
 	if exp.Year() < 2024 {
@@ -35,6 +43,35 @@ func getStorageString(used, available int, isSend bool) string {
 			monthIndicator,
 			shared.ReadableFileSize(available-used))
 	}
+}
+
+func changePassword(identifier, password, newPassword string) error {
+	userKey := crypto.GenerateUserKey([]byte(identifier), []byte(password))
+	oldLoginKeyHash := crypto.GenerateLoginKeyHash(userKey, []byte(password))
+
+	newUserKey := crypto.GenerateUserKey([]byte(identifier), []byte(newPassword))
+	newLoginKeyHash := crypto.GenerateLoginKeyHash(newUserKey, []byte(newPassword))
+
+	protectedKey, err := globals.API.GetUserProtectedKey()
+	if err != nil {
+		return errors.New("error fetching protected key")
+	}
+
+	privateKey, err := crypto.DecryptChunk(userKey, protectedKey)
+	if err != nil {
+		return errors.New("error decrypting protected key")
+	}
+
+	newProtectedKey, err := crypto.EncryptChunk(newUserKey, privateKey)
+	if err != nil {
+		return errors.New("error encrypting private key")
+	}
+
+	return globals.API.ChangePassword(shared.ChangePassword{
+		PrevLoginKeyHash: oldLoginKeyHash,
+		NewLoginKeyHash:  newLoginKeyHash,
+		ProtectedKey:     newProtectedKey,
+	})
 }
 
 func FetchAccountDetails() (shared.AccountResponse, string) {

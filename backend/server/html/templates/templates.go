@@ -74,15 +74,16 @@ type ForgotPasswordTemplate struct {
 }
 
 const (
-	SendHTML         = "send.html"
-	VaultHTML        = "vault.html"
-	DownloadHTML     = "download.html"
-	VerificationHTML = "verify.html"
-	SignupHTML       = "signup.html"
-	LoginHTML        = "login.html"
-	AccountHTML      = "account.html"
-	ForgotHTML       = "forgot.html"
-	FaqHTML          = "faq.html"
+	SendHTML           = "send.html"
+	VaultHTML          = "vault.html"
+	DownloadHTML       = "download.html"
+	VerificationHTML   = "verify.html"
+	SignupHTML         = "signup.html"
+	LoginHTML          = "login.html"
+	AccountHTML        = "account.html"
+	ForgotHTML         = "forgot.html"
+	FaqHTML            = "faq.html"
+	ChangePasswordHTML = "change_password.html"
 )
 
 //go:embed *.html

@@ -213,6 +213,25 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 	handleError(w, err)
 }
 
+func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, id string) {
+	err := templates.ServeTemplate(
+		w,
+		templates.ChangePasswordHTML,
+		templates.Template{
+			Base: templates.BaseTemplate{
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "Change Password",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   []string{"change_password.js"},
+				CSS:          nil,
+				Config:       config.YeetFileConfig,
+			},
+		},
+	)
+
+	handleError(w, err)
+}
+
 // FAQPageHandler returns the FAQ HTML page
 func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 	err := templates.ServeTemplate(
