@@ -4,39 +4,61 @@
 <div id="center-div">
     <h1>Create Account</h1>
     <hr>
-    <input type="radio" id="email-signup" name="signup" checked>
-    <label for="email-signup">Email Address</label><br>
-    <input type="radio" id="id-signup" name="signup">
-    <label for="id-signup">Account ID Only</label><br>
-    <hr>
-    {{ if .ServerPasswordRequired }}
-    <span>This server is password protected. Please enter the server password below
+    <fieldset id="signup-fieldset" style="border: 0;">
+        <input type="radio" id="email-signup" name="signup" checked>
+        <label for="email-signup">Email Address</label><br>
+        <input type="radio" id="id-signup" name="signup">
+        <label for="id-signup">Account ID Only</label><br>
+        <hr>
+        {{ if .ServerPasswordRequired }}
+        <span>This server is password protected. Please enter the server password below
     to create an account.</span><br>
-    <input type="password" id="server-password" placeholder="Server Password">
-    <hr>
-    {{ else }}
-    <input type="password" id="server-password" placeholder="Server Password" hidden>
-    {{ end }}
-    <div id="email-div">
-        <form method="post" id="email-signup-form" action="/signup">
-            <input type="text" id="email" name="email" placeholder="Email"><br>
-            <input type="password" id="password" name="password" placeholder="Password"><br>
-            <input type="password" id="confirm-password" placeholder="Confirm Password"><br>
+        <input type="password" id="server-password" placeholder="Server Password">
+        <hr>
+        {{ else }}
+        <input type="password" id="server-password" placeholder="Server Password" hidden>
+        {{ end }}
+        <div id="email-div">
+            <table>
+                <tr>
+                    <td><label for="email">Email:</label></td>
+                    <td><input type="text" id="email" name="email" placeholder="Email"></td>
+                </tr>
+                <tr>
+                    <td><label for="password">Password:</label></td>
+                    <td><input type="password" id="password" name="password" placeholder="Password"></td>
+                </tr>
+                <tr>
+                    <td><label for="confirm-password">Confirm:</label></td>
+                    <td><input type="password" id="confirm-password" placeholder="Confirm Password"></td>
+                </tr>
+            </table>
 
-            <input type="submit" id="create-email-account" value="Create Account"/>
-        </form>
-    </div>
-    <div id="account-id-div">
-        <p>Note: By signing up with an account number only, you will be unable to recover
-        your account if you ever lose your account number.</p>
-
-        <input type="password" id="account-password" name="password" placeholder="Password"><br>
-        <input type="password" id="account-confirm-password" placeholder="Confirm Password"><br>
-        <input type="submit" id="create-id-only-account" value="Create Account">
-
-        <div id="account-id-verify">
+            <input class="signup-btn" type="submit" id="create-email-account" value="Create Account"/>
         </div>
-    </div>
+        <div id="account-id-div">
+            <table>
+                <tr>
+                    <td><label for="account-password">Password:</label></td>
+                    <td><input type="password" id="account-password" name="password" placeholder="Password"></td>
+                </tr>
+                <tr>
+                    <td><label for="account-confirm-password">Confirm:</label></td>
+                    <td><input type="password" id="account-confirm-password" placeholder="Confirm Password"></td>
+                </tr>
+            </table>
+            <input class="signup-btn" type="submit" id="create-id-only-account" value="Create Account">
+
+            <p class="note-text">
+                Note: By signing up with an account number only,
+                you will be unable to recover your account if you
+                ever lose your account number or your password.
+            </p>
+
+            <div id="account-id-verify">
+            </div>
+        </div>
+    </fieldset>
 
     {{ template "messages.html" . }}
 </div>

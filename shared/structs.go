@@ -156,6 +156,11 @@ type ForgotPassword struct {
 	Email string `json:"email"`
 }
 
+type VerifyEmail struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
 type ResetPassword struct {
 	Email           string `json:"email"`
 	Code            string `json:"code"`

@@ -14,8 +14,8 @@
                 <label for="upload-file-btn">Upload File(s)</label><br>
                 {{ else }}
                 <input type="radio" id="upload-file-btn" name="signup" disabled>
-                <label for="upload-file-btn">Upload File (<a href="/signup">sign up</a>
-                    or <a href="/login">log in</a>)</label><br>
+                <label for="upload-file-btn">Upload File (<a href="{{.Base.Endpoints.Signup}}">sign up</a>
+                    or <a href="{{.Base.Endpoints.Login}}">log in</a>)</label><br>
                 {{ end }}
             </div>
 

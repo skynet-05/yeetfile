@@ -69,6 +69,8 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 			_, _ = w.Write([]byte("Missing or invalid server password"))
 			return
 		}
+	} else {
+		signupData.ServerPassword = "-"
 	}
 
 	var response shared.SignupResponse
@@ -92,7 +94,8 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		// Email signup
 		err := SignupWithEmail(signupData)
-		if err != nil {
+		if err != nil && err != db.VerificationCodeExistsError {
+			log.Printf("Error creating (email) account: %v\n", err)
 			errMsg := "Error creating account"
 			if err == db.UserAlreadyExists {
 				errMsg = "User already exists"
@@ -109,8 +112,11 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(response)
+	if len(response.Error) > 0 {
+		_, _ = w.Write([]byte(response.Error))
+	} else {
+		_ = json.NewEncoder(w).Encode(response)
+	}
 }
 
 // AccountHandler handles fetching and returning the user's account information.
@@ -181,53 +187,54 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 // VerifyEmailHandler handles account verification using the link sent to a user's
 // email immediately after signup.
 func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
-	email := req.URL.Query().Get("email")
-	code := req.URL.Query().Get("code")
+	var verifyEmail shared.VerifyEmail
+	if json.NewDecoder(req.Body).Decode(&verifyEmail) != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("error decoding request"))
+		return
+	}
 
 	// Ensure the request has the correct params for verification, otherwise
 	// it should return the HTML verification page
-	if len(email) == 0 || len(code) == 0 {
-		if len(email) == 0 {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		html.VerifyPageHandler(w, req, email)
+	if len(verifyEmail.Email) == 0 || len(verifyEmail.Code) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte("Missing required fields"))
 		return
 	}
 
 	// Verify user verification code and fetch password hash
-	accountValues, err := db.VerifyUser(email, code)
+	accountValues, err := db.VerifyUser(verifyEmail.Email, verifyEmail.Code)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set(html.ErrorHeader, "Incorrect verification code")
-		html.VerifyPageHandler(w, req, email)
+		_, _ = w.Write([]byte("Incorrect verification code"))
 		return
 	}
 
 	// Create new user
 	id, err := db.NewUser(db.User{
-		Email:        email,
+		Email:        verifyEmail.Email,
 		PasswordHash: accountValues.PasswordHash,
 		ProtectedKey: accountValues.ProtectedKey,
 		PublicKey:    accountValues.PublicKey,
 	})
 
 	if err != nil {
-		w.Header().Set(html.ErrorHeader, "Error creating new account")
-		html.VerifyPageHandler(w, req, email)
+		log.Printf("Error initializing new account: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Error initializing new account"))
 		return
 	}
 
 	err = db.NewRootFolder(id, accountValues.RootFolderKey)
-
 	if err != nil {
-		w.Header().Set(html.ErrorHeader, "Error initializing user vault")
-		html.VerifyPageHandler(w, req, email)
+		log.Printf("Error initializing user vault: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("Error initializing user vault"))
 		return
 	}
 
 	// Remove verification entry
-	_ = db.DeleteVerification(email)
+	_ = db.DeleteVerification(verifyEmail.Email)
 
 	_ = session.SetSession(id, w, req)
 	http.Redirect(w, req, "/account", http.StatusMovedPermanently)
@@ -309,7 +316,7 @@ func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.Method == http.MethodGet {
-		html.ForgotPageHandler(w, req, "")
+		html.ForgotPageHandler(w, req)
 		return
 	} else if req.Method == http.MethodPost {
 		_ = req.ParseForm()
@@ -319,10 +326,14 @@ func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
 
 		id, err := db.GetUserIDByEmail(forgot.Email)
 		if err == nil && len(id) > 0 && len(forgot.Email) > 0 {
-			code, _ := db.NewVerification(
+			code, err := db.NewVerification(
 				shared.Signup{Identifier: forgot.Email},
 				nil,
 				true)
+			if err != nil || len(code) == 0 {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 			_ = mail.SendResetEmail(code, forgot.Email)
 		}
 
@@ -357,7 +368,7 @@ func ResetPasswordHandler(w http.ResponseWriter, req *http.Request) {
 	if len(errorMsg) > 0 {
 		w.WriteHeader(http.StatusForbidden)
 		w.Header().Set(html.ErrorHeader, errorMsg)
-		html.ForgotPageHandler(w, req, reset.Email)
+		html.ForgotPageHandler(w, req)
 		return
 	}
 

@@ -9,6 +9,19 @@ const apiVersion = "v1"
 
 type Endpoint string
 
+type HTMLEndpoints struct {
+	Account        string
+	Send           string
+	Vault          string
+	Login          string
+	Signup         string
+	Forgot         string
+	ChangePassword string
+	VerifyEmail    string
+}
+
+var HTMLPageEndpoints HTMLEndpoints
+
 var (
 	Signup         = genEndpoint("/api/%s/signup")
 	Login          = genEndpoint("/api/%s/login")
@@ -18,7 +31,7 @@ var (
 	Reset          = genEndpoint("/api/%s/reset")
 	Session        = genEndpoint("/api/%s/session")
 	VerifyAccount  = genEndpoint("/api/%s/verify")
-	VerifyEmail    = genEndpoint("/verify-email")
+	VerifyEmail    = genEndpoint("/api/%s/verify_email")
 	ChangePassword = genEndpoint("/api/%s/change_password")
 
 	VaultRoot   = genEndpoint("/api/%s/vault")
@@ -41,7 +54,16 @@ var (
 	PubKey       = genEndpoint("/api/%s/pubkey")
 	ProtectedKey = genEndpoint("/api/%s/protectedkey")
 
+	HTMLAccount        = genEndpoint("/account")
+	HTMLSend           = genEndpoint("/send")
+	HTMLSendDownload   = genEndpoint("/send/*")
+	HTMLVault          = genEndpoint("/vault")
+	HTMLVaultFolder    = genEndpoint("/vault/*")
+	HTMLLogin          = genEndpoint("/login")
+	HTMLSignup         = genEndpoint("/signup")
+	HTMLForgot         = genEndpoint("/forgot")
 	HTMLChangePassword = genEndpoint("/change_password")
+	HTMLVerifyEmail    = genEndpoint("/verify_email")
 )
 
 var JSVarNameMap = map[Endpoint]string{
@@ -76,7 +98,15 @@ var JSVarNameMap = map[Endpoint]string{
 	PubKey:       "PubKey",
 	ProtectedKey: "ProtectedKey",
 
+	HTMLAccount:        "HTMLAccount",
+	HTMLSend:           "HTMLSend",
+	HTMLSendDownload:   "HTMLSendDownload",
+	HTMLVault:          "HTMLVault",
+	HTMLVaultFolder:    "HTMLVaultFolder",
+	HTMLLogin:          "HTMLLogin",
+	HTMLSignup:         "HTMLSignup",
 	HTMLChangePassword: "HTMLChangePassword",
+	HTMLVerifyEmail:    "HTMLVerifyEmail",
 }
 
 func genEndpoint(fmtStr string) Endpoint {
@@ -100,4 +130,17 @@ func (e Endpoint) Format(server string, args ...string) string {
 	strEndpoint = strings.TrimPrefix(strEndpoint, "/")
 	url := fmt.Sprintf("%s/%s", server, strEndpoint)
 	return url
+}
+
+func init() {
+	HTMLPageEndpoints = HTMLEndpoints{
+		Account:        string(HTMLAccount),
+		Send:           string(HTMLSend),
+		Vault:          string(HTMLVault),
+		Login:          string(HTMLLogin),
+		Signup:         string(HTMLSignup),
+		Forgot:         string(HTMLForgot),
+		ChangePassword: string(HTMLChangePassword),
+		VerifyEmail:    string(HTMLVerifyEmail),
+	}
 }

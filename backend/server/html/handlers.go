@@ -11,6 +11,7 @@ import (
 	"yeetfile/backend/server/subscriptions"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
+	"yeetfile/shared/endpoints"
 )
 
 const ErrorHeader = "ErrorMsg"
@@ -43,8 +44,9 @@ func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
 					"vault.js",
 					"ponyfill.min.js",
 				},
-				CSS:    []string{"vault.css"},
-				Config: config.YeetFileConfig,
+				CSS:       []string{"vault.css"},
+				Config:    config.YeetFileConfig,
+				Endpoints: endpoints.HTMLPageEndpoints,
 			},
 			StorageUsed:      userStorage.StorageUsed,
 			StorageAvailable: userStorage.StorageAvailable,
@@ -52,10 +54,6 @@ func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	)
 
 	handleError(w, err)
-}
-
-func SharedVaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
-
 }
 
 // SendPageHandler returns the html template used for sending files
@@ -73,8 +71,9 @@ func SendPageHandler(w http.ResponseWriter, req *http.Request) {
 					"jszip.min.js",
 					"share.js",
 				},
-				CSS:    []string{"upload.css"},
-				Config: config.YeetFileConfig,
+				CSS:       []string{"upload.css"},
+				Config:    config.YeetFileConfig,
+				Endpoints: endpoints.HTMLPageEndpoints,
 			},
 			Meter: 0,
 		},
@@ -96,8 +95,9 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 				"ponyfill.min.js",
 				"download.js",
 			},
-			CSS:    []string{"download.css"},
-			Config: config.YeetFileConfig,
+			CSS:       []string{"download.css"},
+			Config:    config.YeetFileConfig,
+			Endpoints: endpoints.HTMLPageEndpoints,
 		}},
 	)
 
@@ -117,6 +117,7 @@ func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 				Javascript:   []string{"signup.js"},
 				CSS:          []string{"auth.css"},
 				Config:       config.YeetFileConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 			ServerPasswordRequired: config.YeetFileConfig.PasswordHash != nil,
 		},
@@ -139,6 +140,7 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 				Javascript:     []string{"login.js"},
 				CSS:            []string{"auth.css"},
 				Config:         config.YeetFileConfig,
+				Endpoints:      endpoints.HTMLPageEndpoints,
 			},
 		},
 	)
@@ -170,6 +172,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 				Javascript:     []string{"account.js"},
 				CSS:            []string{"account.css"},
 				Config:         config.YeetFileConfig,
+				Endpoints:      endpoints.HTMLPageEndpoints,
 			},
 			Email:            user.Email,
 			PaymentID:        user.PaymentID,
@@ -193,7 +196,10 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 }
 
 // VerifyPageHandler returns the HTML page for verifying the user's email
-func VerifyPageHandler(w http.ResponseWriter, req *http.Request, email string) {
+func VerifyPageHandler(w http.ResponseWriter, req *http.Request) {
+	email := req.URL.Query().Get("email")
+	code := req.URL.Query().Get("code")
+
 	err := templates.ServeTemplate(
 		w,
 		templates.VerificationHTML,
@@ -202,11 +208,13 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 				LoggedIn:     session.IsValidSession(req),
 				Title:        "Verify",
 				ErrorMessage: w.Header().Get(ErrorHeader),
-				Javascript:   nil,
+				Javascript:   []string{"verify.js"},
 				CSS:          nil,
 				Config:       config.YeetFileConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 			Email: email,
+			Code:  code,
 		},
 	)
 
@@ -225,6 +233,7 @@ func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, id stri
 				Javascript:   []string{"change_password.js"},
 				CSS:          nil,
 				Config:       config.YeetFileConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 		},
 	)
@@ -245,6 +254,7 @@ func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 				Javascript:   nil,
 				CSS:          []string{"faq.css"},
 				Config:       config.YeetFileConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 		},
 	)
@@ -253,11 +263,9 @@ func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // ForgotPageHandler returns the HTML page for resetting a user's password
-func ForgotPageHandler(w http.ResponseWriter, req *http.Request, email string) {
-	if len(email) == 0 {
-		email = req.URL.Query().Get("email")
-	}
-
+func ForgotPageHandler(w http.ResponseWriter, req *http.Request) {
+	email := req.URL.Query().Get("email")
+	code := req.URL.Query().Get("code")
 	err := templates.ServeTemplate(
 		w,
 		templates.ForgotHTML,
@@ -269,9 +277,10 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request, email string) {
 				Javascript:   nil,
 				CSS:          nil,
 				Config:       config.YeetFileConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 			Email: email,
-			Code:  req.URL.Query().Get("code"),
+			Code:  code,
 		},
 	)
 

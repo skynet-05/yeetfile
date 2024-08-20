@@ -205,3 +205,16 @@ const jsonReplacer = (key: string, value: any) => {
 
     return value;
 }
+
+/**
+ * Registers a document event listener for the enter key to submit a button
+ * on the page.
+ * @param btn
+ */
+const registerEnterKeySubmit = (btn: HTMLButtonElement): void => {
+    document.addEventListener("keydown", (event: KeyboardEvent) => {
+        if (event.key === "Enter") {
+            btn.click();
+        }
+    });
+}

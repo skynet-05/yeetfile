@@ -8,6 +8,7 @@ import (
 	"strings"
 	"yeetfile/backend/config"
 	"yeetfile/backend/server/subscriptions"
+	"yeetfile/shared/endpoints"
 )
 
 type BaseTemplate struct {
@@ -20,6 +21,7 @@ type BaseTemplate struct {
 	CSS            []string
 	Version        string
 	Config         config.ServerConfig
+	Endpoints      endpoints.HTMLEndpoints
 }
 
 type Template struct {
@@ -65,6 +67,7 @@ type AccountTemplate struct {
 type VerificationTemplate struct {
 	Base  BaseTemplate
 	Email string
+	Code  string
 }
 
 type ForgotPasswordTemplate struct {

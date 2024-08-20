@@ -21,6 +21,16 @@ body {
     margin-top: 0;
 }
 
+fieldset {
+    padding: 0;
+    border: 0;
+}
+
+.note-text {
+    font-size: small;
+    font-style: italic;
+}
+
 .accent-btn {
     background-color: var(--accent-color);
     color: white;

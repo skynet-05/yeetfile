@@ -62,14 +62,14 @@ func Run(addr string) {
 		//{GET, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
 
 		// Auth (signup, login/logout, account mgmt, etc)
-		{GET, "/verify-email", auth.VerifyEmailHandler},
+		{POST, endpoints.VerifyEmail, auth.VerifyEmailHandler},
 		{POST, endpoints.VerifyAccount, auth.VerifyAccountHandler},
 		{GET, endpoints.Session, session.SessionHandler},
 		{GET, endpoints.Logout, auth.LogoutHandler},
 		{POST, endpoints.Login, auth.LoginHandler},
 		{POST, endpoints.Signup, auth.SignupHandler},
 		{GET | PUT | DELETE, endpoints.Account, AuthMiddleware(auth.AccountHandler)},
-		{GET | POST, endpoints.Forgot, auth.ForgotPasswordHandler},
+		{POST, endpoints.Forgot, auth.ForgotPasswordHandler},
 		{POST, endpoints.Reset, auth.ResetPasswordHandler},
 		{GET, endpoints.PubKey, LimiterMiddleware(AuthMiddleware(auth.PubKeyHandler))},
 		{GET, endpoints.ProtectedKey, AuthMiddleware(auth.ProtectedKeyHandler)},
@@ -84,14 +84,15 @@ func Run(addr string) {
 
 		// HTML
 		{GET, "/", html.SendPageHandler},
-		{GET, "/account", AuthMiddleware(html.AccountPageHandler)},
-		{GET, "/send", html.SendPageHandler},
-		{GET, "/vault", AuthMiddleware(html.VaultPageHandler)},
-		{GET, "/vault/*", AuthMiddleware(html.VaultPageHandler)},
-		{GET, "/send/*", html.DownloadPageHandler},
-		{GET, "/signup", html.SignupPageHandler},
-		{GET, "/login", html.LoginPageHandler},
-		{GET, "/faq", html.FAQPageHandler},
+		{GET, endpoints.HTMLSend, html.SendPageHandler},
+		{GET, endpoints.HTMLVault, AuthMiddleware(html.VaultPageHandler)},
+		{GET, endpoints.HTMLVaultFolder, AuthMiddleware(html.VaultPageHandler)},
+		{GET, endpoints.HTMLSendDownload, html.DownloadPageHandler},
+		{GET, endpoints.HTMLSignup, html.SignupPageHandler},
+		{GET, endpoints.HTMLLogin, html.LoginPageHandler},
+		{GET, endpoints.HTMLForgot, html.ForgotPageHandler},
+		{GET, endpoints.HTMLAccount, AuthMiddleware(html.AccountPageHandler)},
+		{GET, endpoints.HTMLVerifyEmail, html.VerifyPageHandler},
 		{GET, endpoints.HTMLChangePassword, AuthMiddleware(html.ChangePasswordPageHandler)},
 
 		// Misc

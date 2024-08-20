@@ -70,9 +70,6 @@ const submitPasswordChange = async () => {
 
     fetch(Endpoints.ChangePassword.path, {
         method: "PUT",
-        headers: {
-            'Content-Type': 'application/json',
-        },
         body: JSON.stringify(changePassword, jsonReplacer)
     }).then(async response => {
         if (response.ok) {

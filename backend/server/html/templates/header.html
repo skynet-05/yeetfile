@@ -5,29 +5,29 @@
   <div class="right">
     {{ if .Base.LoggedIn }}
       {{ if eq .Base.Page "send" }}
-      <a class="selected-page" href="/send">Send</a>
+      <a class="selected-page" href="{{.Base.Endpoints.Send}}">Send</a>
       {{ else }}
-      <a href="/send">Send</a>
+      <a href="{{.Base.Endpoints.Send}}">Send</a>
       {{ end }}
 
       {{ if eq .Base.Page "vault" }}
-      <a class="selected-page" href="/vault">Vault</a>
+      <a class="selected-page" href="{{.Base.Endpoints.Vault}}">Vault</a>
       {{ else }}
-      <a href="/vault">Vault</a>
+      <a href="{{.Base.Endpoints.Vault}}">Vault</a>
       {{ end }}
 
       {{ if eq .Base.Page "account" }}
-      <a class="selected-page" href="/account">Account</a>
+      <a class="selected-page" href="{{.Base.Endpoints.Account}}">Account</a>
       {{ else }}
-      <a href="/account">Account</a>
+      <a href="{{.Base.Endpoints.Account}}">Account</a>
       {{ end }}
     {{ else }}
       {{ if ne .Base.Config.MaxUserCount .Base.Config.CurrentUserCount }}
-      <a href="/signup">Sign Up</a>
+      <a href="{{.Base.Endpoints.Signup}}">Sign Up</a>
       {{ else }}
       <strike>Sign Up</strike><span> (Server Full) </span>
       {{ end }}
-      <a href="/login">Log In</a>
+      <a href="{{.Base.Endpoints.Login}}">Log In</a>
     {{ end }}
   </div>
 </div>

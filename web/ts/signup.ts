@@ -13,16 +13,14 @@ const init = () => {
     serverPassword = document.getElementById("server-password") as HTMLInputElement;
 
     // Email signup
-    let emailSignupButton = document.getElementById("create-email-account");
+    let emailSignupButton = document.getElementById("create-email-account") as HTMLButtonElement;
     emailSignupButton.addEventListener("click", async (event) => {
-        event.preventDefault();
         await emailSignup(emailSignupButton);
     });
 
     // Account ID only signup
-    let accountSignupButton = document.getElementById("create-id-only-account");
+    let accountSignupButton = document.getElementById("create-id-only-account") as HTMLButtonElement;
     accountSignupButton.addEventListener("click", (event) => {
-        event.preventDefault();
         accountIDOnlySignup(accountSignupButton);
     });
 
@@ -89,14 +87,15 @@ const generateKeys = async (identifier, password) => {
     }
 }
 
-const inputsEnabled = (enabled: boolean) => {
+const inputsDisabled = (disabled: boolean) => {
     document.querySelectorAll("input").forEach(
         (value) => {
-       value.disabled = !enabled;
+       value.disabled = disabled;
     });
 }
 
-const emailSignup = async (btn) => {
+const emailSignup = async (btn: HTMLButtonElement) => {
+    inputsDisabled(true);
     let emailInput = document.getElementById("email") as HTMLInputElement;
     let passwordInput = document.getElementById("password") as HTMLInputElement;
     let confirmPasswordInput = document.getElementById("confirm-password") as HTMLInputElement;
@@ -109,12 +108,13 @@ const emailSignup = async (btn) => {
                 submitSignupForm(btn, emailInput.value, userKeys);
             } else {
                 alert("Failed to insert vault key pair into indexeddb");
+                inputsDisabled(false);
             }
         });
     }
 }
 
-const accountIDOnlySignup = (btn) => {
+const accountIDOnlySignup = (btn: HTMLButtonElement) => {
     let passwordInput = document.getElementById("account-password") as HTMLInputElement;
     let confirmPasswordInput = document.getElementById("account-confirm-password") as HTMLInputElement;
 
@@ -138,7 +138,6 @@ const accountIDOnlySignup = (btn) => {
  * }}
  */
 const submitSignupForm = (submitBtn, email, userKeys) => {
-    inputsEnabled(false);
     clearMessages();
 
     let xhr = new XMLHttpRequest();
@@ -148,14 +147,14 @@ const submitSignupForm = (submitBtn, email, userKeys) => {
     xhr.onreadystatechange = () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
             if (email && email.length > 0) {
-                window.location.assign(Endpoints.VerifyEmail.path + "?email=" + email);
+                window.location.assign(Endpoints.HTMLVerifyEmail.path + "?email=" + email);
             } else {
                 let response = JSON.parse(xhr.responseText);
                 let html = generateAccountIDSignupHTML(response.identifier, response.captcha);
                 addVerifyHTML(html);
             }
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            inputsEnabled(true);
+            inputsDisabled(false);
             showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
         }
     };

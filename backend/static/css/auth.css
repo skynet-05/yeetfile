@@ -7,8 +7,17 @@
 }
 
 fieldset {
+    width: 100%;
     min-width: 100px;
     display: inline-block;
+}
+
+table input {
+    margin: 2px;
+}
+
+.signup-btn {
+    margin-left: 2px;
 }
 
 #account-id-verify {
