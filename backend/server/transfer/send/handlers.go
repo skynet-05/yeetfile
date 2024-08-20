@@ -75,7 +75,7 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 
 // UploadDataHandler handles the process of uploading file chunks to the server,
 // after having already initialized the file metadata beforehand.
-func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
+func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-2]
 	chunkNum, err := strconv.Atoi(segments[len(segments)-1])
@@ -99,23 +99,25 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	}
 
 	upload, b2Values, err := transfer.PrepareUpload(metadata, chunkNum, data)
+	metadata.B2ID = b2Values.UploadID
 
+	// Update user meter
+	meterAmount := len(data) - constants.TotalOverhead
+	err = UpdateUserMeter(meterAmount, userID)
+	if err == db.UserSendExceeded {
+		http.Error(w, "Upload failed", http.StatusInternalServerError)
+		abortUpload(metadata, userID, meterAmount, chunkNum)
+		return
+	} else if err != nil {
+		log.Printf("[YF Send] Error updating meter: %v\n", err)
+	}
+
+	// Upload content
 	done, err := upload.Upload(b2Values)
-
 	if err != nil {
 		log.Printf("[YF Send] Chunk upload err: %v\n", err)
 		http.Error(w, "Upload error", http.StatusBadRequest)
-		metadata.B2ID = b2Values.UploadID
-		db.DeleteFileByMetadata(metadata)
-		return
-	}
-
-	// Update user meter
-	err = UpdateUserMeter(len(data)-constants.TotalOverhead, req)
-	if err != nil {
-		log.Printf("[YF Send] Error updating user meter: %v\n", err)
-		// TODO: Maybe just silently accept this? Idk if it's worth an error
-		http.Error(w, "Upload failed", http.StatusInternalServerError)
+		abortUpload(metadata, userID, meterAmount, chunkNum)
 		return
 	}
 

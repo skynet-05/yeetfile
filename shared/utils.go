@@ -28,7 +28,12 @@ func ReadableFileSize(b int) string {
 		exp++
 	}
 
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "kMGT"[exp])
+	size := float64(b) / float64(div)
+	if math.Mod(size, 1) == 0 {
+		return fmt.Sprintf("%d %cB", int64(b)/div, "KMGT"[exp])
+	}
+
+	return fmt.Sprintf("%.1f %cB", size, "KMGT"[exp])
 }
 
 // IsPlaintext takes a string determines if it contains non-ascii characters

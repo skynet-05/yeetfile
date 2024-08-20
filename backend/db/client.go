@@ -112,6 +112,7 @@ func DeleteFileByMetadata(metadata FileMetadata) {
 			log.Printf("Failed to delete B2 file (id: %s, "+
 				"metadata id: %s)\n",
 				metadata.B2ID, metadata.ID)
+			clearDatabase(metadata.ID)
 		}
 	}
 }

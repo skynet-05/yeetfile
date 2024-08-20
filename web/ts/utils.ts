@@ -60,24 +60,27 @@ const concatTypedArrays = (a: Uint8Array, b: Uint8Array): Uint8Array => {
  * @returns {string} A readable file size string (i.e. 12KB, 2.4MB, etc)
  */
 const calcFileSize = (bytes: number): string => {
-    let thresh = 1000;
+    let threshold = 1000;
 
-    if (Math.abs(bytes) < thresh) {
-        return bytes + ' B';
+    if (Math.abs(bytes) < threshold) {
+        return bytes + " B";
     }
 
-    const units = ['KB', 'MB', 'GB', 'TB'];
+    const units = ["KB", "MB", "GB", "TB"];
     let u = -1;
     const r = 10;
 
     do {
-        bytes /= thresh;
+        bytes /= threshold;
         ++u;
     } while (Math.round(
-        Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+        Math.abs(bytes) * r) / r >= threshold && u < units.length - 1);
 
+    if (bytes % 1 === 0) {
+        return bytes.toFixed(0) + " " + units[u];
+    }
 
-    return bytes.toFixed(1) + ' ' + units[u];
+    return bytes.toFixed(1) + " " + units[u];
 }
 
 /**

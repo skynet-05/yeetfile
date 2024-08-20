@@ -96,7 +96,7 @@ func addTestFile(user TestUser, fileID string) {
 }
 
 func cleanUpUserAccount(user TestUser) {
-	err := user.context.DeleteAccount()
+	err := user.context.DeleteAccount(user.id)
 	if err != nil {
 		log.Printf("ERROR - failed to delete user account: %v\n", err)
 	}

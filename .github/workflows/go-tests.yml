@@ -17,14 +17,10 @@ jobs:
       uses: docker/setup-buildx-action@master
     - name: Test API
       run: |
-        echo "YEETFILE_HOST=0.0.0.0" >> .env
-        echo "YEETFILE_DEBUG=1" >> .env
-        echo "YEETFILE_STORAGE=local" >> .env
-        echo "YEETFILE_DB_PASS=postgres" >> .env
         git submodule init
         git submodule update
         docker compose rm -f
         docker compose pull
-        docker compose up --build -d
+        YEETFILE_ENV_FILE=.tests.env docker compose up --build -d
         docker compose logs
         go test -v -tags server_test ./cli/api/...

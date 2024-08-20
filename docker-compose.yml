@@ -27,7 +27,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: ./.env
+    env_file: "${YEETFILE_ENV_FILE:-.env}"
     environment:
       YEETFILE_DB_HOST: "db"
 

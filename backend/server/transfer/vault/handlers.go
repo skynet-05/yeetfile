@@ -136,6 +136,7 @@ func ModifyFolderHandler(w http.ResponseWriter, req *http.Request, userID string
 	}
 }
 
+// ModifyFileHandler handles requests to modify an existing file in the user's vault
 func ModifyFileHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	segments := strings.Split(req.URL.Path, "/")
 	idPart := strings.Split(segments[len(segments)-1], "?")
@@ -174,11 +175,19 @@ func ModifyFileHandler(w http.ResponseWriter, req *http.Request, userID string) 
 	}
 }
 
+// UploadMetadataHandler initializes a file in the user's vault
 func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	var upload shared.VaultUpload
 	err := json.NewDecoder(req.Body).Decode(&upload)
 	if err != nil {
 		http.Error(w, "Error decoding request body", http.StatusBadRequest)
+		return
+	}
+
+	err = CanUserUpload(upload.Length, userID)
+	if err != nil {
+		log.Printf("Error checking if user can upload file: %v\n", err)
+		http.Error(w, "Not enough storage available", http.StatusBadRequest)
 		return
 	}
 
@@ -211,6 +220,8 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, userID stri
 	}
 }
 
+// UploadDataHandler processes incoming chunks of encrypted file data for a
+// vault file
 func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-2]
@@ -227,6 +238,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		return
 	}
 
+	totalSize := len(data) - constants.TotalOverhead
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
 		utils.Logf("[YF Vault] Error fetching metadata: %v\n", err)
@@ -234,37 +246,43 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		return
 	} else if chunkNum > metadata.Chunks {
 		utils.Logf("[YF Vault] User uploading beyond stated # of chunks")
-		http.Error(w, "Attempting to upload more chunks than specified", http.StatusBadRequest)
+		http.Error(w, "Attempting to upload more chunks than specified",
+			http.StatusBadRequest)
+		abortUpload(metadata, userID, totalSize, chunkNum)
+		return
+	}
+
+	err = db.UpdateStorageUsed(userID, totalSize)
+	if err != nil {
+		abortUpload(metadata, userID, totalSize, chunkNum)
+		http.Error(w, "Attempting to upload beyond max storage",
+			http.StatusBadRequest)
 		return
 	}
 
 	upload, b2Values, err := transfer.PrepareUpload(metadata, chunkNum, data)
+	if err != nil {
+		http.Error(w, "Unable to initialize chunk upload",
+			http.StatusBadRequest)
+		abortUpload(metadata, userID, totalSize, chunkNum)
+		return
+	}
 
 	done, err := upload.Upload(b2Values)
-
 	if err != nil {
 		http.Error(w, "Error uploading file", http.StatusBadRequest)
 		log.Printf("[YF Vault] Error uploading file: %v\n", err)
-		metadata.B2ID = b2Values.UploadID
-		db.DeleteFileByMetadata(metadata)
+		abortUpload(metadata, userID, totalSize, chunkNum)
 		return
 	}
 
 	if done {
-		var totalUploadSize int
-		if metadata.Chunks == 1 {
-			totalUploadSize = len(data) - constants.TotalOverhead
-		} else {
-			totalUploadSize = len(data) +
-				(constants.ChunkSize * (metadata.Chunks - 1)) -
-				(constants.TotalOverhead * (metadata.Chunks - 1))
-		}
-
-		err = db.UpdateStorageUsed(userID, totalUploadSize)
 		_, _ = io.WriteString(w, id)
 	}
 }
 
+// DownloadHandler handles incoming requests for metadata pertaining to a file
+// in the vault that a user wants to download
 func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
@@ -290,6 +308,8 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	_, _ = w.Write(jsonData)
 }
 
+// DownloadChunkHandler handles requests for encrypted file data for a file in
+// the user's vault
 func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	segments := strings.Split(req.URL.Path, "/")
 
@@ -323,6 +343,8 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 	_, _ = w.Write(bytes)
 }
 
+// ShareHandler handles requests to share files or folders within the user's
+// vault, as well as modifying the shared state of those files/folders
 func ShareHandler(isFolder bool) session.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request, userID string) {
 		segments := strings.Split(req.URL.Path, "/")

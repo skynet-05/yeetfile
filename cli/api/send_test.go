@@ -4,13 +4,64 @@ package api
 
 import (
 	"encoding/hex"
+	"github.com/stretchr/testify/assert"
 	"log"
+	"strings"
 	"testing"
 	"time"
 	"yeetfile/cli/crypto"
 	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
 )
+
+func TestSendPastLimit(t *testing.T) {
+	account, err := UserA.context.GetAccountInfo()
+	assert.Nil(t, err)
+
+	used := account.SendUsed
+	fakeSize := account.SendAvailable - account.SendUsed
+	realSize := fakeSize + 1
+
+	filename := []byte("too_big")
+	contents := []byte(strings.Repeat(".", realSize))
+	password := []byte("password")
+
+	key, salt, _, err := crypto.DeriveSendingKey(password, nil, nil)
+	assert.Nil(t, err)
+
+	encData, err := crypto.EncryptChunk(key, contents)
+	assert.Nil(t, err)
+
+	encName, _ := crypto.EncryptChunk(key, filename)
+	hexName := hex.EncodeToString(encName)
+
+	// Attempt uploading with true size
+	uploadMetadata := shared.UploadMetadata{
+		Name:       hexName,
+		Chunks:     1,
+		Size:       realSize,
+		Salt:       salt,
+		Downloads:  1,
+		Expiration: "10m",
+	}
+
+	_, err = UserA.context.InitSendFile(uploadMetadata)
+	assert.NotNil(t, err)
+
+	// Update size to make the init succeed
+	uploadMetadata.Size = fakeSize
+	meta, err := UserA.context.InitSendFile(uploadMetadata)
+	assert.Nil(t, err)
+
+	// Attempt to upload a chunk larger than user has room for
+	uploadURL := endpoints.UploadSendFileData.Format(server, meta.ID, "1")
+	_, err = UserA.context.UploadFileChunk(uploadURL, encData)
+	assert.NotNil(t, err)
+
+	account, err = UserA.context.GetAccountInfo()
+	assert.Nil(t, err)
+	assert.Equal(t, used, account.SendUsed)
+}
 
 func TestSendFile(t *testing.T) {
 	filename := []byte("abc123")

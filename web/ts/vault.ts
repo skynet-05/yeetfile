@@ -185,7 +185,8 @@ const uploadFile = async (
     file: File,
     idx: number,
     total: number,
-    callback: (success: boolean) => void) => {
+    callback: (success: boolean) => void,
+) => {
     showFileIndicator("");
 
     if (total > 1) {
@@ -227,13 +228,14 @@ const uploadFile = async (
                 callback(true);
             }
         }, errorMessage => {
+            pauseInteractions = false;
             callback(false);
             alert(errorMessage);
             showStorageBar("", 0);
         });
     }, () => {
+        pauseInteractions = false;
         callback(false);
-        alert("Failed to initialize vault upload!");
         showStorageBar("", 0);
     });
 }
@@ -719,7 +721,7 @@ const renameItem = async (id, isFolder, newName) => {
 }
 
 const deleteVaultContent = (id, name, isFolder, sharedID, callback) => {
-    let modID = sharedID ? sharedID : id;
+    let modID = sharedID !== id ? sharedID : id;
     let endpoint = isFolder ?
         Endpoints.format(Endpoints.VaultFolder, modID) :
         Endpoints.format(Endpoints.VaultFile, modID);
@@ -727,7 +729,7 @@ const deleteVaultContent = (id, name, isFolder, sharedID, callback) => {
     pauseInteractions = true;
     showFileIndicator(`Deleting ${name}...`);
 
-    let sharedParam = sharedID ? "?shared=true" : "";
+    let sharedParam = sharedID !== id ? "?shared=true" : "";
 
     fetch(`${endpoint}${sharedParam}`, {
         method: "DELETE"

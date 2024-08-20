@@ -157,3 +157,16 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 
 	return totalUploadSize, nil
 }
+
+func abortUpload(metadata db.FileMetadata, userID string, chunkLen, chunkNum int) {
+	db.DeleteFileByMetadata(metadata)
+	totalSize := chunkLen
+	for chunkNum > 1 {
+		totalSize += constants.ChunkSize
+	}
+
+	err := db.UpdateStorageUsed(userID, -totalSize)
+	if err != nil {
+		log.Printf("Error adjusting user storage during abort: %v\n", err)
+	}
+}

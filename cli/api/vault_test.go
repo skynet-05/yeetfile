@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 	"yeetfile/cli/crypto"
 	"yeetfile/shared"
@@ -271,4 +272,49 @@ func TestVaultFolders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decrypting file name: %v\n", err)
 	}
+}
+
+func TestUploadPastLimit(t *testing.T) {
+	account, err := UserA.context.GetAccountInfo()
+	assert.Nil(t, err)
+
+	used := account.StorageUsed
+	fakeSize := account.StorageAvailable - account.StorageUsed
+	realSize := fakeSize + 1
+
+	name := shared.GenRandomString(12)
+	key, err := crypto.GenerateRandomKey()
+	assert.Nil(t, err)
+
+	encName, err := crypto.EncryptChunk(key, []byte(name))
+	assert.Nil(t, err)
+
+	encData, err := crypto.EncryptChunk(key, []byte(strings.Repeat(".", realSize)))
+	assert.Nil(t, err)
+
+	hexEncName := hex.EncodeToString(encName)
+	encKey, err := crypto.EncryptRSA(UserA.pubKey, key)
+	assert.Nil(t, err)
+
+	upload := shared.VaultUpload{
+		Name:         hexEncName,
+		Length:       realSize,
+		Chunks:       1,
+		FolderID:     "",
+		ProtectedKey: encKey,
+	}
+
+	_, err = UserA.context.InitVaultFile(upload)
+	assert.NotNil(t, err)
+
+	upload.Length = fakeSize
+	meta, err := UserA.context.InitVaultFile(upload)
+	assert.Nil(t, err)
+
+	url := endpoints.UploadVaultFileData.Format(server, meta.ID, "1")
+	_, err = UserA.context.UploadFileChunk(url, encData)
+	assert.NotNil(t, err)
+
+	account, err = UserA.context.GetAccountInfo()
+	assert.Equal(t, used, account.StorageUsed)
 }

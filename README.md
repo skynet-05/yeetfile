@@ -156,6 +156,8 @@ All environment variables can be defined in a file named `.env` at the root leve
 | `YEETFILE_DB_USER` | The PostgreSQL user to access the YeetFile database | `postgres` | |
 | `YEETFILE_DB_PASS` | The password for the PostgreSQL user | None | |
 | `YEETFILE_DB_NAME` | The name of the database that YeetFile will use | `yeetfile` | |
+| `YEETFILE_DEFAULT_USER_STORAGE` | The default bytes of storage to assign new users | `15000000` (15MB) | `-1` for unlimited, `>0` bytes otherwise |
+| `YEETFILE_DEFAULT_USER_SEND` | The default bytes a user can send each month | `5000000` (5MB) | `-1` for unlimited, `>0` bytes otherwise |
 
 #### Backblaze Environment Variables
 

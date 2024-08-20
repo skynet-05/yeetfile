@@ -122,6 +122,8 @@ const uploadChunks = async (
 
                 if (response.length > 0) {
                     callback(true);
+                } else {
+                    callback(false);
                 }
             }, errorMessage => {
                 reject();

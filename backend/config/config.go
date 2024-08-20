@@ -17,8 +17,12 @@ const B2Storage = "b2"
 
 var storageType = utils.GetEnvVar("YEETFILE_STORAGE", B2Storage)
 var callbackDomain = os.Getenv("YEETFILE_CALLBACK_DOMAIN")
-var defaultUserStorage = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_STORAGE", 0)
-var defaultUserSend = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_SEND", 0)
+var defaultUserStorage = utils.GetEnvVarInt(
+	"YEETFILE_DEFAULT_USER_STORAGE",
+	15000000) // 15MB
+var defaultUserSend = utils.GetEnvVarInt(
+	"YEETFILE_DEFAULT_USER_SEND",
+	5000000) // 5MB
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
 var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
 

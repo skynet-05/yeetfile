@@ -78,7 +78,7 @@ const init = () => {
             crypto.generatePassphrase(async passphrase => {
                 pepper = passphrase;
 
-                updateProgress("Initializing");
+                updateProgress("Initializing...");
                 let [key, salt] = await crypto.deriveSendingKey(formValues.password, undefined, passphrase);
 
                 if (isFileUpload()) {
@@ -146,8 +146,8 @@ const getFormValues = (): SendForm => {
         files: files,
         password: pw,
         passwordConfirm: pwConfirm,
-        downloads: parseInt(downloads),
-        expiration: parseInt(exp),
+        downloads: downloads ? parseInt(downloads) : 0,
+        expiration: exp ? parseInt(exp) : 0,
         expUnits: unit,
         text: text,
     };
@@ -269,15 +269,23 @@ const submitFormSingle = async (
         size: file.size,
         expiration: expString
     }), (id) => {
-        transfer.uploadSendChunks(id, file, key, () => {
-            showFileTag(id);
+        let chunk = 1;
+        let percent = (chunk / chunks) * 100;
+        console.log(percent);
+        transfer.uploadSendChunks(id, file, key, (done: boolean) => {
+            if (done) {
+                showFileTag(id);
+            } else {
+                updateProgress(`Uploading... (${percent}%)`);
+            }
             callback();
         }, err => {
-            alert("Error uploading file");
+            resetForm();
             console.error(err);
         });
     }, () => {
-        alert("Failed to upload metadata");
+        resetForm();
+        console.error("Failed to upload metadata");
     });
 }
 

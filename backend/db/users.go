@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -40,6 +41,8 @@ var defaultExp time.Time
 
 var UserAlreadyExists = errors.New("user already exists")
 var UserLimitReached = errors.New("user limit has been reached")
+var UserSendExceeded = errors.New("user exceeded monthly send limit")
+var UserStorageExceeded = errors.New("user exceeded storage limit")
 
 // NewUser creates a new user in the "users" table, ensuring that the email
 // provided is not already in use.
@@ -189,14 +192,23 @@ func GetUserStorage(id string) (UserStorage, UserSend, error) {
 // UpdateStorageUsed updates the amount of storage used by the user. Can be a
 // negative number to remove storage space.
 func UpdateStorageUsed(userID string, amount int) error {
+	var storageUsed int
+	var storageAvailable int
 	s := `UPDATE users 
 	      SET storage_used = CASE 
 	                           WHEN storage_used + $1 < 0 THEN 0
 	                           ELSE storage_used + $1
 	                         END
-	      WHERE id=$2`
-	_, err := db.Exec(s, amount, userID)
-	return err
+	      WHERE id=$2
+	      RETURNING storage_used, storage_available`
+	err := db.QueryRow(s, amount, userID).Scan(&storageUsed, &storageAvailable)
+	if err != nil {
+		return err
+	} else if storageUsed > storageAvailable && amount > 0 {
+		return UserStorageExceeded
+	}
+
+	return nil
 }
 
 // RotateUserPaymentID overwrites the previous payment ID once a transaction is
@@ -476,55 +488,55 @@ func GetUserPublicName(userID string) (string, error) {
 
 // GetUserIDByEmail returns a user's ID given their email address.
 func GetUserIDByEmail(email string) (string, error) {
-	rows, err := db.Query(`
+	var id string
+	err := db.QueryRow(`
 		SELECT id
 		FROM users 
-		WHERE email = $1`, email)
+		WHERE email = $1`, email).Scan(&id)
 	if err != nil {
 		log.Printf("Error querying for user by email: %v", err)
 		return "", err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var id string
-		err = rows.Scan(&id)
-		if err != nil {
-			return "", err
-		}
-
-		return id, nil
-	}
-
-	return "", errors.New("unable to find user")
+	return id, nil
 }
 
 // GetUserSendLimits returns the amount of used and available bytes for
 // sending files
 func GetUserSendLimits(id string) (int, int, error) {
-	rows, err := db.Query(`
+	var sendUsed int
+	var sendAvailable int
+	err := db.QueryRow(`
 		SELECT send_used, send_available
 		FROM users
-		WHERE id = $1`, id)
-	if err != nil {
+		WHERE id = $1`, id).Scan(&sendUsed, &sendAvailable)
+	if err == sql.ErrNoRows {
+		return 0, 0, errors.New("unable to find user by id")
+	} else if err != nil {
 		log.Printf("Error querying for user by id: %s\n", id)
 		return 0, 0, err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var sendUsed int
-		var sendAvailable int
-		err = rows.Scan(&sendUsed, &sendAvailable)
-		if err != nil {
-			log.Printf("Error reading limits for user %s\n", id)
-			return 0, 0, err
-		}
+	return sendUsed, sendAvailable, nil
+}
 
-		return sendUsed, sendAvailable, nil
+// GetUserStorageLimits returns the amount of used and available bytes for
+// storing files
+func GetUserStorageLimits(id string) (int, int, error) {
+	var storageUsed int
+	var storageAvailable int
+	err := db.QueryRow(`
+		SELECT storage_used, storage_available
+		FROM users
+		WHERE id = $1`, id).Scan(&storageUsed, &storageAvailable)
+	if err == sql.ErrNoRows {
+		return 0, 0, errors.New("unable to find user by id")
+	} else if err != nil {
+		log.Printf("Error querying for user by id: %s\n", id)
+		return 0, 0, err
 	}
 
-	return 0, 0, errors.New("unable to find user by id")
+	return storageUsed, storageAvailable, nil
 }
 
 func GetPaymentIDByUserID(userID string) (string, error) {
@@ -616,13 +628,21 @@ func SetUserSubscription(
 // UpdateUserSendUsed adds an amount of bytes (size) to a user's send_used
 // given their user ID.
 func UpdateUserSendUsed(id string, size int) error {
-	s := `UPDATE users
-          SET send_used=send_used + $2
-          WHERE id=$1`
+	s := `UPDATE users 
+	      SET send_used = CASE 
+	                           WHEN send_used + $1 < 0 THEN 0
+	                           ELSE send_used + $1
+	                         END
+	      WHERE id=$2
+	      RETURNING send_used, send_available`
 
-	_, err := db.Exec(s, id, size)
+	var sendUsed int
+	var sendAvailable int
+	err := db.QueryRow(s, size, id).Scan(&sendUsed, &sendAvailable)
 	if err != nil {
 		return err
+	} else if sendUsed > sendAvailable {
+		return UserSendExceeded
 	}
 
 	return nil
