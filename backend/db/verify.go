@@ -8,6 +8,8 @@ import (
 	"yeetfile/shared"
 )
 
+var VerificationCodeExistsError = errors.New("verification code already sent")
+
 type NewAccountValues struct {
 	PasswordHash  []byte
 	ProtectedKey  []byte
@@ -22,7 +24,8 @@ func NewVerification(
 	reset bool,
 ) (string, error) {
 	if !reset {
-		r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`, signupData.Identifier)
+		r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`,
+			signupData.Identifier)
 
 		if e != nil {
 			return "", e
@@ -34,28 +37,80 @@ func NewVerification(
 	// Generate verification code
 	code := shared.GenRandomNumbers(6)
 
-	rows, err := db.Query(`SELECT * FROM verify WHERE identity = $1`, signupData.Identifier)
+	rows, err := db.Query(`SELECT date FROM verify WHERE identity = $1`,
+		signupData.Identifier)
 	if err != nil {
 		return "", err
 	}
 
 	defer rows.Close()
 	if rows.Next() {
-		// This user already has a verification entry -- update the
-		// code before resending the verification request
-		s := `UPDATE verify SET code = $1 WHERE identity=$2`
-		_, err = db.Exec(s, code, signupData.Identifier)
+		var date time.Time
+		err = rows.Scan(&date)
 		if err != nil {
 			return "", err
+		} else if time.Now().UTC().Before(date) {
+			// This user already has a verification entry, but it's
+			// too early to send a new code. Update the other values
+			// (in the password changed) and move on
+			s := `UPDATE verify
+			      SET pw_hash=$1, 
+			          protected_key=$2, 
+			          public_key=$3, 
+			          root_folder_key=$4 
+			      WHERE identity=$5`
+			_, err = db.Exec(s,
+				pwHash,
+				signupData.ProtectedKey,
+				signupData.PublicKey,
+				signupData.RootFolderKey,
+				signupData.Identifier)
+			if err != nil {
+				return "", err
+			}
+
+			return "", VerificationCodeExistsError
+		} else {
+			// This user already has a verification entry -- update the
+			// code before resending the verification request
+			s := `UPDATE verify 
+			      SET 
+			          code=$1,
+			          pw_hash=$2,
+			          date=$3,
+			          protected_key=$4,
+			          public_key=$5,
+			          root_folder_key=$6
+			      WHERE identity=$7`
+			_, err = db.Exec(s,
+				code,
+				pwHash,
+				time.Now().Add(5*time.Minute).UTC(),
+				signupData.ProtectedKey,
+				signupData.PublicKey,
+				signupData.RootFolderKey,
+				signupData.Identifier)
+			if err != nil {
+				return "", err
+			}
+
+			return code, nil
 		}
 	} else {
-		s := `INSERT INTO verify (identity, code, date, pw_hash, protected_key, public_key, root_folder_key) 
+		s := `INSERT INTO verify (
+                    identity,
+                    code,
+                    date,
+                    pw_hash,
+                    protected_key,
+                    public_key,
+                    root_folder_key) 
 		      VALUES ($1, $2, $3, $4, $5, $6, $7)`
 		_, err = db.Exec(
 			s,
 			signupData.Identifier,
 			code,
-			time.Now(),
+			time.Now().Add(5*time.Minute).UTC(),
 			pwHash,
 			signupData.ProtectedKey,
 			signupData.PublicKey,

@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"yeetfile/cli/requests"
@@ -126,9 +125,12 @@ func (ctx *Context) SubmitSignup(signup shared.Signup) (shared.SignupResponse, e
 // to their email address
 func (ctx *Context) VerifyEmail(email, code string) error {
 	url := endpoints.VerifyEmail.Format(ctx.Server)
-	url += fmt.Sprintf("?email=%s&code=%s", email, code)
+	reqData, err := json.Marshal(shared.VerifyEmail{
+		Email: email,
+		Code:  code,
+	})
 
-	response, err := requests.GetRequest(ctx.Session, url)
+	response, err := requests.PostRequest(ctx.Session, url, reqData)
 	if err != nil {
 		return err
 	} else if response.StatusCode >= http.StatusBadRequest {
@@ -209,7 +211,7 @@ func (ctx *Context) ChangePassword(password shared.ChangePassword) error {
 	} else if resp.StatusCode != http.StatusOK {
 		return utils.ParseHTTPError(resp)
 	}
-	
+
 	return nil
 }
 
