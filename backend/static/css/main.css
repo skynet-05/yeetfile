@@ -259,6 +259,7 @@ input:disabled, textarea:disabled {
 
 .yeetfile-logo {
     max-width: 200px;
+    content: url("/static/img/yeetfile-logo.png");
 }
 
 .red-icon {
@@ -413,6 +414,10 @@ input:disabled, textarea:disabled {
         background-color: #312F43;
     }
 
+    button, input:is([type="button"], [type="reset"]) {
+        color: white;
+    }
+
     div {
         background-color: #312F43;
     }
@@ -449,5 +454,19 @@ input:disabled, textarea:disabled {
     fieldset {
         padding-left: 0;
         padding-right: 0;
+    }
+
+    .yeetfile-logo {
+        content: url("/static/img/yeetfile-icon.png");
+    }
+
+    #meddlehead-link {
+        display: none;
+    }
+}
+
+@media (max-width:425px) {
+    .grid-2-col > * {
+        padding-left: 0;
     }
 }

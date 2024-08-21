@@ -22,6 +22,7 @@ const init = () => {
     let passwordInput = document.getElementById("password") as HTMLInputElement;
     let confirmPasswordInput = document.getElementById("confirm-password") as HTMLInputElement;
     let showPasswordCB = document.getElementById("show-password") as HTMLInputElement;
+    let passwordDiv = document.getElementById("password-div") as HTMLDivElement;
 
     showPasswordCB.addEventListener("change", (event) => {
         let target = event.currentTarget as HTMLInputElement;
@@ -34,6 +35,12 @@ const init = () => {
         passwordInput.disabled = !target.checked;
         confirmPasswordInput.disabled = !target.checked;
         showPasswordCB.disabled = !target.checked;
+
+        if (target.checked) {
+            passwordDiv.style.display = "inline";
+        } else if (window.innerWidth <= 425) {
+            passwordDiv.style.display = "none";
+        }
 
         if (!target.checked) {
             passwordInput.value = "";
@@ -118,8 +125,11 @@ const resetForm = () => {
     uploadBtn.disabled = false;
     uploadBtn.value = "Upload";
 
-    let reset = document.getElementById("reset");
+    let reset = document.getElementById("reset") as HTMLButtonElement;
     reset.style.display = "none";
+
+    let detailsDiv = document.getElementById("upload-details-div") as HTMLDivElement;
+    detailsDiv.style.display = "inline";
 
     setFormEnabled(true);
 }
@@ -417,6 +427,17 @@ const showFileTag = (tag) => {
     let fileLink = document.getElementById("file-link") as HTMLAnchorElement;
 
     let link = `${window.location.protocol}//${window.location.host}/send/${tag}#${pepper}`
+
+    if (window.innerWidth <= 425) {
+        let linkLabel = document.getElementById("link-label") as HTMLSpanElement;
+        linkLabel.style.fontWeight = "bold";
+
+        let tagRow = document.getElementById("tag-row") as HTMLTableRowElement;
+        tagRow.style.display = "none";
+
+        let detailsDiv = document.getElementById("upload-details-div") as HTMLDivElement;
+        detailsDiv.style.display = "none";
+    }
 
     tagDiv.style.display = "inherit";
     fileTag.textContent = `${tag}#${pepper}`;

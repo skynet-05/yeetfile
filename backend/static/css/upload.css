@@ -14,6 +14,10 @@
     border: none;
 }
 
+a {
+    word-break: break-all
+}
+
 #upload-type-div {
     border-bottom: 2px dotted gray !important;
     border-radius: 0 !important;
@@ -25,8 +29,30 @@
     display: none;
 }
 
+label {
+    padding-left: 5px;
+}
+
 @media (max-width:768px) {
     #expiration {
         width: 100px;
+    }
+}
+
+@media (max-width:425px) {
+    #password-div {
+        display: none;
+    }
+
+    #downloads, #expiration {
+        width: 60px;
+    }
+
+    #downloads {
+        padding-right: 5px;
+    }
+
+    .hide-mobile {
+        display: none;
     }
 }

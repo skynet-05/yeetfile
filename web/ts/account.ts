@@ -1,6 +1,5 @@
 import {Endpoints} from "./endpoints.js";
 import {YeetFileDB} from "./db.js";
-import * as endpoints from "./endpoints.js";
 import * as interfaces from "./interfaces.js";
 
 const init = () => {

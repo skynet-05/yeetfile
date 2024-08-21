@@ -3,6 +3,8 @@ import * as transfer from "./transfer.js";
 import * as interfaces from "./interfaces.js";
 import {Endpoints} from "./endpoints.js";
 
+let timeoutInterval;
+
 const init = () => {
     let xhr = new XMLHttpRequest();
     let id = window.location.pathname.split("/").slice(-1)[0];
@@ -38,6 +40,8 @@ const handleMetadata = async (download: interfaces.DownloadResponse) => {
 }
 
 const showDownload = (name, download, key) => {
+    let downloadBtn = document.getElementById("download-nopass") as HTMLButtonElement;
+
     let loading = document.getElementById("loading");
     loading.style.display = "none";
 
@@ -47,12 +51,17 @@ const showDownload = (name, download, key) => {
     let nameSpan = document.getElementById("name");
     if (download.id.startsWith("text_")) {
         nameSpan.textContent = "N/A (text-only)";
+        downloadBtn.innerText = "Show Text Content";
     } else {
         nameSpan.textContent = name;
     }
 
     let expiration = document.getElementById("expiration");
+
     expiration.textContent = calcTimeRemaining(download.expiration);
+    timeoutInterval = window.setInterval(() => {
+        expiration.textContent = calcTimeRemaining(download.expiration);
+    }, 1000);
 
     let downloads = document.getElementById("downloads");
     downloads.textContent = download.downloads;
@@ -63,7 +72,6 @@ const showDownload = (name, download, key) => {
     let downloadDiv = document.getElementById("download-prompt-div");
     downloadDiv.style.display = "inherit";
 
-    let downloadBtn = document.getElementById("download-nopass") as HTMLButtonElement;
     downloadBtn.addEventListener("click", () => {
         downloadBtn.disabled = true;
         downloadBtn.innerText = "Downloading...";
@@ -76,6 +84,8 @@ const showDownload = (name, download, key) => {
 
                 if (newDownloadCount === 0) {
                     downloads.textContent += " (deleted)";
+                    expiration.textContent = "---";
+                    clearInterval(timeoutInterval);
                 }
             } else {
                 downloadBtn.disabled = false;
@@ -122,7 +132,26 @@ const calcTimeRemaining = expiration => {
     const minutes = totalMinutes % 60;
     const seconds = totalSeconds % 60;
 
-    return `${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`;
+    let label = `${seconds} seconds`;
+
+    if (minutes > 0) {
+        label = `${minutes} minutes, ` + label;
+    }
+
+    if (hours > 0) {
+        label = `${hours} hours, ` + label;
+    }
+
+    if (days > 0) {
+        label = `${days} days, ` + label;
+    }
+
+    if (seconds <= 0) {
+        label = "0 seconds (deleted)";
+        clearInterval(timeoutInterval);
+    }
+
+    return label;
 }
 
 const promptPassword = (download) => {

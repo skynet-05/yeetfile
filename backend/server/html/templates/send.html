@@ -36,10 +36,10 @@
                         <input id="name" type="text" value="My Files"><br>
                     </div>
 
-                    <label for="downloads">Downloads:</label><br>
+                    <label for="downloads">Downloads:</label><br class="hide-mobile">
                     <input id="downloads" type="number" value="1"><br>
 
-                    <label for="expiration">Expiration:</label><br>
+                    <label for="expiration">Expiration:</label><br class="hide-mobile">
                     <input id="expiration" type="number">
                     <select id="duration-unit">
                         <option selected>Minutes</option>
@@ -85,11 +85,16 @@
 
         <div id="file-tag-div">
             <hr>
-            <span>File Tag: </span>
-            <span id="file-tag"></span><br>
-
-            <span>Link: </span>
-            <a id="file-link" href=""></a>
+            <table>
+                <tr>
+                    <td><span id="link-label">Link:</span></td>
+                    <td><a id="file-link" href=""></a></td>
+                </tr>
+                <tr id="tag-row">
+                    <td><span>Tag:</span></td>
+                    <td><span id="file-tag"></span></td>
+                </tr>
+            </table>
         </div>
     </form>
 </div>
