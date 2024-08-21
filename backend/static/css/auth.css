@@ -24,6 +24,10 @@ table input {
     display: none;
 }
 
+#account-code {
+    margin-left: 0;
+}
+
 #center-div {
     width: 50%;
     max-width: 600px;

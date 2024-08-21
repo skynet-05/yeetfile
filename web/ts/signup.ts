@@ -88,7 +88,7 @@ const generateKeys = async (identifier, password) => {
 }
 
 const inputsDisabled = (disabled: boolean) => {
-    document.querySelectorAll("input").forEach(
+    document.querySelectorAll("fieldset").forEach(
         (value) => {
        value.disabled = disabled;
     });
@@ -119,8 +119,7 @@ const accountIDOnlySignup = (btn: HTMLButtonElement) => {
     let confirmPasswordInput = document.getElementById("account-confirm-password") as HTMLInputElement;
 
     if (passwordIsValid(passwordInput.value, confirmPasswordInput.value)) {
-        passwordInput.disabled = true;
-        confirmPasswordInput.disabled = true;
+        inputsDisabled(true);
         submitSignupForm(btn, "", undefined);
     }
 }
@@ -185,7 +184,7 @@ const generateAccountIDSignupHTML = (id, img) => {
     <p style="margin-bottom: 0;">
     Please enter the 6-digit code above to verify your account.
     </p>
-    <input type="text" id="account-code" name="code" placeholder="Code"><br><br>
+    <input type="text" id="account-code" name="code" placeholder="Code"><br>
     <button id="verify-account">Verify</button>
     `;
 }
@@ -213,32 +212,30 @@ const verifyAccountID = async id => {
     let userKeys = await generateKeys(id, password);
     await new YeetFileDB().insertVaultKeyPair(userKeys["privateKey"], userKeys["publicKey"], "", success => {
         if (success) {
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", Endpoints.VerifyAccount.path, false);
+            xhr.setRequestHeader("Content-Type", "application/json");
 
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    let html = generateSuccessHTML(id);
+                    addVerifyHTML(html);
+                } else if (xhr.readyState === 4 && xhr.status !== 200) {
+                    button.disabled = false;
+                    showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
+                }
+            };
+
+            xhr.send(JSON.stringify({
+                id: id,
+                code: codeInput.value,
+                loginKeyHash: Array.from(userKeys["loginKeyHash"]),
+                protectedKey: Array.from(userKeys["protectedKey"]),
+                publicKey: Array.from(userKeys["publicKey"]),
+                rootFolderKey: Array.from(userKeys["rootFolderKey"])
+            }));
         }
     });
-
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", Endpoints.VerifyAccount.path, false);
-    xhr.setRequestHeader("Content-Type", "application/json");
-
-    xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            let html = generateSuccessHTML(id);
-            addVerifyHTML(html);
-        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            button.disabled = false;
-            showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
-        }
-    };
-
-    xhr.send(JSON.stringify({
-        id: id,
-        code: codeInput.value,
-        loginKeyHash: Array.from(userKeys["loginKeyHash"]),
-        protectedKey: Array.from(userKeys["protectedKey"]),
-        publicKey: Array.from(userKeys["publicKey"]),
-        rootFolderKey: Array.from(userKeys["rootFolderKey"])
-    }));
 }
 
 const addVerifyHTML = html => {

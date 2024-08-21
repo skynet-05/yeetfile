@@ -110,3 +110,30 @@ tr:last-child td {
     from {transform:rotate(0deg);}
     to {transform:rotate(360deg);}
 }
+
+@media (prefers-color-scheme: dark) {
+    a {
+        text-decoration: none;
+    }
+
+    .edit-row img {
+        filter: invert(100%);
+    }
+
+    thead > tr > th {
+        background-color: #312F43;
+        color: white;
+    }
+
+    th, td {
+        border-color: #171720;
+    }
+
+    .folder-link {
+        color: white;
+    }
+
+    .vault-icon {
+        filter: invert(100%);
+    }
+}

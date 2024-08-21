@@ -43,12 +43,12 @@ fieldset {
 
 .accent-icon {
     cursor: pointer;
-    filter: invert(33%) sepia(57%) saturate(4505%) hue-rotate(232deg) brightness(96%) contrast(95%);
+    filter: invert(33%) sepia(57%) saturate(4505%) hue-rotate(232deg) brightness(96%) contrast(95%) !important;
 }
 
 .shared-icon {
     cursor: pointer;
-    filter: invert(41%) sepia(14%) saturate(5662%) hue-rotate(86deg) brightness(95%) contrast(78%);
+    filter: invert(41%) sepia(14%) saturate(5662%) hue-rotate(86deg) brightness(95%) contrast(78%) !important;
 }
 
 .mobile-only {
@@ -125,6 +125,7 @@ button {
 
 textarea {
     min-height: 50px;
+    font-size: medium;
 }
 
 progress {
@@ -262,7 +263,7 @@ input:disabled, textarea:disabled {
 
 .red-icon {
     cursor: pointer;
-    filter: invert(29%) sepia(8%) saturate(5464%) hue-rotate(315deg) brightness(106%) contrast(95%);
+    filter: invert(29%) sepia(8%) saturate(5464%) hue-rotate(315deg) brightness(106%) contrast(95%) !important;
 }
 
 .flipped-icon {
@@ -273,7 +274,7 @@ input:disabled, textarea:disabled {
 }
 
 .red-link {
-    color: var(--destructive-color);
+    color: var(--destructive-color) !important;
     text-decoration: none;
 }
 
@@ -352,26 +353,77 @@ input:disabled, textarea:disabled {
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --accent-color: #a1a125;
+        /*--accent-color: #a1a125;*/
+        /*--button-color: #171720;*/
+        --button-color: #242333;
+        /*--card-bg-color: #171720;*/
+        --card-bg-color: #242333;
+    }
+
+    input:disabled {
+        background-color: darkgray !important;
+    }
+
+    input {
+        background-color: #242333 !important;
     }
 
     html {
-        filter: invert(90%);
-        -webkit-filter: invert(90%);
+        background-color: #242333;
+        background-image: url("/static/img/background-dark.svg");
+        /*filter: invert(90%);*/
+        /*-webkit-filter: invert(90%);*/
+    }
+
+    textarea {
+        background-color: #242333;
+        border: 1px solid #171720 !important;
+        color: white;
+    }
+
+    textarea:disabled {
+        background-color: darkgray;
+    }
+
+    select {
+        color: #171720;
+    }
+
+    dialog {
+        background: #312f43;
+    }
+
+    dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.45);
     }
 
     * {
-        border-color: lightgray !important;
+        border-color: #242333 !important;
+        color: #ffffff;
     }
 
     button, input:is([type="button"], [type="submit"]) {
-        color: black !important;
+        color: white !important;
     }
 
     #center-div {
         /*box-shadow: 0 12px 18px 2px rgba(0,0,0,.04),0 6px 22px 4px rgba(0,0,0,.12),0 6px 10px -4px rgba(0,0,0,.12);*/
         box-shadow: none;
-        border: 1px solid;
+        border: 3px solid;
+        background-color: #312F43;
+    }
+
+    div {
+        background-color: #312F43;
+    }
+
+    .yeetfile-logo {
+        filter: invert(100%);
+    }
+
+    .selected-page {
+        border-bottom: 2px solid white !important;
+        border-radius: 0 !important;
     }
 }
 

@@ -149,3 +149,9 @@ label a {
         height: 50px;
     }
 }
+
+@media (prefers-color-scheme: dark) {
+    .btcpay-btn {
+        background-color: #171720;
+    }
+}
