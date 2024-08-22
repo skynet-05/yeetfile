@@ -3,12 +3,14 @@ package send
 import (
 	"errors"
 	"fmt"
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/huh/spinner"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/huh/spinner"
+
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
@@ -16,24 +18,31 @@ import (
 	"yeetfile/shared/constants"
 )
 
-var fileOption = "File"
-var textOption = "Text"
+var (
+	fileOption = "File"
+	textOption = "Text"
+)
 
-var downloads string
-var expiration string
-var expirationUnits string
-var password string
-var setPassword bool
+var (
+	downloads       string
+	expiration      string
+	expirationUnits string
+	password        string
+	setPassword     bool
+)
 
 var serverError error
 
-var emptySendError = errors.New("missing file or text to send")
-var expValidationError = errors.New("input must only contain numeric characters")
-var inputTooLowError = errors.New("input must be greater >= 1")
-var exceedsMaxDownloads = errors.New("max downloads must be <= 10")
-var exceedsMaxTextLen = errors.New(fmt.Sprintf(
-	"text exceeds max length (%d)",
-	constants.MaxPlaintextLen))
+var (
+	emptySendError      = errors.New("missing file or text to send")
+	expValidationError  = errors.New("input must only contain numeric characters")
+	inputTooLowError    = errors.New("input must be greater >= 1")
+	exceedsMaxDownloads = errors.New("max downloads must be <= 10")
+	exceedsMaxTextLen   = errors.New(fmt.Sprintf(
+		"text exceeds max length (%d)",
+		constants.MaxPlaintextLen))
+)
+
 var expExceedsMaxErr = errors.New(fmt.Sprintf(
 	"expiration must be < %d days in the future",
 	constants.MaxSendAgeDays))
@@ -69,7 +78,6 @@ func ShowSendModel() {
 				Value(&option),
 		),
 	).WithTheme(styles.Theme).WithShowHelp(true).Run()
-
 	if err != nil {
 		return
 	}
@@ -90,7 +98,7 @@ func getSendFields() []huh.Field {
 					return expValidationError
 				} else if val < 1 {
 					return inputTooLowError
-				} else if !isValidExp(val, expirationUnits) {
+				} else if !isValidExp(int64(val), expirationUnits) {
 					return expExceedsMaxErr
 				}
 
@@ -171,7 +179,7 @@ func getConfirmationField(toValidate *string) huh.Field {
 					"or after %s %s.",
 				exp,
 				units,
-				getExpString(expInt, expirationUnits),
+				getExpString(int64(expInt), expirationUnits),
 				d,
 				dStr)
 
@@ -189,7 +197,7 @@ func getConfirmationField(toValidate *string) huh.Field {
 			expVal, _ := strconv.Atoi(expiration)
 			if len(*toValidate) == 0 {
 				return emptySendError
-			} else if !isValidExp(expVal, expirationUnits) {
+			} else if !isValidExp(int64(expVal), expirationUnits) {
 				return expExceedsMaxErr
 			}
 
@@ -267,7 +275,6 @@ func showSendTextModel(text string) {
 	err := huh.NewForm(huh.NewGroup(fields...), getPasswordGroup()).
 		WithTheme(styles.Theme).
 		WithShowHelp(true).Run()
-
 	if err != nil {
 		return
 	}

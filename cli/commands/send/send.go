@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/transfer"
@@ -28,30 +29,32 @@ type textUpload struct {
 	Password     string
 }
 
-const expMinutes = "minutes"
-const expHours = "hours"
-const expDays = "days"
+const (
+	expMinutes = "minutes"
+	expHours   = "hours"
+	expDays    = "days"
+)
 
-func getDuration(value int, units string) time.Duration {
+func getDuration(value int64, units string) time.Duration {
 	var duration time.Duration
 	switch units {
 	case expMinutes:
-		duration = time.Duration(value * int(time.Minute))
+		duration = time.Duration(value * int64(time.Minute))
 	case expHours:
-		duration = time.Duration(value * int(time.Hour))
+		duration = time.Duration(value * int64(time.Hour))
 	case expDays:
-		duration = time.Duration(value * int(time.Hour*24))
+		duration = time.Duration(value * int64(time.Hour*24))
 	}
 
 	return duration
 }
 
-func getExpString(value int, units string) string {
+func getExpString(value int64, units string) string {
 	duration := getDuration(value, units)
 	return time.Now().Add(duration).Format("02 Jan 2006 15:04 MST")
 }
 
-func isValidExp(value int, units string) bool {
+func isValidExp(value int64, units string) bool {
 	duration := getDuration(value, units)
 	maxAge := time.Now().Add(constants.MaxSendAgeDays * time.Hour * 24)
 	return time.Now().Add(duration).Before(maxAge)
@@ -93,7 +96,6 @@ func createTextLink(upload textUpload) (string, string, error) {
 func createFileLink(upload fileUpload, progress func(int, int)) (string, string, error) {
 	key, salt, pepper, err := crypto.DeriveSendingKey(
 		[]byte(upload.Password), nil, nil)
-
 	if err != nil {
 		return "", "", err
 	}
@@ -124,7 +126,6 @@ func createFileLink(upload fileUpload, progress func(int, int)) (string, string,
 		chunk += 1
 		progress(chunk, pending.NumChunks)
 	})
-
 	if err != nil {
 		return "", "", err
 	}

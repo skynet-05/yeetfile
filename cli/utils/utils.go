@@ -9,10 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
-
-	"golang.org/x/term"
 
 	"yeetfile/cli/styles"
 	"yeetfile/shared"
@@ -73,33 +70,6 @@ func ParseDownloadString(tag string) (string, []byte, error) {
 	pepper := splitTag[1]
 
 	return path, []byte(pepper), nil
-}
-
-func readPassword() []byte {
-	pw, err := term.ReadPassword(syscall.Stdin)
-	fmt.Println()
-
-	if err != nil {
-		fmt.Println("Error reading stdin")
-		os.Exit(1)
-	}
-
-	return pw
-}
-
-// RequestPassword prompts the user for a password
-func RequestPassword() []byte {
-	fmt.Print("Enter Password: ")
-	return readPassword()
-}
-
-// ConfirmPassword prompts the user for a password again, but checks against
-// the provided password bytes to confirm that they're the same.
-func ConfirmPassword(pw []byte) bool {
-	fmt.Print("Confirm Password: ")
-	confirmPw := readPassword()
-
-	return string(confirmPw) == string(pw)
 }
 
 func CopyToFile(contents string, to string) error {
