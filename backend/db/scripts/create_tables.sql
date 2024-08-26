@@ -5,9 +5,8 @@ create table if not exists metadata
             primary key,
     chunks   integer,
     filename text,
-    salt     bytea,
     b2_id    text,
-    length   integer
+    length   bigint
 );
 
 create table if not exists b2_uploads
@@ -69,7 +68,7 @@ create table if not exists verify
         constraint verification_pk
             primary key,
     code            text,
-    date            date,
+    date            timestamp,
     pw_hash         bytea,
     protected_key   bytea,
     public_key      bytea,
@@ -84,7 +83,7 @@ create table if not exists vault
     owner_id      text not null,
     name          text not null,
     b2_id         text    default ''::text,
-    length        integer,
+    length        bigint,
     modified      timestamp,
     folder_id     text,
     chunks        integer,

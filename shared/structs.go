@@ -16,7 +16,6 @@ type UploadMetadata struct {
 	Name       string `json:"name"`
 	Chunks     int    `json:"chunks"`
 	Size       int    `json:"size"`
-	Salt       []byte `json:"salt"`
 	Downloads  int    `json:"downloads"`
 	Expiration string `json:"expiration"`
 }
@@ -107,7 +106,6 @@ type PlaintextUpload struct {
 type DownloadResponse struct {
 	Name       string    `json:"name"`
 	ID         string    `json:"id"`
-	Salt       []byte    `json:"salt" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	Size       int       `json:"size"`
 	Chunks     int       `json:"chunks"`
 	Downloads  int       `json:"downloads"`

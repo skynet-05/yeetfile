@@ -15,7 +15,6 @@ type FileMetadata struct {
 	RefID        string
 	Chunks       int
 	Name         string
-	Salt         []byte
 	B2ID         string
 	Length       int
 	ProtectedKey []byte
@@ -23,7 +22,7 @@ type FileMetadata struct {
 
 // InsertMetadata creates a new metadata entry in the db and returns a unique ID for
 // that entry.
-func InsertMetadata(chunks int, name string, salt []byte, plaintext bool) (string, error) {
+func InsertMetadata(chunks int, name string, plaintext bool) (string, error) {
 	prefix := constants.FileIDPrefix
 	if plaintext {
 		prefix = constants.PlaintextIDPrefix
@@ -37,9 +36,9 @@ func InsertMetadata(chunks int, name string, salt []byte, plaintext bool) (strin
 	}
 
 	s := `INSERT INTO metadata
-	      (id, chunks, filename, salt, b2_id, length)
-	      VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := db.Exec(s, id, chunks, name, salt, "", -1)
+	      (id, chunks, filename, b2_id, length)
+	      VALUES ($1, $2, $3, $4, $5)`
+	_, err := db.Exec(s, id, chunks, name, "", -1)
 	if err != nil {
 		panic(err)
 	}
@@ -105,11 +104,10 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 	var id string
 	var chunks int
 	var name string
-	var salt []byte
 	var b2ID string
 	var length int
 
-	err := rows.Scan(&id, &chunks, &name, &salt, &b2ID, &length)
+	err := rows.Scan(&id, &chunks, &name, &b2ID, &length)
 
 	if err != nil {
 		panic(err)
@@ -120,7 +118,6 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 		ID:     id,
 		Chunks: chunks,
 		Name:   name,
-		Salt:   salt,
 		B2ID:   b2ID,
 		Length: length,
 	}

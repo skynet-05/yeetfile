@@ -16,7 +16,6 @@ var ExceededMaximumAttemptsError = errors.New("exceeded maximum attempts")
 type FileUpload struct {
 	filename string
 	data     []byte
-	salt     []byte
 	checksum string
 	chunk    int
 	chunks   int
@@ -49,7 +48,6 @@ func PrepareUpload(
 	upload := FileUpload{
 		data:     data,
 		filename: metadata.Name,
-		salt:     metadata.Salt,
 		checksum: checksum,
 		chunk:    chunk,
 		chunks:   metadata.Chunks,

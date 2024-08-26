@@ -116,7 +116,6 @@ func createFileLink(upload fileUpload, progress func(int, int)) (string, string,
 		Name:       hexEncName,
 		Chunks:     numChunks,
 		Size:       size,
-		Salt:       salt,
 		Downloads:  upload.MaxDownloads,
 		Expiration: createExpString(upload.ExpValue, upload.ExpUnits),
 	}

@@ -48,7 +48,7 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 		return
 	}
 
-	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, meta.Salt, false)
+	id, _ := db.InsertMetadata(meta.Chunks, meta.Name, false)
 	b2Upload := db.CreateNewUpload(id, meta.Name)
 
 	exp := utils.StrToDuration(meta.Expiration, config.IsDebugMode)
@@ -144,7 +144,7 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id, _ := db.InsertMetadata(1, plaintextUpload.Name, plaintextUpload.Salt, true)
+	id, _ := db.InsertMetadata(1, plaintextUpload.Name, true)
 	b2Upload := db.CreateNewUpload(id, plaintextUpload.Name)
 
 	exp := utils.StrToDuration(plaintextUpload.Expiration, config.IsDebugMode)
@@ -195,7 +195,6 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 		Name:       metadata.Name,
 		ID:         metadata.ID,
 		Chunks:     metadata.Chunks,
-		Salt:       metadata.Salt,
 		Size:       metadata.Length,
 		Downloads:  expiry.Downloads,
 		Expiration: expiry.Date,
