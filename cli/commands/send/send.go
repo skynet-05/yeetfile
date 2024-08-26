@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"yeetfile/cli/utils"
 
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
@@ -61,8 +62,8 @@ func isValidExp(value int64, units string) bool {
 }
 
 func createTextLink(upload textUpload) (string, string, error) {
-	key, salt, pepper, err := crypto.DeriveSendingKey(
-		[]byte(upload.Password), nil, nil)
+	key, salt, err := crypto.DeriveSendingKey(
+		[]byte(upload.Password), nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -90,12 +91,16 @@ func createTextLink(upload textUpload) (string, string, error) {
 		return "", "", err
 	}
 
-	return id, string(pepper), nil
+	if len(upload.Password) > 0 {
+		return id, utils.B64Encode(salt), nil
+	} else {
+		return id, utils.B64Encode(key), nil
+	}
 }
 
 func createFileLink(upload fileUpload, progress func(int, int)) (string, string, error) {
-	key, salt, pepper, err := crypto.DeriveSendingKey(
-		[]byte(upload.Password), nil, nil)
+	key, salt, err := crypto.DeriveSendingKey(
+		[]byte(upload.Password), nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -130,7 +135,11 @@ func createFileLink(upload fileUpload, progress func(int, int)) (string, string,
 		return "", "", err
 	}
 
-	return result, string(pepper), nil
+	if len(upload.Password) > 0 {
+		return result, utils.B64Encode(salt), nil
+	} else {
+		return result, utils.B64Encode(key), nil
+	}
 }
 
 func createExpString(expValue int, expUnits string) string {

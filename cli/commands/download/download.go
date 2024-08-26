@@ -4,12 +4,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/charmbracelet/huh"
 	"strings"
 	"time"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
-	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
@@ -20,7 +18,7 @@ var decryptError = errors.New("decryption error")
 type DownloadResource struct {
 	Server string
 	ItemID string
-	Pepper string
+	Secret []byte
 }
 
 type PreparedDownload struct {
@@ -42,18 +40,18 @@ func parseLink(link string) DownloadResource {
 	resource := strings.Split(linkSegments[len(linkSegments)-1], "#")
 
 	var id string
-	var pepper string
+	var secret string
 	if len(resource) == 1 {
 		id = resource[0]
 	} else if len(resource) > 1 {
 		id = resource[0]
-		pepper = resource[1]
+		secret = resource[1]
 	}
 
 	return DownloadResource{
 		Server: server,
 		ItemID: id,
-		Pepper: pepper,
+		Secret: utils.B64Decode(secret),
 	}
 }
 
@@ -88,25 +86,6 @@ func (d DownloadResource) fetchMetadata() (shared.DownloadResponse, error) {
 	return globals.API.FetchSendFileMetadata(d.Server, d.ItemID)
 }
 
-func getPassword(err error) (string, error) {
-	desc := "This content is password protected"
-	if err != nil {
-		desc = styles.ErrStyle.Render(err.Error())
-	}
-
-	var password string
-	pErr := huh.NewForm(huh.NewGroup(
-		huh.NewInput().
-			Title("Password").
-			Description(desc).
-			EchoMode(huh.EchoModePassword).
-			Value(&password),
-		huh.NewConfirm().Affirmative("Submit").Negative(""),
-	)).WithTheme(styles.Theme).Run()
-
-	return password, pErr
-}
-
 // decryptResponse decrypts the name from the shared.DownloadResponse returned
 // by the server, and returns the decrypted name and the key that was successfully
 // used to decrypt the name.
@@ -114,10 +93,17 @@ func (d DownloadResource) decryptResponse(
 	response shared.DownloadResponse,
 	password string,
 ) (string, []byte, error) {
-	key, _, _, err := crypto.DeriveSendingKey(
-		[]byte(password),
-		response.Salt,
-		[]byte(d.Pepper))
+	var key []byte
+	var err error
+	if len(password) == 0 {
+		key = d.Secret
+	} else {
+		key, _, err = crypto.DeriveSendingKey([]byte(password), d.Secret)
+	}
+
+	if err != nil {
+		return "", nil, err
+	}
 
 	encName, err := hex.DecodeString(response.Name)
 	if err != nil {
@@ -129,9 +115,9 @@ func (d DownloadResource) decryptResponse(
 		// Decryption error, likely means the file is password protected
 		var newPassword string
 		if password == "" {
-			newPassword, err = getPassword(nil)
+			newPassword, err = showPasswordPromptModel(nil)
 		} else {
-			newPassword, err = getPassword(decryptError)
+			newPassword, err = showPasswordPromptModel(decryptError)
 		}
 
 		if err != nil {

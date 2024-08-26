@@ -7,12 +7,13 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
 	"math/big"
-	"yeetfile/cli/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
@@ -27,28 +28,21 @@ type SignupKeys struct {
 	ProtectedRootFolderKey []byte
 }
 
-// DeriveSendingKey uses PBKDF2 to derive a key for sending a file. Both the
-// salt and the pepper can be left nil in order to randomly generate both values.
+// DeriveSendingKey uses PBKDF2 to derive a key for sending a file. The salt
+// can be left nil in order to randomly generate the value.
 func DeriveSendingKey(
 	password []byte,
 	salt []byte,
-	pepper []byte,
-) ([]byte, []byte, []byte, error) {
+) ([]byte, []byte, error) {
 	if salt == nil {
 		salt = make([]byte, constants.KeySize)
 		if _, err := rand.Read(salt); err != nil {
-			return []byte{}, nil, nil, err
+			return []byte{}, nil, err
 		}
 	}
 
-	if pepper == nil {
-		pepper = []byte(utils.GeneratePassphrase())
-	}
-
-	pepperPw := append(password, pepper...)
-	key := DerivePBKDFKey(pepperPw, salt)
-
-	return key, salt, pepper, nil
+	key := DerivePBKDFKey(password, salt)
+	return key, salt, nil
 }
 
 // GenerateCLISessionKey uses crypto.rand to generate a random alphanumeric key
@@ -80,8 +74,22 @@ func GenerateRandomKey() ([]byte, error) {
 }
 
 // DerivePBKDFKey uses PBKDF2 to derive a key from a known password and salt.
+// Used for files and text sent with YeetFile Send.
 func DerivePBKDFKey(password []byte, salt []byte) []byte {
 	key := pbkdf2.Key(password, salt, 600000, constants.KeySize, sha256.New)
+	return key
+}
+
+// DeriveArgon2Key uses Argon2 to derive a key from a known password and salt.
+// Used for the User Key, and subsequently the Login Key.
+func DeriveArgon2Key(password, salt []byte) []byte {
+	key := argon2.IDKey(
+		password,
+		salt,
+		constants.Argon2Iter,
+		constants.Argon2Mem,
+		1,
+		uint32(constants.KeySize))
 	return key
 }
 
@@ -89,13 +97,19 @@ func DerivePBKDFKey(password []byte, salt []byte) []byte {
 // files that are stored in YeetFile, using their identifier (email or acct ID)
 // and their password.
 func GenerateUserKey(identifier []byte, password []byte) []byte {
-	return DerivePBKDFKey(password, identifier)
+	h := sha256.New()
+	h.Write(identifier)
+	identifierHash := h.Sum(nil)
+	hexHash := hex.EncodeToString(identifierHash)
+
+	return DeriveArgon2Key(password, []byte(hexHash))
 }
 
 // GenerateLoginKeyHash generates a login key using the user's user key and
 // their password, and returns a hex encoded hash of the resulting key.
 func GenerateLoginKeyHash(userKey []byte, password []byte) []byte {
-	loginKey := DerivePBKDFKey(userKey, password)
+	hexUserKey := hex.EncodeToString(userKey)
+	loginKey := DeriveArgon2Key([]byte(hexUserKey), password)
 
 	h := sha256.New()
 	h.Write(loginKey)

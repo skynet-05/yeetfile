@@ -26,7 +26,6 @@ func init() {
 	} else {
 		sessionVal, err := crypto.DecryptChunk(cliKey, session)
 		if err != nil {
-			log.Println("error decrypting session value")
 			API = api.InitContext(Config.Server, "")
 		} else {
 			API = api.InitContext(Config.Server, string(sessionVal))

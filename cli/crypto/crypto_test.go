@@ -10,13 +10,13 @@ var data = []byte("data")
 var password = []byte("topsecret")
 
 func TestDeriveKey(t *testing.T) {
-	key, salt, pepper, err := DeriveSendingKey(password, nil, nil)
+	key, salt, err := DeriveSendingKey(password, nil)
 	if err != nil {
 		t.Fatalf("Error generating key: %v\n", err)
 	}
 
-	if len(salt) == 0 || len(pepper) == 0 {
-		t.Fatalf("Failed to generate salt or pepper")
+	if len(salt) == 0 {
+		t.Fatalf("Failed to generate salt")
 	}
 
 	isEmpty := true
@@ -34,7 +34,7 @@ func TestDeriveKey(t *testing.T) {
 
 func TestEncryptChunk(t *testing.T) {
 	plainData := make([]byte, constants.ChunkSize)
-	key, _, _, _ := DeriveSendingKey(password, nil, nil)
+	key, _, _ := DeriveSendingKey(password, nil)
 	encrypted, _ := EncryptChunk(key, plainData)
 
 	if len(encrypted) != len(plainData)+constants.TotalOverhead {
@@ -68,10 +68,10 @@ func TestEncryptChunk(t *testing.T) {
 }
 
 func TestDecryptChunk(t *testing.T) {
-	key, salt, pepper, _ := DeriveSendingKey(password, nil, nil)
+	key, salt, _ := DeriveSendingKey(password, nil)
 	encrypted, _ := EncryptChunk(key, data)
 
-	decryptKey, _, _, _ := DeriveSendingKey(password, salt, pepper)
+	decryptKey, _, _ := DeriveSendingKey(password, salt)
 	decrypted, err := DecryptChunk(decryptKey, encrypted)
 
 	if err != nil {

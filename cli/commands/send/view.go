@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"yeetfile/shared/endpoints"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -221,12 +222,12 @@ func showSendFileModel(filepath string) {
 	}
 
 	var result string
-	var pepper string
+	var secret string
 	progress := spinner.New()
 	_ = progress.Title("Preparing file...").Action(func() {
 		expVal, _ := strconv.Atoi(expiration)
 		maxDownloads, _ := strconv.Atoi(downloads)
-		result, pepper, err = createFileLink(fileUpload{
+		result, secret, err = createFileLink(fileUpload{
 			FilePath:     filepath,
 			ExpUnits:     expirationUnits,
 			ExpValue:     expVal,
@@ -245,7 +246,7 @@ func showSendFileModel(filepath string) {
 		return
 	}
 
-	showLinkModel("File Link", result, pepper)
+	showLinkModel("File Link", result, secret)
 }
 
 func showSendTextModel(text string) {
@@ -280,12 +281,12 @@ func showSendTextModel(text string) {
 	}
 
 	var result string
-	var pepper string
+	var secret string
 	progress := spinner.New()
 	_ = progress.Title("Preparing text...").Action(func() {
 		expVal, _ := strconv.Atoi(expiration)
 		maxDownloads, _ := strconv.Atoi(downloads)
-		result, pepper, err = createTextLink(textUpload{
+		result, secret, err = createTextLink(textUpload{
 			Text:         text,
 			ExpUnits:     expirationUnits,
 			ExpValue:     expVal,
@@ -300,14 +301,14 @@ func showSendTextModel(text string) {
 		return
 	}
 
-	showLinkModel("Text Link", result, pepper)
+	showLinkModel("Text Link", result, secret)
 }
 
-func showLinkModel(title, id, pepper string) {
+func showLinkModel(title, id, secret string) {
 	resource := fmt.Sprintf("%s#%s",
 		shared.EscapeString(id),
-		shared.EscapeString(pepper))
-	link := fmt.Sprintf("%s/%s", globals.Config.Server, resource)
+		shared.EscapeString(secret))
+	link := endpoints.HTMLSendDownload.Format(globals.Config.Server, resource)
 
 	err := huh.NewForm(huh.NewGroup(
 		huh.NewNote().Title(utils.GenerateTitle(title)),

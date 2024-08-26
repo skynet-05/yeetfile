@@ -101,7 +101,6 @@ func Run(addr string) {
 			"/static/*/?/*",
 			misc.FileHandler("/static/", "", static.StaticFiles),
 		},
-		{GET, "/wordlist", misc.WordlistHandler},
 		{GET, "/up", misc.UpHandler},
 
 		// StreamSaver.js

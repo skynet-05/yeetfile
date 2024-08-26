@@ -3,8 +3,6 @@ import * as interfaces from "./interfaces.js";
 import * as transfer from "./transfer.js";
 import {Endpoints} from "./endpoints.js";
 
-let pepper = "";
-
 type SendForm = {
     files: FileList,
     password: string,
@@ -75,30 +73,34 @@ const init = () => {
         resetForm();
     });
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         let formValues = getFormValues();
 
         if (validateForm(formValues)) {
             setFormEnabled(false);
-            crypto.generatePassphrase(async passphrase => {
-                pepper = passphrase;
+            updateProgress("Initializing...");
+            let [key, salt] = await crypto.deriveSendingKey(
+                formValues.password,
+                undefined);
 
-                updateProgress("Initializing...");
-                let [key, salt] = await crypto.deriveSendingKey(formValues.password, undefined, passphrase);
+            let rawKey = await crypto.exportKey(key, "raw");
+            let keyHex = toURLSafeBase64(rawKey);
+            let fileSecret = formValues.password.length > 0 ?
+                toURLSafeBase64(salt) : // file has password, share file w/ salt only
+                keyHex; // file has no password, share w/ hex key
 
-                if (isFileUpload()) {
-                    if (formValues.files.length > 1) {
-                        alert("Feature not supported");
-                        // await submitFormMulti(formValues, key, salt, allowReset);
-                    } else {
-                        await submitFormSingle(formValues, key, salt, allowReset);
-                    }
+            if (isFileUpload()) {
+                if (formValues.files.length > 1) {
+                    alert("Feature not supported");
+                    // await submitFormMulti(formValues, key, salt, allowReset);
                 } else {
-                    await submitFormText(formValues, key, salt, allowReset);
+                    await submitFormSingle(formValues, key, fileSecret, allowReset);
                 }
-            });
+            } else {
+                await submitFormText(formValues, key, fileSecret, allowReset);
+            }
         }
     });
 }
@@ -255,13 +257,13 @@ const submitFormMulti = async (
  * Submit a single file to YeetFile Send
  * @param form {SendForm} - The send form that is being submitted
  * @param key {CryptoKey} - The randomly generated file key
- * @param salt {Uint8Array} - The generated salt
+ * @param secret {string} - The file's key (if no password specified) or salt
  * @param callback {function()} - The function to run after finishing
  */
 const submitFormSingle = async (
     form: SendForm,
     key: CryptoKey,
-    salt: Uint8Array,
+    secret: string,
     callback: () => void,
 ) => {
     let file = form.files[0];
@@ -274,17 +276,16 @@ const submitFormSingle = async (
     transfer.uploadSendMetadata(new interfaces.UploadMetadata({
         name: hexName,
         chunks: chunks,
-        salt: Array.from(salt),
+        salt: [],
         downloads: form.downloads,
         size: file.size,
         expiration: expString
     }), (id) => {
         let chunk = 1;
         let percent = (chunk / chunks) * 100;
-        console.log(percent);
         transfer.uploadSendChunks(id, file, key, (done: boolean) => {
             if (done) {
-                showFileTag(id);
+                showFileTag(id, secret);
             } else {
                 updateProgress(`Uploading... (${percent}%)`);
             }
@@ -303,13 +304,14 @@ const submitFormSingle = async (
  * Submits the text-only upload form
  * @param form {HTMLFormElement} - The form being submitted
  * @param key {CryptoKey} - The key used for encrypting the text
- * @param salt {Uint8Array} - The salt generated when creating the key
+ * @param secret {string} - The hex key (if no password was set) otherwise the
+ * hex salt.
  * @param callback {function()} - The callback indicating upload status
  */
 const submitFormText = async (
     form: SendForm,
     key: CryptoKey,
-    salt: Uint8Array,
+    secret: string,
     callback: () => void,
 ) => {
     let encryptedText = await crypto.encryptString(key, form.text);
@@ -319,9 +321,9 @@ const submitFormText = async (
     let expString = getExpString(form.expiration, form.expUnits);
     let downloads = form.downloads;
 
-    uploadTextOnly(hexName, encryptedText, salt, downloads, expString, (tag) => {
+    uploadTextOnly(hexName, encryptedText, new Uint8Array(), downloads, expString, (tag) => {
         if (tag) {
-            showFileTag(tag);
+            showFileTag(tag, secret);
             callback();
         } else {
             resetForm();
@@ -359,7 +361,7 @@ const uploadZip = async (id, key, zip, chunks) => {
             let blob = await crypto.encryptChunk(key, zipData);
             updateProgress(`Uploading file... ${i + 1}/${chunks}`);
             transfer.sendChunk(Endpoints.UploadSendFileData, blob, id, i + 1, (tag) => {
-                showFileTag(tag);
+                showFileTag(tag, "");
             }, () => {
                 alert("Error uploading file!");
             });
@@ -421,26 +423,29 @@ const validateDownloads = (numDownloads) => {
     return true;
 }
 
-const showFileTag = (tag) => {
+const showFileTag = (id, secret) => {
     let tagDiv = document.getElementById("file-tag-div");
     let fileTag = document.getElementById("file-tag");
     let fileLink = document.getElementById("file-link") as HTMLAnchorElement;
 
-    let link = `${window.location.protocol}//${window.location.host}/send/${tag}#${pepper}`
+    let endpoint = Endpoints.format(Endpoints.HTMLSendDownload, id);
+    let link = `${window.location.protocol}//${window.location.host}${endpoint}#${secret}`;
 
     if (window.innerWidth <= 425) {
         let linkLabel = document.getElementById("link-label") as HTMLSpanElement;
         linkLabel.style.fontWeight = "bold";
 
-        let tagRow = document.getElementById("tag-row") as HTMLTableRowElement;
-        tagRow.style.display = "none";
+        let tagRows = document.getElementsByClassName("tag-row");
+        Array.from(tagRows).map((tagRow: HTMLTableRowElement) => {
+            tagRow.style.display = "none";
+        });
 
         let detailsDiv = document.getElementById("upload-details-div") as HTMLDivElement;
         detailsDiv.style.display = "none";
     }
 
     tagDiv.style.display = "inherit";
-    fileTag.textContent = `${tag}#${pepper}`;
+    fileTag.textContent = `${id}#${secret}`;
     fileLink.textContent = link;
     fileLink.href = link;
 }

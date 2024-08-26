@@ -13,7 +13,7 @@ import (
 func TestUploadText(t *testing.T) {
 	text := "top secret text"
 	password := "topsecret"
-	key, salt, pepper, err := crypto.DeriveSendingKey([]byte(password), nil, nil)
+	key, salt, err := crypto.DeriveSendingKey([]byte(password), nil)
 	if err != nil {
 		t.Fatalf("Error deriving sending keys: %v\n", err)
 	}
@@ -46,9 +46,9 @@ func TestUploadText(t *testing.T) {
 		t.Fatalf("Error downloading encrypted text: %v\n", err)
 	}
 
-	newKey, _, _, err := crypto.DeriveSendingKey([]byte(password), salt, pepper)
+	newKey, _, err := crypto.DeriveSendingKey([]byte(password), salt)
 	if err != nil {
-		t.Fatalf("Error deriving new key from previous salt, pepper, etc")
+		t.Fatalf("Error deriving new key from previous salt")
 	}
 
 	decData, err := crypto.DecryptChunk(newKey, data)

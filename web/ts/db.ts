@@ -57,10 +57,9 @@ export class YeetFileDB {
 
             let encKey;
             if (password.length > 0) {
-                let [vaultEncKey, _] = await crypto.deriveSendingKey(
+                encKey = await crypto.generateArgon2Key(
                     password,
-                    hexToBytes("YEETFILE_RANDOM_SESSION_KEY"), "");
-                encKey = vaultEncKey;
+                    "YEETFILE_RANDOM_SESSION_KEY");
             } else {
                 encKey = await crypto.importKey(hexToBytes("YEETFILE_RANDOM_SESSION_KEY"))
             }
@@ -182,10 +181,9 @@ export class YeetFileDB {
 
                 let decKey;
                 if (password.length > 0) {
-                    let [vaultDecKey, _] = await crypto.deriveSendingKey(
+                    decKey = await crypto.generateArgon2Key(
                         password,
-                        hexToBytes("YEETFILE_RANDOM_SESSION_KEY"), "");
-                    decKey = vaultDecKey;
+                        "YEETFILE_RANDOM_SESSION_KEY");
                 } else {
                     decKey = await crypto.importKey(hexToBytes("YEETFILE_RANDOM_SESSION_KEY"))
                 }

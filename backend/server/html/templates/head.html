@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/css/{{ .Base.Config.Version }}/main.css">
     <script src="/static/js/{{ .Base.Config.Version }}/db.js" type="module"></script>
     <script src="/static/js/{{ .Base.Config.Version }}/utils.js"></script>
+    <script async src="/static/js/{{ .Base.Config.Version }}/argon2-bundled.min.js"></script>
 
     {{ range .Base.CSS }}
         <link rel="stylesheet" href="/static/css/{{ $.Base.Config.Version }}/{{ . }}">

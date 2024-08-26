@@ -25,6 +25,40 @@ const toHexString = (bytes: Uint8Array): string =>
         str + byte.toString(16).padStart(2, '0'), '');
 
 /**
+ * Converts a Uint8Array of bytes to URL safe Base64. This is used to encode the
+ * key or salt when sending a file/text via YeetFile Send.
+ * @param bytes
+ */
+const toURLSafeBase64 = (bytes: Uint8Array): string => {
+    let binaryString = "";
+    for (let i = 0; i < bytes.length; i++) {
+        binaryString += String.fromCharCode(bytes[i]);
+    }
+    let b64 = btoa(binaryString);
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Converts a URL Safe Base64 to a Uint8Array. This is used to decode the
+ * key or salt when download a file/text sent via YeetFile Send.
+ * @param b64
+ */
+const fromURLSafeBase64 = (b64: string): Uint8Array => {
+    let base64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+
+    let binaryString = atob(base64);
+    let uint8Array = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i);
+    }
+
+    return uint8Array;
+}
+
+/**
  * Returns the total number of chunks required to upload
  * a file to YeetFile
  * @param {number} size - The file size, in bytes

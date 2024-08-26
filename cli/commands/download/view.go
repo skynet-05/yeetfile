@@ -118,6 +118,25 @@ func showPreviewModel(prep PreparedDownload) {
 	}
 }
 
+func showPasswordPromptModel(err error) (string, error) {
+	desc := "This content is password protected"
+	if err != nil {
+		desc = styles.ErrStyle.Render(err.Error())
+	}
+
+	var password string
+	pErr := huh.NewForm(huh.NewGroup(
+		huh.NewInput().
+			Title("Password").
+			Description(desc).
+			EchoMode(huh.EchoModePassword).
+			Value(&password),
+		huh.NewConfirm().Affirmative("Submit").Negative(""),
+	)).WithTheme(styles.Theme).Run()
+
+	return password, pErr
+}
+
 func showDownloadTextModel(prep PreparedDownload) {
 	var data []byte
 	var err error

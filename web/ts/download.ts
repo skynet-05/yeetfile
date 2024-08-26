@@ -27,10 +27,9 @@ const init = () => {
 
 const handleMetadata = async (download: interfaces.DownloadResponse) => {
     // Attempt to decrypt without a password first
-    let salt = download.salt;
-    let pepper = location.hash.slice(1);
+    let secret = location.hash.slice(1);
 
-    let [key, _] = await crypto.deriveSendingKey("", salt, pepper)
+    let key = await crypto.importKey(fromURLSafeBase64(secret));
     decryptName(key, download.name).then(result => {
         showDownload(result, download, key);
     }).catch(err => {
@@ -165,13 +164,12 @@ const promptPassword = (download) => {
     let btn = document.getElementById("submit") as HTMLButtonElement;
 
     btn.addEventListener("click", async () => {
-        let salt = base64ToArray(download.salt);
-        let pepper = location.hash.slice(1);
+        let secret = fromURLSafeBase64(location.hash.slice(1));
 
         setFormEnabled(false);
         updatePasswordBtn("Validating", true);
 
-        let [key, _] = await crypto.deriveSendingKey(password.value, salt, pepper);
+        let [key, _] = await crypto.deriveSendingKey(password.value, secret);
 
         setFormEnabled(true);
 

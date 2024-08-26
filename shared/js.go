@@ -18,7 +18,9 @@ export const TotalOverhead = %d;
 export const MaxPlaintextLen = %d;
 export const PlaintextIDPrefix = "%s";
 export const FileIDPrefix = "%s";
-export const VerificationCodeLength = %d;`
+export const VerificationCodeLength = %d;
+export const Argon2Iter = %d;
+export const Argon2Mem = %d;`
 
 const endpointsHeadJS = `
 // Auto-generated from shared/js.go. Don't edit this manually.
@@ -54,7 +56,9 @@ func GenerateSharedJS() (string, string) {
 		constants.MaxPlaintextLen,
 		constants.PlaintextIDPrefix,
 		constants.FileIDPrefix,
-		constants.VerificationCodeLength)
+		constants.VerificationCodeLength,
+		constants.Argon2Iter,
+		constants.Argon2Mem)
 
 	jsEndpoints := endpointsHeadJS
 	for apiEndpoint, varName := range endpoints.JSVarNameMap {

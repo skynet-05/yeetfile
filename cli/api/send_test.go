@@ -26,7 +26,7 @@ func TestSendPastLimit(t *testing.T) {
 	contents := []byte(strings.Repeat(".", realSize))
 	password := []byte("password")
 
-	key, salt, _, err := crypto.DeriveSendingKey(password, nil, nil)
+	key, salt, err := crypto.DeriveSendingKey(password, nil)
 	assert.Nil(t, err)
 
 	encData, err := crypto.EncryptChunk(key, contents)
@@ -68,7 +68,7 @@ func TestSendFile(t *testing.T) {
 	contents := []byte("testing")
 	password := []byte("password")
 
-	key, salt, pepper, err := crypto.DeriveSendingKey(password, nil, nil)
+	key, salt, err := crypto.DeriveSendingKey(password, nil)
 	if err != nil {
 		t.Fatalf("Error deriving sending key: %v\n", key)
 	}
@@ -111,7 +111,7 @@ func TestSendFile(t *testing.T) {
 		t.Fatalf("Error downloading send file data: %v\n", err)
 	}
 
-	newKey, _, _, _ := crypto.DeriveSendingKey(password, salt, pepper)
+	newKey, _, _ := crypto.DeriveSendingKey(password, salt)
 	downloadedData, err := crypto.DecryptChunk(newKey, encDownloadedData)
 	if err != nil {
 		t.Fatalf("Error decrypting downloaded data")

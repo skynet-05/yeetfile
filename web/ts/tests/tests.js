@@ -1,5 +1,65 @@
+global.atob = function(base64) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+  let str = '';
+  let i = 0;
+  let enc1, enc2, enc3, enc4;
+
+  base64 = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+
+  while (i < base64.length) {
+    enc1 = chars.indexOf(base64.charAt(i++));
+    enc2 = chars.indexOf(base64.charAt(i++));
+    enc3 = chars.indexOf(base64.charAt(i++));
+    enc4 = chars.indexOf(base64.charAt(i++));
+
+    str += String.fromCharCode((enc1 << 2) | (enc2 >> 4));
+
+    if (enc3 !== 64) {
+      str += String.fromCharCode(((enc2 & 15) << 4) | (enc3 >> 2));
+    }
+
+    if (enc4 !== 64) {
+      str += String.fromCharCode(((enc3 & 3) << 6) | enc4);
+    }
+  }
+
+  return str;
+};
+
 import { strict as assert } from "node:assert";
 import * as crypto from "../crypto.js";
+
+import { readFile } from 'fs/promises';
+import path from 'path';
+import vm from 'vm';
+import { fileURLToPath } from 'url';
+
+// Resolve __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const sandbox = {
+  window: {},
+  document: {},
+  crypto: global.crypto || require('crypto').webcrypto, // Use Node.js's webcrypto if available
+};
+
+// Simulate window and document objects
+global.window = {};
+global.document = {};
+
+// Load the argon2-bundled.js script
+const scriptPath = path.resolve(__dirname, '../../../node_modules/argon2-browser/dist/argon2-bundled.min.js');
+const scriptContent = await readFile(scriptPath, 'utf-8');
+// Use vm to run the script in the sandbox
+vm.createContext(sandbox); // Create a context for the sandbox
+vm.runInContext(scriptContent, sandbox); // Execute the script
+
+// Extract the argon2 object from the sandbox
+export const argon2 = sandbox.argon2;
+console.log(argon2);
+
+// Access argon2 from the global window object
+//const { argon2 } = window;
 
 const testDeriveSendingKey = async testCallback => {
     // Test that two keys generated from the same password aren't the same
@@ -112,7 +172,9 @@ const runTest = async (testIdx) => {
 
     if (tests[testIdx]) {
         console.log("TEST: " + tests[testIdx].name);
-        await tests[testIdx](testCallback);
+        setTimeout(async () => {
+            await tests[testIdx](testCallback);
+        }, 500);
     }
 }
 

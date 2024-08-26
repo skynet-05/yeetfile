@@ -1,3 +1,5 @@
+import * as constants from "./constants.js";
+
 // @ts-ignore;
 export let webcrypto;
 
@@ -9,25 +11,21 @@ let indexedDB: IDBFactory;
 
 /**
  * deriveSendingKey creates a PBKDF2 key using a password as the payload, a
- * salt (or a randomly generated salt if not provided) and a pepper to append
- * to the password. Returns the derived key and the salt.
+ * salt (or a randomly generated salt if not provided). Returns the derived key
+ * and the salt.
  * @param password {string} - the password for generating the key
  * @param salt {Uint8Array} - the key salt (can be left undefined to randomly generate one)
- * @param pepper {string} - the pepper to extend the password
  * @returns {Promise<[CryptoKey,Uint8Array]>}
  */
 export const deriveSendingKey = async (
     password: string,
     salt: Uint8Array,
-    pepper: string,
 ): Promise<[CryptoKey, Uint8Array]> => {
     if (!salt) {
         salt = webcrypto.getRandomValues(new Uint8Array(HashSize));
     }
 
-    password = password + pepper;
     let encodedPassword = utf8Encode.encode(password);
-
     return [await deriveKey(encodedPassword, salt), salt];
 }
 
@@ -41,7 +39,7 @@ export const importKey = async (keyData: Uint8Array): Promise<CryptoKey> => {
         "raw",
         keyData,
         "AES-GCM",
-        false,
+        true,
         ["encrypt", "decrypt"]
     )
 }
@@ -188,6 +186,28 @@ export const decryptChunk = async (
 }
 
 /**
+ * Generate an argon2 hash from a provided payload/password and salt.
+ * @param payload
+ * @param salt
+ */
+export const generateArgon2Key = async (
+    payload: string,
+    salt: string,
+): Promise<CryptoKey> => {
+    let key = await argon2.hash({
+        pass: payload,
+        salt: salt,
+        hashLen: constants.KeySize,
+        type: 2,
+        mem: constants.Argon2Mem,
+        time: constants.Argon2Iter,
+        parallelism: 1,
+    });
+
+    return await importKey(key.hash);
+}
+
+/**
  * generateUserKey creates a PBKDF2 key using user's password as the payload and
  * their identifier (email or account ID) as the salt.
  * @param identifier {string} - the user's email or account ID
@@ -198,7 +218,11 @@ export const generateUserKey = async (
     identifier: string,
     password: string,
 ): Promise<CryptoKey> => {
-    return await deriveKey(utf8Encode.encode(password), utf8Encode.encode(identifier));
+    let utf8Identifier = utf8Encode.encode(identifier);
+    let emailBuffer = await crypto.subtle.digest("SHA-256", utf8Identifier);
+    let sha256Identifier = toHexString(new Uint8Array(emailBuffer));
+
+    return await generateArgon2Key(password, sha256Identifier);
 }
 
 /**
@@ -214,10 +238,11 @@ export const generateLoginKeyHash = async (
     password: string,
 ): Promise<Uint8Array> => {
     let userKeyExported = await exportKey(userKey, "raw");
+    let userKeyHex = toHexString(userKeyExported);
 
-    let loginKey = await deriveKey(userKeyExported, utf8Encode.encode(password));
-    let loginKeyExported = await exportKey(loginKey, "raw");
-    let loginKeyHash = await webcrypto.subtle.digest("SHA-256", loginKeyExported);
+    let loginKey = await generateArgon2Key(userKeyHex, password);
+    let loginKeyBytes = await exportKey(loginKey, "raw")
+    let loginKeyHash = await webcrypto.subtle.digest("SHA-256", loginKeyBytes);
 
     return new Uint8Array(loginKeyHash);
 }
@@ -230,52 +255,6 @@ export const generateLoginKeyHash = async (
  */
 export const generateRandomKey = (): Uint8Array => {
     return webcrypto.getRandomValues(new Uint8Array(HashSize));
-}
-
-/**
- * fetchWordlist requests the list of words from the server, which is used
- * for generating random passphrases as peppers for files.
- * @param callback - the request callback
- */
-export const fetchWordlist = (callback: (arg: string[]) => void) => {
-    fetch("/wordlist")
-        .then((response) => response.json())
-        .then((data) => {
-            callback(data);
-        })
-        .catch((error) => {
-            console.error("Error fetching wordlist: ", error);
-        });
-}
-
-/**
- * generatePassphrase generates a unique 3 word passphrase separated by
- * "." and including a random number in a random position.
- * @param callback {function}
- */
-export const generatePassphrase = (callback: (arg: string) => void) => {
-    let passphrase = [];
-    fetchWordlist(words => {
-        let wordNum = Math.floor(Math.random() * 3);
-        let randNum = Math.floor(Math.random() * 10);
-        let numBefore = Math.round(Math.random());
-
-        while (passphrase.length < 3) {
-            let idx = Math.floor(Math.random() * (words.length + 1));
-            let word = words[idx];
-            if (wordNum === 0) {
-                if (numBefore) {
-                    word = randNum + word;
-                } else {
-                    word = word + randNum;
-                }
-            }
-            wordNum--;
-            passphrase.push(word);
-        }
-
-        callback(passphrase.join("."));
-    })
 }
 
 /**
@@ -362,4 +341,6 @@ if (typeof window !== 'undefined') {
 } else {
     // @ts-ignore
     webcrypto = await import('crypto');
+    // @ts-ignore
+    argon2kdf = await import('argon2-browser');
 }

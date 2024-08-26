@@ -16,3 +16,6 @@ uploads/
 .cache/
 debug.log
 out/
+venv/
+reports/
+node_modules/

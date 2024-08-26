@@ -135,7 +135,7 @@ func Entrypoint(args []string) {
 		if _, ok := authErr.(*net.OpError); ok {
 			utils.HandleCLIError("Unable to connect to the server", authErr)
 			return
-		} else if !isAuthCommand(command) && authErr != nil {
+		} else if !isAuthCommand(command) && command != Download && authErr != nil {
 			styles.PrintErrStr("You are not logged in. " +
 				"Use the 'login' or 'signup' commands to continue.")
 			return
