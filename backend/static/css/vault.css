@@ -137,3 +137,13 @@ tr:last-child td {
         filter: invert(100%);
     }
 }
+
+@media (max-width:425px) {
+    #vault-items-div {
+        height: 230px;
+    }
+
+    #center-div {
+        height: 700px;
+    }
+}
