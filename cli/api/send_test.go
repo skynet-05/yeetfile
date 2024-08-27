@@ -26,7 +26,7 @@ func TestSendPastLimit(t *testing.T) {
 	contents := []byte(strings.Repeat(".", realSize))
 	password := []byte("password")
 
-	key, salt, err := crypto.DeriveSendingKey(password, nil)
+	key, _, err := crypto.DeriveSendingKey(password, nil)
 	assert.Nil(t, err)
 
 	encData, err := crypto.EncryptChunk(key, contents)
@@ -40,7 +40,6 @@ func TestSendPastLimit(t *testing.T) {
 		Name:       hexName,
 		Chunks:     1,
 		Size:       realSize,
-		Salt:       salt,
 		Downloads:  1,
 		Expiration: "10m",
 	}
@@ -89,7 +88,6 @@ func TestSendFile(t *testing.T) {
 		Name:       hexName,
 		Chunks:     1,
 		Size:       len(encData),
-		Salt:       salt,
 		Downloads:  2,
 		Expiration: "5s", // 5 seconds
 	})
