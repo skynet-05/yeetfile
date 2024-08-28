@@ -19,3 +19,5 @@ out/
 venv/
 reports/
 node_modules/
+.pytest_cache/
+*test_*.txt

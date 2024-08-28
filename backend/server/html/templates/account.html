@@ -49,9 +49,9 @@
       </tr>
       {{ end }}
     </table>
-    <button id="change-pw-btn">Change Password</button> <button id="logout-btn">Log Out</button>
+    <button id="change-pw-btn">Change Password</button> <button data-testid="logout-btn" id="logout-btn">Log Out</button>
     <details>
-      <summary>Advanced</summary>
+      <summary data-testid="advanced-summary">Advanced</summary>
       <table>
         <tr>
           <td>Payment ID:</td>
@@ -60,7 +60,7 @@
         </tr>
       </table>
       <br>
-      <button id="delete-btn" class="red-button">Delete Account</button>
+      <button data-testid="delete-btn" id="delete-btn" class="red-button">Delete Account</button>
     </details>
   </div>
   {{ template "messages.html" . }}

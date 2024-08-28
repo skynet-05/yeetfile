@@ -45,28 +45,28 @@
             </tr>
         </table>
 
-        <button id="download-nopass" value="Download">Download</button>
+        <button data-testid="download-nopass" id="download-nopass" value="Download">Download</button>
     </div>
     <fieldset id="download-fieldset">
-        <div id="password-prompt-div">
+        <div data-testid="password-prompt-div" id="password-prompt-div">
             <table>
                 <tr>
                     <td>
                         <label for="password">Password:</label>
                     </td>
                     <td>
-                        <input id="password" type="password">
+                        <input data-testid="password" id="password" type="password">
                     </td>
                 </tr>
             </table>
 
-            <button id="submit" value="Submit">Submit</button>
+            <button data-testid="submit" id="submit" value="Submit">Submit</button>
         </div>
     </fieldset>
 
-    <div id="plaintext-div">
+    <div data-testid="plaintext-div" id="plaintext-div">
         <hr>
-        <p id="plaintext-content"></p>
+        <p data-testid="plaintext-content" id="plaintext-content"></p>
     </div>
 </div>
 {{ template "footer.html" . }}

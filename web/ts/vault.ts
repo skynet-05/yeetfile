@@ -483,7 +483,8 @@ const generateFolderRow = async (item) => {
 
 const generateItemRow = async (item) => {
     let classes = item.sharedBy.length > 0 ? "shared-link" : "file-link";
-    let link = `<a id="${itemIDPrefix}-${item.refID}" class="${classes}" href="#">${item.name}</a>`
+    let id = `${itemIDPrefix}-${item.refID}`;
+    let link = `<a data-testid="${id}" id="${id}" class="${classes}" href="#">${item.name}</a>`
     return generateRow(
         link,
         item.name,
@@ -506,11 +507,12 @@ const generateRow = (link, name, size, modified, id, isFolder, sharedWith, share
     // let linkedIcon = isLinked ? `<img id="${id}-linked" class="vault-icon" src="/static/icons/link.svg">` : ""
     let sharedByIndicator = sharedBy ? `<br><img class="vault-icon shared-icon" src="/static/icons/owner.svg">&nbsp;${sharedBy}` : ""
 
+    let idStr = `${actionIDPrefix}-${id}`
     return `<tr id="${id}-row">
         <td>${icon} ${link} ${sharedIcon} ${sharedByIndicator}</td>
         <td>${size}</td>
         <td id="${id}-modified">${modified}</td>
-        <td class="action-icon" id="${actionIDPrefix}-${id}">⋮</td>
+        <td class="action-icon" data-testid=${idStr} id="${idStr}">⋮</td>
     </tr>`
 }
 
@@ -749,7 +751,7 @@ const deleteVaultContent = (id, name, isFolder, sharedID, callback) => {
 const createNewFolder = async (folderName) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", Endpoints.format(Endpoints.VaultFolder, ""), false);
-    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader("Content-Type", "application/json");
 
     let newFolderKey = await crypto.generateRandomKey();
     let newFolderKeyImported = await crypto.importKey(newFolderKey);

@@ -5,9 +5,9 @@
     <h1>Create Account</h1>
     <hr>
     <fieldset id="signup-fieldset" style="border: 0;">
-        <input type="radio" id="email-signup" name="signup" checked>
+        <input data-testid="email-signup" type="radio" id="email-signup" name="signup" checked>
         <label for="email-signup">Email Address</label><br>
-        <input type="radio" id="id-signup" name="signup">
+        <input data-testid="id-signup" type="radio" id="id-signup" name="signup">
         <label for="id-signup">Account ID Only</label><br>
         <hr>
         {{ if .ServerPasswordRequired }}
@@ -18,7 +18,7 @@
         {{ else }}
         <input type="password" id="server-password" placeholder="Server Password" hidden>
         {{ end }}
-        <div id="email-div">
+        <div data-testid="email-id-div" id="email-div">
             <table>
                 <tr>
                     <td><label for="email">Email:</label></td>
@@ -36,18 +36,18 @@
 
             <input class="signup-btn" type="submit" id="create-email-account" value="Create Account"/>
         </div>
-        <div id="account-id-div">
+        <div data-testid="account-id-div" id="account-id-div">
             <table>
                 <tr>
                     <td><label for="account-password">Password:</label></td>
-                    <td><input type="password" id="account-password" name="password" placeholder="Password"></td>
+                    <td><input data-testid="account-password" type="password" id="account-password" name="password" placeholder="Password"></td>
                 </tr>
                 <tr>
                     <td><label for="account-confirm-password">Confirm:</label></td>
-                    <td><input type="password" id="account-confirm-password" placeholder="Confirm Password"></td>
+                    <td><input data-testid="account-confirm-password" type="password" id="account-confirm-password" placeholder="Confirm Password"></td>
                 </tr>
             </table>
-            <input class="signup-btn" type="submit" id="create-id-only-account" value="Create Account">
+            <input data-testid="create-id-only-account" class="signup-btn" type="submit" id="create-id-only-account" value="Create Account ID">
 
             <p class="note-text">
                 Note: By signing up with an account number only,
@@ -57,7 +57,7 @@
         </div>
     </fieldset>
 
-    <div id="account-id-verify">
+    <div data-testid="account-id-verify" id="account-id-verify">
     </div>
 
     {{ template "messages.html" . }}

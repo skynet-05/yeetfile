@@ -184,8 +184,8 @@ const generateAccountIDSignupHTML = (id, img) => {
     <p style="margin-bottom: 0;">
     Please enter the 6-digit code above to verify your account.
     </p>
-    <input type="text" id="account-code" name="code" placeholder="Code"><br>
-    <button id="verify-account">Verify</button>
+    <input type="text" data-testid="account-code" id="account-code" name="code" placeholder="Code"><br>
+    <button data-testid="verify-account" id="verify-account">Verify</button>
     `;
 }
 
@@ -196,9 +196,9 @@ const generateSuccessHTML = (id) => {
         }
     });
 
-    return `<p>Your account ID is: <b>${id}</b> -- write this down!<br>
+    return `<p>Your account ID is: <b data-testid="final-account-id">${id}</b> -- write this down!<br>
     This is what you will use to log in, and <b>will not be shown again.</b></p>
-    <button id="goto-account">Go To Account</button>`
+    <button data-testid="goto-account" id="goto-account">Go To Account</button>`
 }
 
 const verifyAccountID = async id => {

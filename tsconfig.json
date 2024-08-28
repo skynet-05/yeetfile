@@ -5,9 +5,7 @@
         "lib": [
             "es2017",
             "dom"
-        ],
-        "paths": {
-            "sodium": ["./backend/static/js/sodium.js"]
-        }
-    }
+        ]
+    },
+    "exclude": ["web/tests"]
 }

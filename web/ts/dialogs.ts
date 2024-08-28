@@ -80,7 +80,7 @@ const generateShareRow = (id, tableBody, recipient, isFolder, callback) => {
     let row = `<tr id="share-${recipient.id}">
 <td>${recipient.recipientName}</td>
 <td><input id="can-modify-${recipient.id}" type="checkbox" ${recipient.canModify ? "checked" : ""}></td>
-<td><img id="delete-modify-${recipient.id}" class="vault-icon red-icon" src="/static/icons/remove.svg"></td>
+<td><img id="remove-share-${recipient.id}" class="vault-icon red-icon" src="/static/icons/remove.svg"></td>
 </tr>`;
 
     tableBody.parentElement.style.display = "table";
@@ -90,7 +90,7 @@ const generateShareRow = (id, tableBody, recipient, isFolder, callback) => {
         if (event.target.id === `can-modify-${recipient.id}`) {
             let cb = document.getElementById(`can-modify-${recipient.id}`) as HTMLInputElement;
             transfer.changeSharedItemPerms(id, recipient.id, cb.checked, isFolder);
-        } else if (event.target.id === `delete-modify-${recipient.id}`) {
+        } else if (event.target.id === `remove-share-${recipient.id}`) {
             if (confirm(`Remove user '${recipient.recipientName}' from shared content?`)) {
                 transfer.removeUserFromShared(id, recipient.id, isFolder).then(() => {
                     callback(DialogSignal.Share);

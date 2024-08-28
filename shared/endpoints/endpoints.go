@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-const apiVersion = "v1"
-
 type Endpoint string
 
 type HTMLEndpoints struct {
@@ -23,47 +21,47 @@ type HTMLEndpoints struct {
 var HTMLPageEndpoints HTMLEndpoints
 
 var (
-	Signup         = genEndpoint("/api/%s/signup")
-	Login          = genEndpoint("/api/%s/login")
-	Logout         = genEndpoint("/api/%s/logout")
-	Account        = genEndpoint("/api/%s/account")
-	Forgot         = genEndpoint("/api/%s/forgot")
-	Reset          = genEndpoint("/api/%s/reset")
-	Session        = genEndpoint("/api/%s/session")
-	VerifyAccount  = genEndpoint("/api/%s/verify")
-	VerifyEmail    = genEndpoint("/api/%s/verify_email")
-	ChangePassword = genEndpoint("/api/%s/change_password")
+	Signup         = Endpoint("/api/signup")
+	Login          = Endpoint("/api/login")
+	Logout         = Endpoint("/api/logout")
+	Account        = Endpoint("/api/account")
+	Forgot         = Endpoint("/api/forgot")
+	Reset          = Endpoint("/api/reset")
+	Session        = Endpoint("/api/session")
+	VerifyAccount  = Endpoint("/api/verify")
+	VerifyEmail    = Endpoint("/api/verify_email")
+	ChangePassword = Endpoint("/api/change_password")
 
-	VaultRoot   = genEndpoint("/api/%s/vault")
-	VaultFolder = genEndpoint("/api/%s/vault/folder/*")
-	VaultFile   = genEndpoint("/api/%s/vault/file/*")
+	VaultRoot   = Endpoint("/api/vault")
+	VaultFolder = Endpoint("/api/vault/folder/*")
+	VaultFile   = Endpoint("/api/vault/file/*")
 
-	UploadVaultFileMetadata   = genEndpoint("/api/%s/vault/u")
-	UploadVaultFileData       = genEndpoint("/api/%s/vault/u/*/*")
-	DownloadVaultFileMetadata = genEndpoint("/api/%s/vault/d/*")
-	DownloadVaultFileData     = genEndpoint("/api/%s/vault/d/*/*")
+	UploadVaultFileMetadata   = Endpoint("/api/vault/u")
+	UploadVaultFileData       = Endpoint("/api/vault/u/*/*")
+	DownloadVaultFileMetadata = Endpoint("/api/vault/d/*")
+	DownloadVaultFileData     = Endpoint("/api/vault/d/*/*")
 
-	UploadSendFileMetadata   = genEndpoint("/api/%s/send/u")
-	UploadSendFileData       = genEndpoint("/api/%s/send/u/*/*")
-	UploadSendText           = genEndpoint("/api/%s/send/plaintext")
-	DownloadSendFileMetadata = genEndpoint("/api/%s/send/d/*")
-	DownloadSendFileData     = genEndpoint("/api/%s/send/d/*/*")
+	UploadSendFileMetadata   = Endpoint("/api/send/u")
+	UploadSendFileData       = Endpoint("/api/send/u/*/*")
+	UploadSendText           = Endpoint("/api/send/plaintext")
+	DownloadSendFileMetadata = Endpoint("/api/send/d/*")
+	DownloadSendFileData     = Endpoint("/api/send/d/*/*")
 
-	ShareFile    = genEndpoint("/api/%s/share/file/*")
-	ShareFolder  = genEndpoint("/api/%s/share/folder/*")
-	PubKey       = genEndpoint("/api/%s/pubkey")
-	ProtectedKey = genEndpoint("/api/%s/protectedkey")
+	ShareFile    = Endpoint("/api/share/file/*")
+	ShareFolder  = Endpoint("/api/share/folder/*")
+	PubKey       = Endpoint("/api/pubkey")
+	ProtectedKey = Endpoint("/api/protectedkey")
 
-	HTMLAccount        = genEndpoint("/account")
-	HTMLSend           = genEndpoint("/send")
-	HTMLSendDownload   = genEndpoint("/send/*")
-	HTMLVault          = genEndpoint("/vault")
-	HTMLVaultFolder    = genEndpoint("/vault/*")
-	HTMLLogin          = genEndpoint("/login")
-	HTMLSignup         = genEndpoint("/signup")
-	HTMLForgot         = genEndpoint("/forgot")
-	HTMLChangePassword = genEndpoint("/change_password")
-	HTMLVerifyEmail    = genEndpoint("/verify_email")
+	HTMLAccount        = Endpoint("/account")
+	HTMLSend           = Endpoint("/send")
+	HTMLSendDownload   = Endpoint("/send/*")
+	HTMLVault          = Endpoint("/vault")
+	HTMLVaultFolder    = Endpoint("/vault/*")
+	HTMLLogin          = Endpoint("/login")
+	HTMLSignup         = Endpoint("/signup")
+	HTMLForgot         = Endpoint("/forgot")
+	HTMLChangePassword = Endpoint("/change_password")
+	HTMLVerifyEmail    = Endpoint("/verify_email")
 )
 
 var JSVarNameMap = map[Endpoint]string{
@@ -107,14 +105,6 @@ var JSVarNameMap = map[Endpoint]string{
 	HTMLSignup:         "HTMLSignup",
 	HTMLChangePassword: "HTMLChangePassword",
 	HTMLVerifyEmail:    "HTMLVerifyEmail",
-}
-
-func genEndpoint(fmtStr string) Endpoint {
-	if !strings.Contains(fmtStr, "%s") {
-		return Endpoint(fmtStr)
-	}
-
-	return Endpoint(fmt.Sprintf(fmtStr, apiVersion))
 }
 
 func (e Endpoint) Format(server string, args ...string) string {

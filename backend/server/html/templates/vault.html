@@ -5,9 +5,9 @@
 <div id="center-div">
     <h1>Vault</h1>
     <hr class="accent-hr">
-    <input id="file-input" type="file" style="display: none;" multiple>
+    <input data-testid="file-input" id="file-input" type="file" style="display: none;" multiple>
     <button class="accent-btn" id="vault-upload">Upload</button>
-    <button id="new-vault-folder">Create Folder</button>
+    <button data-testid="new-vault-folder" id="new-vault-folder">Create Folder</button>
     <p id="vault-status"></p>
     <div id="vault-items-div">
         <table id="vault-table">
@@ -19,7 +19,7 @@
                     <th class="centered-text">Actions</th>
                 </tr>
             </thead>
-            <tbody id="table-body">
+            <tbody data-testid="table-body" id="table-body">
             </tbody>
         </table>
     </div>
@@ -31,18 +31,18 @@
 
 {{ template "vault-password-dialog.html" false }}
 
-<dialog id="folder-dialog">
+<dialog data-testid="folder-dialog" id="folder-dialog">
     <h3>New Folder</h3>
     <hr>
-    <input id="folder-name" type="text" placeholder="New Folder Name">
+    <input data-testid="folder-name" id="folder-name" type="text" placeholder="New Folder Name">
     <br><br>
     <div class="align-items-right">
         <button id="cancel-folder">Cancel</button>
-        <button id="submit-folder" class="accent-btn">Create</button>
+        <button data-testid="submit-folder" id="submit-folder" class="accent-btn">Create</button>
     </div>
 </dialog>
 
-<dialog data-dynamic="true" id="actions-dialog">
+<dialog data-dynamic="true" data-testid="actions-dialog" id="actions-dialog">
     <h3 id="actions-dialog-title"></h3>
     <hr>
     <div id="action-download" class="edit-row">
@@ -57,7 +57,7 @@
         <img src="/static/icons/{{ .Base.Config.Version }}/send.svg">
         <span>Send</span>
     </div>
-    <div id="action-share" class="edit-row">
+    <div data-testid="action-share" id="action-share" class="edit-row">
         <img src="/static/icons/{{ .Base.Config.Version }}/share.svg">
         <span>Share</span>
     </div>
@@ -65,11 +65,11 @@
         <img src="/static/icons/{{ .Base.Config.Version }}/link.svg">
         <span>Link</span>
     </div>
-    <div id="action-delete" class="edit-row">
+    <div data-testid="action-delete" id="action-delete" class="edit-row">
         <img class="red-icon" src="/static/icons/{{ .Base.Config.Version }}/trash.svg">
         <span class="red-link">Delete</span>
     </div>
-    <div id="action-remove" class="edit-row">
+    <div data-testid="action-remove" id="action-remove" class="edit-row">
         <img class="red-icon" src="/static/icons/{{ .Base.Config.Version }}/remove.svg">
         <span class="red-link">Remove</span>
     </div>
@@ -79,7 +79,7 @@
     </div>
 </dialog>
 
-<dialog data-dynamic="true" id="rename-dialog">
+<dialog data-dynamic="true" data-testid="rename-dialog" id="rename-dialog">
     <h3 id="rename-title">Rename</h3>
     <hr>
     <label for="new-name">New Name:</label>
@@ -91,7 +91,7 @@
     </div>
 </dialog>
 
-<dialog data-dynamic="true" id="share-dialog">
+<dialog data-dynamic="true" data-testid="share-dialog" id="share-dialog">
     <h3>Share</h3>
     <hr>
     <span id="share-loading">Loading...</span>
@@ -107,14 +107,14 @@
         </tbody>
     </table>
     <label for="share-target">Share With:</label>
-    <input id="share-target" type="text" placeholder="Email or Account #">
+    <input data-testid="share-target" id="share-target" type="text" placeholder="Email or Account #">
     <br>
     <label for="share-modify">Can Modify:</label>
     <input id="share-modify" type="checkbox">
     <br><br>
     <div class="align-items-right">
         <button id="cancel-share">Close</button>
-        <button id="submit-share" class="accent-btn">Share</button>
+        <button data-testid="submit-share" id="submit-share" class="accent-btn">Share</button>
     </div>
 </dialog>
 

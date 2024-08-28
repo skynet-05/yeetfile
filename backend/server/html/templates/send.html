@@ -10,7 +10,7 @@
                 <input type="radio" id="upload-text-btn" name="signup" checked>
                 <label for="upload-text-btn">Upload Text</label><br>
                 {{ if .Base.LoggedIn }}
-                <input type="radio" id="upload-file-btn" name="signup">
+                <input type="radio" data-testid="upload-file-btn" id="upload-file-btn" name="signup">
                 <label for="upload-file-btn">Upload File(s)</label><br>
                 {{ else }}
                 <input type="radio" id="upload-file-btn" name="signup" disabled>
@@ -23,11 +23,11 @@
                 <div id="upload-content-div">
                     <div id="upload-text-row">
                         <label id="upload-text-label" for="upload-text-content">Text (0/2000):</label><br>
-                        <textarea spellcheck="false" id="upload-text-content" class="full-width full-height" maxlength="2000"></textarea><br>
+                        <textarea data-testid="upload-text-content" spellcheck="false" id="upload-text-content" class="full-width full-height" maxlength="2000"></textarea><br>
                     </div>
                     <div id="upload-file-row">
                         <label for="upload">File(s):</label><br>
-                        <input id="upload" type="file"><br>
+                        <input data-testid="upload-file" id="upload" type="file"><br>
                     </div>
                 </div>
                 <div id="upload-details-div">
@@ -37,10 +37,10 @@
                     </div>
 
                     <label for="downloads">Downloads:</label><br class="hide-mobile">
-                    <input id="downloads" type="number" value="1"><br>
+                    <input data-testid="downloads" id="downloads" type="number" value="1"><br>
 
                     <label for="expiration">Expiration:</label><br class="hide-mobile">
-                    <input id="expiration" type="number">
+                    <input data-testid="expiration" id="expiration" type="number">
                     <select id="duration-unit">
                         <option selected>Minutes</option>
                         <option>Hours</option>
@@ -48,7 +48,7 @@
                     </select><br>
 
                     <label for="use-password">Protect with password:</label>
-                    <input type="checkbox" id="use-password" role="button"><br>
+                    <input type="checkbox" data-testid="use-password" id="use-password" role="button"><br>
 
                     <div id="password-div">
                         <hr>
@@ -58,7 +58,7 @@
                                     <label for="password">Password:</label>
                                 </td>
                                 <td>
-                                    <input id="password" autocomplete="off" type="password" disabled>
+                                    <input data-testid="password" id="password" autocomplete="off" type="password" disabled>
                                 </td>
                             </tr>
                             <tr>
@@ -66,7 +66,7 @@
                                     <label for="confirm-password">Confirm:</label>
                                 </td>
                                 <td>
-                                    <input id="confirm-password" autocomplete="off" type="password" disabled>
+                                    <input data-testid="confirm-password" id="confirm-password" autocomplete="off" type="password" disabled>
                                 </td>
                             </tr>
                         </table>
@@ -79,25 +79,25 @@
         </fieldset>
 
         <div class="align-items-right">
-            <input id="submit" type="submit" value="Upload"/>
+            <input data-testid="submit" id="submit" type="submit" value="Upload"/>
             <input id="reset" type="reset" value="Reset"/>
         </div>
 
-        <div id="file-tag-div">
+        <div data-testid="file-tag-div" id="file-tag-div">
             <hr>
             <table style="width: 100%;">
                 <tr>
                     <td><span id="link-label">Link:</span></td>
                 </tr>
                 <tr style="margin-bottom: 10px">
-                    <td><a id="file-link" href=""></a></td>
+                    <td><a data-testid="file-link" id="file-link" href=""></a></td>
                 </tr>
                 <tr><td><hr></td></tr>
                 <tr class="tag-row">
                     <td><span>Tag:</span></td>
                 </tr>
                 <tr class="tag-row">
-                    <td><span id="file-tag"></span></td>
+                    <td><span data-testid="file-tag" id="file-tag"></span></td>
                 </tr>
             </table>
         </div>

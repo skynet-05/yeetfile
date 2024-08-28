@@ -8,7 +8,7 @@
 [![License: AGPLv3](https://img.shields.io/github/license/benbusby/yeetfile)](https://opensource.org/license/agpl-v3)
 
 [![Tests (CLI)](https://github.com/benbusby/yeetfile/actions/workflows/go-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/go-tests.yml)
-[![Tests (JS)](https://github.com/benbusby/yeetfile/actions/workflows/ts-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/ts-tests.yml)
+[![Tests (Web)](https://github.com/benbusby/yeetfile/actions/workflows/web-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/web-tests.yml)
 
 <table>
   <tr>
