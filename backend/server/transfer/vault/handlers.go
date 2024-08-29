@@ -231,27 +231,30 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		return
 	}
 
-	data, err := utils.LimitedReader(w, req.Body)
-	if err != nil {
-		utils.Logf("[YF Vault] Error reading uploaded data: %v\n", err)
-		http.Error(w, "Error reading request", http.StatusBadRequest)
-		return
-	}
-
-	totalSize := len(data) - constants.TotalOverhead
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
 		utils.Logf("[YF Vault] Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
-	} else if chunkNum > metadata.Chunks {
-		utils.Logf("[YF Vault] User uploading beyond stated # of chunks")
-		http.Error(w, "Attempting to upload more chunks than specified",
-			http.StatusBadRequest)
-		abortUpload(metadata, userID, totalSize, chunkNum)
+	}
+
+	data, err := utils.LimitedReader(w, req.Body)
+	if err != nil {
+		utils.Logf("[YF Vault] Error reading uploaded data: %v\n", err)
+		http.Error(w, "Error reading request", http.StatusBadRequest)
+		abortUpload(metadata, userID, 0, chunkNum)
 		return
 	}
 
+	if chunkNum > metadata.Chunks {
+		utils.Logf("[YF Vault] User uploading beyond stated # of chunks")
+		http.Error(w, "Attempting to upload more chunks than specified",
+			http.StatusBadRequest)
+		abortUpload(metadata, userID, 0, chunkNum)
+		return
+	}
+
+	totalSize := len(data) - constants.TotalOverhead
 	err = db.UpdateStorageUsed(userID, totalSize)
 	if err != nil {
 		abortUpload(metadata, userID, totalSize, chunkNum)

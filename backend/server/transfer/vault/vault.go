@@ -137,12 +137,12 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 				"Unable to delete vault file from b2: '%s'",
 				metadata.B2ID)
 		}
+	}
 
-		if !db.DeleteB2Uploads(metadata.ID) {
-			log.Printf(
-				"Failed to delete b2 records for vault file: '%s'",
-				metadata.ID)
-		}
+	if !db.DeleteB2Uploads(metadata.ID) {
+		log.Printf(
+			"Failed to delete b2 records for vault file: '%s'",
+			metadata.ID)
 	}
 
 	vaultDeleteErr := db.DeleteVaultFile(id, userID)

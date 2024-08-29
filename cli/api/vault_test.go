@@ -5,11 +5,14 @@ package api
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"strings"
 	"testing"
 	"yeetfile/cli/crypto"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
 
@@ -49,6 +52,7 @@ func uploadRandomFile(user TestUser, folderID string, folderKey []byte) (string,
 	}
 
 	meta, err := user.context.InitVaultFile(upload)
+
 	if err != nil {
 		return "", err
 	}
@@ -317,4 +321,29 @@ func TestUploadPastLimit(t *testing.T) {
 
 	account, err = UserA.context.GetAccountInfo()
 	assert.Equal(t, used, account.StorageUsed)
+}
+
+func TestDownloadLimiter(t *testing.T) {
+	fileIDA, err := uploadRandomFile(UserB, "", nil)
+	assert.Nil(t, err)
+
+	fileIDB, err := uploadRandomFile(UserB, "", nil)
+	assert.Nil(t, err)
+
+	urlA := endpoints.DownloadVaultFileData.Format(server, fileIDA, "1")
+	urlB := endpoints.DownloadVaultFileData.Format(server, fileIDB, "1")
+
+	attempt := 1
+	for attempt <= constants.LimiterAttempts {
+		_, err = UserB.context.DownloadFileChunk(urlA)
+		assert.Nil(t, err)
+		attempt += 1
+	}
+
+	_, err = UserB.context.DownloadFileChunk(urlA)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), fmt.Sprint(http.StatusTooManyRequests))
+
+	_, err = UserB.context.DownloadFileChunk(urlB)
+	assert.Nil(t, err)
 }

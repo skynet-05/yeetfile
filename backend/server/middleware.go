@@ -1,6 +1,7 @@
 package server
 
 import (
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/time/rate"
 	"net"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/server/session"
+	"yeetfile/shared/constants"
+	"yeetfile/shared/endpoints"
 )
 
 type Visitor struct {
@@ -15,25 +18,22 @@ type Visitor struct {
 	lastSeen time.Time
 }
 
-var visitors = make(map[string]*Visitor)
+var visitors = make(map[[32]byte]*Visitor)
 var mu sync.Mutex
 
-func init() {
-	go cleanup()
-}
-
-// getVisitor checks to see if an ip address is associated with a rate limiter,
-// and returns it if so. If not, it creates a new entry in the visitors map
-// associating the ip address with a new rate limiter.
-func getVisitor(ip string) *rate.Limiter {
+// getVisitor checks to see if an identifier (ip address or user id) is
+// associated with a rate limiter, and returns it if so. If not, it creates a
+// new entry in the visitors map associating the ip address with a new rate limiter.
+func getVisitor(identifier string, path string) *rate.Limiter {
 	mu.Lock()
 	defer mu.Unlock()
 
-	visitor, exists := visitors[ip]
+	idHash := blake2b.Sum256([]byte(identifier + path))
+	visitor, exists := visitors[idHash]
 	if !exists {
-		limit := rate.Every(time.Second * 30)
-		limiter := rate.NewLimiter(limit, 3)
-		visitors[ip] = &Visitor{limiter, time.Now()}
+		limit := rate.Every(time.Second * constants.LimiterSeconds)
+		limiter := rate.NewLimiter(limit, constants.LimiterAttempts)
+		visitors[idHash] = &Visitor{limiter, time.Now()}
 		return limiter
 	}
 
@@ -57,15 +57,16 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			ip = fallbackIP
 		}
 
-		limiter := getVisitor(ip)
+		limiter := getVisitor(ip, req.URL.Path)
 		if limiter.Allow() {
 			next.ServeHTTP(w, req)
 			return
 		}
 
-		w.WriteHeader(http.StatusTooManyRequests)
-		_, _ = w.Write([]byte("Too many back-to-back requests from this " +
-			"IP address, please wait and try again."))
+		http.Error(
+			w,
+			"Too many requests from this IP address -- please wait and try again",
+			http.StatusTooManyRequests)
 	}
 
 	return handler
@@ -88,6 +89,39 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 		}
 
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
+		return
+	}
+
+	return handler
+}
+
+// AuthLimiterMiddleware is like AuthMiddleware, but also restricts requests to
+// the same constants.LimiterAttempts per constants.LimiterSeconds by session
+// (unlike LimiterMiddleware which limits by IP address)
+func AuthLimiterMiddleware(next session.HandlerFunc) http.HandlerFunc {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		// Skip auth if the app is in debug mode, otherwise validate session
+		if session.IsValidSession(req) {
+			// Call the next handler
+			id, err := session.GetSessionAndUserID(req)
+			if err != nil {
+				return
+			}
+
+			limiter := getVisitor(id, req.URL.Path)
+			if limiter.Allow() {
+				next(w, req, id)
+				return
+			} else {
+				http.Error(
+					w,
+					"Too many requests from this account -- please wait and try again",
+					http.StatusTooManyRequests)
+				return
+			}
+		}
+
+		http.Redirect(w, req, string(endpoints.HTMLLogin), http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -124,9 +158,9 @@ func BTCPayMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return handler
 }
 
-// cleanup removes an ip->visitor pairing from the visitors map if they haven't
-// repeated a request in 30 seconds.
-func cleanup() {
+// ManageLimiters removes an id->visitor pairing from the visitors map if they
+// haven't repeated a limiter-enabled request in constants.LimiterSeconds.
+func ManageLimiters() {
 	mu.Lock()
 	for ip, v := range visitors {
 		if time.Since(v.lastSeen) > time.Minute {
@@ -134,7 +168,4 @@ func cleanup() {
 		}
 	}
 	mu.Unlock()
-
-	time.Sleep(time.Second * 30)
-	cleanup()
 }
