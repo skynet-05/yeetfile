@@ -140,6 +140,12 @@ func RemoveShareEntryByRecipient(recipientID, refID string) error {
 	return err
 }
 
+func RemoveShareEntryByItemID(itemID string) error {
+	deleteQuery := `DELETE FROM sharing WHERE item_id=$1`
+	_, err := db.Exec(deleteQuery, itemID)
+	return err
+}
+
 // GetShareInfo retrieves all records of how an item has been shared
 func GetShareInfo(ownerID, itemID string, isFolder bool) ([]shared.ShareInfo, error) {
 	err := UserCanEditItem(itemID, ownerID, isFolder)

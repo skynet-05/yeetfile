@@ -114,7 +114,9 @@ func DeleteVaultFolder(id, userID string, isShared bool) error {
 		return err
 	}
 
-	return nil
+	err = db.RemoveShareEntryByItemID(id)
+
+	return err
 }
 
 func deleteVaultFile(id, userID string, isShared bool) (int, error) {
@@ -155,7 +157,9 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 		log.Printf("Failed to update storage for user: %v\n", err)
 	}
 
-	return totalUploadSize, nil
+	err = db.RemoveShareEntryByItemID(id)
+
+	return totalUploadSize, err
 }
 
 func abortUpload(metadata db.FileMetadata, userID string, chunkLen, chunkNum int) {
