@@ -9,6 +9,7 @@
 
 [![Tests (CLI)](https://github.com/benbusby/yeetfile/actions/workflows/go-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/go-tests.yml)
 [![Tests (Web)](https://github.com/benbusby/yeetfile/actions/workflows/web-tests.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/web-tests.yml)
+[![Vuln Scan](https://github.com/benbusby/yeetfile/actions/workflows/vuln-scan.yml/badge.svg)](https://github.com/benbusby/yeetfile/actions/workflows/vuln-scan.yml)
 
 <table>
   <tr>
