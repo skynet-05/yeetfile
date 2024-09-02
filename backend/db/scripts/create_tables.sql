@@ -120,3 +120,14 @@ create table if not exists sharing
     is_folder    boolean
 );
 
+create table if not exists downloads
+(
+    id           text not null
+        constraint downloads_pk
+            primary key,
+    file_id      text,
+    user_id      text,
+    chunk        integer default 0,
+    total_chunks integer,
+    updated      timestamp
+);
