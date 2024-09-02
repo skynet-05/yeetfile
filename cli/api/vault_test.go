@@ -182,7 +182,7 @@ func TestDownloadFile(t *testing.T) {
 	}
 
 	// Test downloading file data with another user
-	url := endpoints.DownloadVaultFileData.Format(server, id, "1")
+	url := endpoints.DownloadVaultFileData.Format(server, meta.ID, "1")
 	_, err = UserB.context.DownloadFileChunk(url)
 	if err == nil {
 		t.Fatal("UserB was able to download data for a file UserA uploaded")
@@ -324,26 +324,47 @@ func TestUploadPastLimit(t *testing.T) {
 }
 
 func TestDownloadLimiter(t *testing.T) {
-	fileIDA, err := uploadRandomFile(UserB, "", nil)
+	metaOnlyFileID, err := uploadRandomFile(UserB, "", nil)
+	meta1, err := UserB.context.GetVaultItemMetadata(metaOnlyFileID)
+	assert.Nil(t, err)
+	meta2, err := UserB.context.GetVaultItemMetadata(metaOnlyFileID)
 	assert.Nil(t, err)
 
-	fileIDB, err := uploadRandomFile(UserB, "", nil)
+	assert.Equal(t, meta1.ID, meta2.ID)
+
+	fileID, err := uploadRandomFile(UserB, "", nil)
 	assert.Nil(t, err)
 
-	urlA := endpoints.DownloadVaultFileData.Format(server, fileIDA, "1")
-	urlB := endpoints.DownloadVaultFileData.Format(server, fileIDB, "1")
+	var downloadID string
+	downloadFunc := func() error {
+		var downloadErr error
+		meta, downloadErr := UserB.context.GetVaultItemMetadata(fileID)
+		if downloadErr != nil {
+			return downloadErr
+		}
+
+		if len(downloadID) == 0 {
+			assert.NotEqual(t, downloadID, meta.ID)
+		}
+
+		downloadID = meta.ID
+
+		url := endpoints.DownloadVaultFileData.Format(server, meta.ID, "1")
+		_, downloadErr = UserB.context.DownloadFileChunk(url)
+		_, intentionalErr := UserB.context.DownloadFileChunk(url)
+		assert.NotNil(t, intentionalErr)
+
+		return downloadErr
+	}
 
 	attempt := 1
 	for attempt <= constants.LimiterAttempts {
-		_, err = UserB.context.DownloadFileChunk(urlA)
+		err = downloadFunc()
 		assert.Nil(t, err)
 		attempt += 1
 	}
 
-	_, err = UserB.context.DownloadFileChunk(urlA)
+	err = downloadFunc()
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), fmt.Sprint(http.StatusTooManyRequests))
-
-	_, err = UserB.context.DownloadFileChunk(urlB)
-	assert.Nil(t, err)
 }

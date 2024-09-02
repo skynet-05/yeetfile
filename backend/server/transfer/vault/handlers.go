@@ -297,9 +297,16 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 		return
 	}
 
+	downloadID, err := db.InitDownload(metadata.RefID, userID, metadata.Chunks)
+	if err != nil {
+		utils.Logf("Error initializing download: %v\n", err)
+		http.Error(w, "Error initializing download", http.StatusInternalServerError)
+		return
+	}
+
 	response := shared.VaultDownloadResponse{
 		Name:         metadata.Name,
-		ID:           metadata.RefID,
+		ID:           downloadID,
 		Chunks:       metadata.Chunks,
 		Size:         metadata.Length,
 		ProtectedKey: metadata.ProtectedKey,
@@ -327,7 +334,14 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 		chunk = 1 // Downloads always begin with chunk 1
 	}
 
-	metadata, err := db.RetrieveVaultMetadata(id, userID)
+	metadataID, err := db.GetDownload(id, userID)
+	if err != nil {
+		log.Printf("Error fetching download ID: %v\n", err)
+		http.Error(w, "Error fetching download info", http.StatusInternalServerError)
+		return
+	}
+
+	metadata, err := db.RetrieveVaultMetadata(metadataID, userID)
 	if err != nil {
 		utils.Logf("Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
@@ -341,6 +355,11 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 		cache.PrepCache(id, metadata.Length)
 		_, bytes = transfer.DownloadFile(metadata.B2ID, metadata.Length, chunk)
 		_ = cache.Write(id, bytes)
+	}
+
+	err = db.UpdateDownload(id)
+	if err != nil {
+		log.Printf("Error updating download: %v\n", err)
 	}
 
 	_, _ = w.Write(bytes)

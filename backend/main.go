@@ -20,6 +20,7 @@ func main() {
 	var expiryCronID cron.EntryID
 	var memberCronID cron.EntryID
 	var limiterCronID cron.EntryID
+	var downloadsCronID cron.EntryID
 
 	var err error
 	if config.IsDebugMode {
@@ -53,6 +54,13 @@ func main() {
 		log.Println("Limiter cron task added!")
 	}
 
+	downloadsCronID, err = c.AddFunc("@every 1h", db.CleanUpDownloads)
+	if err != nil {
+		panic(err)
+	} else {
+		log.Println("Download cleanup cron task added!")
+	}
+
 	if len(c.Entries()) > 0 && config.IsDebugMode {
 		_, _ = c.AddFunc("@every 1m", func() {
 			log.Println("~~ CRON MONITOR ~~")
@@ -65,6 +73,9 @@ func main() {
 						e.Next.Format(time.RFC1123))
 				} else if e.ID == limiterCronID {
 					log.Println("Limiter middleware | next run: " +
+						e.Next.Format(time.RFC1123))
+				} else if e.ID == downloadsCronID {
+					log.Println("Downloads cleanup | next run: " +
 						e.Next.Format(time.RFC1123))
 				}
 			}
