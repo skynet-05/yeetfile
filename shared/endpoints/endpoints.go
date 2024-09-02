@@ -18,7 +18,14 @@ type HTMLEndpoints struct {
 	VerifyEmail    string
 }
 
+type BillingEndpoints struct {
+	BTCPayCheckout string
+	StripeCheckout string
+	StripeManage   string
+}
+
 var HTMLPageEndpoints HTMLEndpoints
+var BillingPageEndpoints BillingEndpoints
 
 var (
 	Signup         = Endpoint("/api/signup")
@@ -52,7 +59,14 @@ var (
 	PubKey       = Endpoint("/api/pubkey")
 	ProtectedKey = Endpoint("/api/protectedkey")
 
+	StripeWebhook  = Endpoint("/stripe/webhook")
+	StripeManage   = Endpoint("/stripe/manage")
+	StripeCheckout = Endpoint("/stripe/checkout")
+	BTCPayWebhook  = Endpoint("/btcpay/webhook")
+	BTCPayCheckout = Endpoint("/btcpay/checkout")
+
 	HTMLAccount        = Endpoint("/account")
+	HTMLHome           = Endpoint("/")
 	HTMLSend           = Endpoint("/send")
 	HTMLSendDownload   = Endpoint("/send/*")
 	HTMLVault          = Endpoint("/vault")
@@ -96,6 +110,7 @@ var JSVarNameMap = map[Endpoint]string{
 	PubKey:       "PubKey",
 	ProtectedKey: "ProtectedKey",
 
+	HTMLHome:           "HTMLHome",
 	HTMLAccount:        "HTMLAccount",
 	HTMLSend:           "HTMLSend",
 	HTMLSendDownload:   "HTMLSendDownload",
@@ -132,5 +147,11 @@ func init() {
 		Forgot:         string(HTMLForgot),
 		ChangePassword: string(HTMLChangePassword),
 		VerifyEmail:    string(HTMLVerifyEmail),
+	}
+
+	BillingPageEndpoints = BillingEndpoints{
+		BTCPayCheckout: string(BTCPayCheckout),
+		StripeCheckout: string(StripeCheckout),
+		StripeManage:   string(StripeManage),
 	}
 }

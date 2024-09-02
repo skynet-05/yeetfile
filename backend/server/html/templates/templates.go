@@ -61,6 +61,7 @@ type AccountTemplate struct {
 	StripeConfigured     bool
 	BTCPayConfigured     bool
 	BillingConfigured    bool
+	BillingEndpoints     endpoints.BillingEndpoints
 	SubscriptionTemplate subscriptions.SubscriptionTemplateValues
 }
 

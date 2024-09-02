@@ -76,14 +76,14 @@ func Run(addr string) {
 		{PUT, endpoints.ChangePassword, AuthMiddleware(auth.ChangePasswordHandler)},
 
 		// Payments (Stripe, BTCPay)
-		{POST, "/webhook/stripe", payments.StripeWebhook},
-		{GET, "/manage-sub", StripeMiddleware(AuthMiddleware(payments.StripeCustomerPortal))},
-		{GET, "/checkout", StripeMiddleware(AuthMiddleware(payments.StripeCheckout))},
-		{POST, "/webhook/btcpay", payments.BTCPayWebhook},
-		{GET, "/checkout-btc", BTCPayMiddleware(AuthMiddleware(payments.BTCPayCheckout))},
+		{POST, endpoints.StripeWebhook, payments.StripeWebhook},
+		{GET, endpoints.StripeManage, StripeMiddleware(AuthMiddleware(payments.StripeCustomerPortal))},
+		{GET, endpoints.StripeCheckout, StripeMiddleware(AuthMiddleware(payments.StripeCheckout))},
+		{POST, endpoints.BTCPayWebhook, payments.BTCPayWebhook},
+		{GET, endpoints.BTCPayCheckout, BTCPayMiddleware(AuthMiddleware(payments.BTCPayCheckout))},
 
 		// HTML
-		{GET, "/", html.SendPageHandler},
+		{GET, endpoints.HTMLHome, html.SendPageHandler},
 		{GET, endpoints.HTMLSend, html.SendPageHandler},
 		{GET, endpoints.HTMLVault, AuthMiddleware(html.VaultPageHandler)},
 		{GET, endpoints.HTMLVaultFolder, AuthMiddleware(html.VaultPageHandler)},

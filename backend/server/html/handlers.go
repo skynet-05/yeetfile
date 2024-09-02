@@ -189,6 +189,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 			BillingConfigured: config.YeetFileConfig.StripeBilling.Configured ||
 				config.YeetFileConfig.BTCPayBilling.Configured,
 			SubscriptionTemplate: subscriptions.TemplateValues,
+			BillingEndpoints:     endpoints.BillingPageEndpoints,
 		},
 	)
 
