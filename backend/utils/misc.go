@@ -27,7 +27,22 @@ func Log(msg string) {
 func Logf(msg string, a ...any) {
 	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
 		log.Printf(msg, a...)
+
 	}
+}
+
+func GenErrMsgs(msg string, err error) (string, string) {
+	var serverMsg string
+	var clientMsg string
+
+	serverMsg = fmt.Sprintf("%s\n└─ Error: %v\n", msg, err)
+	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
+		clientMsg = serverMsg
+	} else {
+		clientMsg = msg
+	}
+
+	return serverMsg, clientMsg
 }
 
 func GetEnvVar(key string, fallback string) string {
@@ -230,7 +245,7 @@ func ParseSizeString(str string) int {
 			return num
 		}
 	} else {
-		Logf("No match found for size string: %s\n", str)
+		log.Printf("No match found for size string: %s\n", str)
 	}
 
 	return 0

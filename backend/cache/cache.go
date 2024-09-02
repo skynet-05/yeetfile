@@ -3,6 +3,7 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -239,7 +240,7 @@ func init() {
 	userCacheDirSize := os.Getenv("YEETFILE_CACHE_MAX_SIZE")
 	if len(userCacheDirSize) > 0 {
 		maxCacheSize = utils.ParseSizeString(userCacheDirSize)
-		utils.Logf("Max cache size: %s (%d bytes)",
+		log.Printf("Max cache size: %s (%d bytes)",
 			userCacheDirSize,
 			maxCacheSize)
 	}
@@ -247,7 +248,7 @@ func init() {
 	userCacheFileSize := os.Getenv("YEETFILE_CACHE_MAX_FILE_SIZE")
 	if len(userCacheFileSize) > 0 {
 		maxCachedFileSize = utils.ParseSizeString(userCacheFileSize)
-		utils.Logf("Max size of files in cache: %s (%d bytes)",
+		log.Printf("Max size of files in cache: %s (%d bytes)",
 			userCacheFileSize,
 			maxCachedFileSize)
 	}

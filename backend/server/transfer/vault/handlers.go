@@ -292,15 +292,21 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
-		utils.Logf("Error fetching metadata: %v\n", err)
-		http.Error(w, "No metadata found", http.StatusBadRequest)
+		serverMsg, clientMsg := utils.GenErrMsgs(
+			"Error fetching metadata",
+			err)
+		log.Println(serverMsg)
+		http.Error(w, clientMsg, http.StatusBadRequest)
 		return
 	}
 
 	downloadID, err := db.InitDownload(metadata.RefID, userID, metadata.Chunks)
 	if err != nil {
-		utils.Logf("Error initializing download: %v\n", err)
-		http.Error(w, "Error initializing download", http.StatusInternalServerError)
+		serverMsg, clientMsg := utils.GenErrMsgs(
+			"Error initializing download",
+			err)
+		log.Println(serverMsg)
+		http.Error(w, clientMsg, http.StatusInternalServerError)
 		return
 	}
 
