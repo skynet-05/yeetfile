@@ -157,6 +157,7 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 		log.Printf("Failed to update storage for user: %v\n", err)
 	}
 
+	_ = db.RemoveDownloadByFileID(id, userID)
 	err = db.RemoveShareEntryByItemID(id)
 
 	return totalUploadSize, err

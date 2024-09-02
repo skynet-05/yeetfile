@@ -14,7 +14,8 @@ func InitDownload(fileID, userID string, chunks int) (string, error) {
 	var err error
 	id, err = getIDByFileAndUserID(fileID, userID)
 	if err == nil && len(id) > 0 {
-		return id, nil
+		err = resetDownload(id)
+		return id, err
 	}
 
 	id = shared.GenRandomString(8)
@@ -67,6 +68,12 @@ func CleanUpDownloads() {
 	if err != nil {
 		log.Printf("Error cleaning up downloads: %v\n", err)
 	}
+}
+
+func RemoveDownloadByFileID(fileID, userID string) error {
+	s := `DELETE FROM downloads WHERE file_id=$1 AND user_id=$2`
+	_, err := db.Exec(s, fileID, userID)
+	return err
 }
 
 func getIDByFileAndUserID(fileID, userID string) (string, error) {
