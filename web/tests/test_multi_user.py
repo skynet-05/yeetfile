@@ -11,7 +11,7 @@ account_id_b: str = ""
 @pytest.fixture(scope="session")
 def browser_context() -> BrowserContext:
     with sync_playwright() as p:
-        browser: Browser = p.chromium.launch()
+        browser: Browser = p.chromium.launch(slow_mo=100)
         context_a: BrowserContext = browser.new_context()
         context_b: BrowserContext = browser.new_context()
         yield context_a, context_b

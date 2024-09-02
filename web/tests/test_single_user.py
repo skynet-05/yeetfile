@@ -12,7 +12,7 @@ account_id: str = ""
 @pytest.fixture(scope="session")
 def browser_context() -> BrowserContext:
     with sync_playwright() as p:
-        browser: Browser = p.chromium.launch()
+        browser: Browser = p.chromium.launch(slow_mo=100)
         context: BrowserContext = browser.new_context()
         yield context
         browser.close()
@@ -184,8 +184,6 @@ def test_vault(browser_context: BrowserContext):
 
         folder_json = fetch_folder_json(page, folder_id)
         assert len(folder_json["folders"]) == 1
-
-        page.get_by_role("link", name=folder_name).click()
         return folder_json["folders"][0]["id"]
 
     def _upload_file(folder_id: str):
