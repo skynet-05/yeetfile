@@ -63,7 +63,7 @@ func Run(addr string) {
 
 		// Auth (signup, login/logout, account mgmt, etc)
 		{POST, endpoints.VerifyEmail, auth.VerifyEmailHandler},
-		{POST, endpoints.VerifyAccount, auth.VerifyAccountHandler},
+		{POST, endpoints.VerifyAccount, LimiterMiddleware(auth.VerifyAccountHandler)},
 		{GET, endpoints.Session, session.SessionHandler},
 		{GET, endpoints.Logout, auth.LogoutHandler},
 		{POST, endpoints.Login, auth.LoginHandler},

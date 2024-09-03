@@ -10,15 +10,19 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"math/rand"
 )
 
 // GenerateCaptchaImage takes a verification code string and generates an image
 // to use for verifying non-email users.
-func GenerateCaptchaImage(code string) string {
+func GenerateCaptchaImage(code string, isCLI bool) string {
 	// Add spaces to code for legibility
 	//code = strings.Join(strings.Split(code, ""), " ")
 	img := image.NewRGBA(image.Rect(0, 0, 45, 25))
+
+	addNoise(img, isCLI)
 	addLabel(img, 2, 17, code)
+	addNoise(img, isCLI)
 
 	// Resize
 	dst := image.NewRGBA(image.Rect(0, 0, 250, 100))
@@ -33,7 +37,7 @@ func GenerateCaptchaImage(code string) string {
 }
 
 func addLabel(img *image.RGBA, x, y int, label string) {
-	col := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	col := color.RGBA{G: 255, A: 255}
 	point := fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)}
 
 	d := &font.Drawer{
@@ -43,4 +47,25 @@ func addLabel(img *image.RGBA, x, y int, label string) {
 		Dot:  point,
 	}
 	d.DrawString(label)
+}
+
+func addNoise(img *image.RGBA, isCLI bool) {
+	if isCLI {
+		return
+	}
+
+	bounds := img.Bounds()
+	draw.Draw(img, bounds, img, bounds.Min, draw.Src)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			if rand.Float64() < 0.07 {
+				noiseColor := color.RGBA{G: 100, B: 255, A: 255}
+				if rand.Intn(2) == 0 {
+					noiseColor = color.RGBA{G: 100, R: 255, A: 255}
+				}
+
+				img.Set(x, y, noiseColor)
+			}
+		}
+	}
 }

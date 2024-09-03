@@ -3,6 +3,7 @@ package requests
 import (
 	"bytes"
 	"net/http"
+	"yeetfile/shared/constants"
 )
 
 func GetRequest(session, url string) (*http.Response, error) {
@@ -33,6 +34,8 @@ func sendRequest(session, method, url string, data []byte) (*http.Response, erro
 			Value: session,
 		})
 	}
+
+	req.Header.Set("User-Agent", constants.CLIUserAgent)
 
 	resp, err := new(http.Transport).RoundTrip(req)
 	if err != nil {

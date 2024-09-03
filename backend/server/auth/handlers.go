@@ -15,6 +15,7 @@ import (
 	"yeetfile/backend/server/transfer/vault"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 // LoginHandler handles a POST request to /login to log the user in.
@@ -78,7 +79,8 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 
 	if len(signupData.Identifier) == 0 {
 		// No email, so this is an account ID only signup
-		id, captcha, err := SignupAccountIDOnly()
+		isCLI := req.UserAgent() == constants.CLIUserAgent
+		id, captcha, err := SignupAccountIDOnly(isCLI)
 		if err != nil {
 			status = http.StatusBadRequest
 			response = shared.SignupResponse{

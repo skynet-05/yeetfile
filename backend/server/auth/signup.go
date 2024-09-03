@@ -37,7 +37,7 @@ func SignupWithEmail(signup shared.Signup) error {
 // SignupAccountIDOnly creates a new user with only an account ID as the user's
 // login credential. Returns the user's (temporary) account ID, an image
 // of their captcha code, and an error.
-func SignupAccountIDOnly() (string, string, error) {
+func SignupAccountIDOnly(isCLI bool) (string, string, error) {
 	id := db.CreateUniqueUserID()
 
 	code, err := db.NewVerification(shared.Signup{Identifier: id}, nil, false)
@@ -45,6 +45,6 @@ func SignupAccountIDOnly() (string, string, error) {
 		return "", "", err
 	}
 
-	captchaBase64 := GenerateCaptchaImage(code)
+	captchaBase64 := GenerateCaptchaImage(code, isCLI)
 	return id, captchaBase64, nil
 }
