@@ -49,7 +49,8 @@ create table if not exists users
     send_used           bigint   default 0,
     sub_duration        text     default ''::text,
     sub_type            text     default ''::text,
-    sub_method          text     default ''::text
+    sub_method          text     default ''::text,
+    bandwidth           bigint   default 0
 );
 
 create table if not exists stripe

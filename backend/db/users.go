@@ -89,8 +89,9 @@ func NewUser(user User) (string, error) {
                    member_expiration,
                    last_upgraded_month,
                    protected_key,
-                   public_key)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+                   public_key,
+                   bandwidth)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	_, err := db.Exec(
 		s,
@@ -103,7 +104,8 @@ func NewUser(user User) (string, error) {
 		defaultExp,
 		-1,
 		user.ProtectedKey,
-		user.PublicKey)
+		user.PublicKey,
+		config.YeetFileConfig.DefaultUserStorage*3)
 	if err != nil {
 		return "", err
 	}
@@ -209,6 +211,14 @@ func UpdateStorageUsed(userID string, amount int) error {
 	}
 
 	return nil
+}
+
+// UpdateBandwidth subtracts bandwidth from the user's bandwidth column, returning
+// an error if the value goes below 0.
+func UpdateBandwidth(userID string, amount int) error {
+	s := `UPDATE users SET bandwidth=bandwidth-$2 WHERE id=$1`
+	_, err := db.Exec(s, userID, amount)
+	return err
 }
 
 // RotateUserPaymentID overwrites the previous payment ID once a transaction is
@@ -539,6 +549,19 @@ func GetUserStorageLimits(id string) (int, int, error) {
 	return storageUsed, storageAvailable, nil
 }
 
+// GetUserBandwidth returns the user's bandwidth, which can be used to determine
+// if a file download can be performed.
+func GetUserBandwidth(id string) (int, error) {
+	var bandwidth int
+	s := `SELECT bandwidth FROM users WHERE id=$1`
+	err := db.QueryRow(s, id).Scan(&bandwidth)
+	if err != nil {
+		return 0, err
+	}
+
+	return bandwidth, nil
+}
+
 func GetPaymentIDByUserID(userID string) (string, error) {
 	rows, err := db.Query(`
 		SELECT payment_id
@@ -751,6 +774,12 @@ func CheckMemberships() {
 		subscriptions.StorageAmountMap[subscriptions.TypeAdvanced])
 	if err != nil {
 		log.Printf("Error updating novice member storage/send")
+	}
+
+	bandwidthUpdate := `UPDATE users SET bandwidth = storage_available * 3;`
+	_, err = db.Exec(bandwidthUpdate)
+	if err != nil {
+		log.Printf("Failed to update user bandwidths")
 	}
 }
 

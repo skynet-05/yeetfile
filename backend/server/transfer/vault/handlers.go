@@ -300,6 +300,19 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 		return
 	}
 
+	bandwidth, err := db.GetUserBandwidth(userID)
+	if err != nil {
+		serverMsg, clientMsg := utils.GenErrMsgs("Server error", err)
+		log.Println(serverMsg)
+		http.Error(w, clientMsg, http.StatusInternalServerError)
+		return
+	} else if bandwidth < metadata.Length {
+		log.Printf("Bandwidth limit triggered")
+		http.Error(w, "Bandwidth limit reached -- contact YeetFile "+
+			"support or try again tomorrow.", http.StatusForbidden)
+		return
+	}
+
 	downloadID, err := db.InitDownload(metadata.RefID, userID, metadata.Chunks)
 	if err != nil {
 		serverMsg, clientMsg := utils.GenErrMsgs(
@@ -366,6 +379,11 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 	err = db.UpdateDownload(id)
 	if err != nil {
 		log.Printf("Error updating download: %v\n", err)
+	}
+
+	err = db.UpdateBandwidth(userID, len(bytes)-constants.TotalOverhead)
+	if err != nil {
+		log.Printf("Error updating bandwidth: %v\n", err)
 	}
 
 	_, _ = w.Write(bytes)
