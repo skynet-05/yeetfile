@@ -18,6 +18,7 @@ type User struct {
 	PasswordHash       []byte
 	ProtectedKey       []byte
 	PublicKey          []byte
+	PasswordHint       []byte
 	PaymentID          string
 	MemberExp          time.Time
 	StorageAvailable   int
@@ -83,6 +84,7 @@ func NewUser(user User) (string, error) {
                    id,
                    email,
                    pw_hash,
+                   pw_hint,
                    payment_id,
                    send_available,
                    storage_available,
@@ -91,13 +93,14 @@ func NewUser(user User) (string, error) {
                    protected_key,
                    public_key,
                    bandwidth)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 
 	_, err := db.Exec(
 		s,
 		user.ID,
 		user.Email,
 		user.PasswordHash,
+		user.PasswordHint,
 		paymentID,
 		config.YeetFileConfig.DefaultUserSend,
 		config.YeetFileConfig.DefaultUserStorage,
@@ -218,6 +221,12 @@ func UpdateStorageUsed(userID string, amount int) error {
 func UpdateBandwidth(userID string, amount int) error {
 	s := `UPDATE users SET bandwidth=bandwidth-$2 WHERE id=$1`
 	_, err := db.Exec(s, userID, amount)
+	return err
+}
+
+func UpdatePasswordHint(userID string, encHint []byte) error {
+	s := `UPDATE users SET pw_hint=$2 WHERE id=$1 AND email IS NOT NULL AND email != ''`
+	_, err := db.Exec(s, userID, encHint)
 	return err
 }
 
@@ -407,7 +416,7 @@ func GetUserByID(id string) (User, error) {
 		SELECT email, payment_id, member_expiration,
 		       send_available, send_used, 
 		       storage_available, storage_used,
-		       sub_method
+		       sub_method, pw_hint
 		FROM users
 		WHERE id = $1`, id)
 	if err != nil {
@@ -425,11 +434,12 @@ func GetUserByID(id string) (User, error) {
 		var storageAvailable int
 		var storageUsed int
 		var subMethod string
+		var pwHint []byte
 		err = rows.Scan(
 			&email, &paymentID, &expiration,
 			&sendAvailable, &sendUsed,
 			&storageAvailable, &storageUsed,
-			&subMethod)
+			&subMethod, &pwHint)
 		if err != nil {
 			return User{}, err
 		}
@@ -443,6 +453,7 @@ func GetUserByID(id string) (User, error) {
 			StorageAvailable:   storageAvailable,
 			StorageUsed:        storageUsed,
 			SubscriptionMethod: subMethod,
+			PasswordHint:       pwHint,
 		}, nil
 	}
 
@@ -509,6 +520,19 @@ func GetUserIDByEmail(email string) (string, error) {
 	}
 
 	return id, nil
+}
+
+func GetUserPasswordHintByEmail(email string) ([]byte, error) {
+	var hint []byte
+	err := db.QueryRow(`SELECT pw_hint FROM users WHERE email = $1`, email).
+		Scan(&hint)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return hint, nil
 }
 
 // GetUserSendLimits returns the amount of used and available bytes for

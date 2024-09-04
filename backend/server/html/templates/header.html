@@ -24,8 +24,6 @@
     {{ else }}
       {{ if ne .Base.Config.MaxUserCount .Base.Config.CurrentUserCount }}
       <a href="{{.Base.Endpoints.Signup}}">Sign Up</a>
-      {{ else }}
-      <strike>Sign Up</strike><span> (Server Full) </span>
       {{ end }}
       <a href="{{.Base.Endpoints.Login}}">Log In</a>
     {{ end }}

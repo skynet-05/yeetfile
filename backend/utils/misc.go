@@ -112,15 +112,6 @@ func GenChecksum(data []byte) ([]byte, string) {
 	return checksum, fmt.Sprintf("%x", checksum)
 }
 
-// IsEitherEmpty returns true if one string is empty ("") but not the other
-func IsEitherEmpty(a string, b string) bool {
-	if (len(a) == 0 && len(b) != 0) || (len(a) != 0 && len(b) == 0) {
-		return true
-	}
-
-	return false
-}
-
 func Contains(items []string, target string) bool {
 	for _, item := range items {
 		if item == target {
@@ -149,6 +140,26 @@ func IsStructMissingAnyField(s interface{}) bool {
 				return true
 			}
 			break
+		}
+	}
+
+	return false
+}
+
+func IsAnyStringMissing(s ...string) bool {
+	for _, str := range s {
+		if len(str) == 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsAnyByteSliceMissing(b ...[]byte) bool {
+	for _, bs := range b {
+		if len(bs) == 0 {
+			return true
 		}
 	}
 

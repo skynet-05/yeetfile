@@ -74,6 +74,10 @@ func changePassword(identifier, password, newPassword string) error {
 	})
 }
 
+func changePasswordHint(passwordHint string) error {
+	return globals.API.ChangePasswordHint(passwordHint)
+}
+
 func FetchAccountDetails() (shared.AccountResponse, string) {
 	account, err := globals.API.GetAccountInfo()
 	if err != nil {
@@ -89,15 +93,22 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		account.Email = "None"
 	}
 
+	passwordHintStr := "Not Set"
+	if account.HasPasswordHint {
+		passwordHintStr = "Enabled"
+	}
+
 	accountDetails := fmt.Sprintf(""+
 		"Email: %s\n"+
 		"Vault: %s\n"+
 		"Send:  %s\n\n"+
-		"Subscription: %s",
+		"Subscription: %s\n"+
+		"Password Hint: %s",
 		account.Email,
 		storageStr,
 		sendStr,
-		subscriptionStr)
+		subscriptionStr,
+		passwordHintStr)
 
 	return account, accountDetails
 }

@@ -4,33 +4,12 @@
 <div id="center-div">
   <h1>Forgot Password</h1>
   <hr>
-  {{ if eq .Email "" }}
-  <p>Enter the email address associated with your YeetFile account to recover your password.</p>
-  {{ end }}
-  <form action="/forgot" method="post">
-    {{ if ne .Email "" }}
-    <input name="email" value="{{ .Email }}" type="text" disabled><br>
-    {{ else }}
-    <input name="email" placeholder="Email Address" type="text"><br>
-    <input type="submit" value="Submit">
-    {{ end }}
-  </form>
-  {{ if ne .Email "" }}
+  <p>Enter the email address associated with your YeetFile account below.</p>
+  <p>If you've set a password hint, it will be emailed to you.</p>
   <hr>
-  <p>You should receive a password reset email shortly. Enter the code from the email below, along
-  with your new password.</p>
-  <form action="/reset" method="post">
-    <input name="email" type="text" value="{{ .Email }}" style="display: none" readonly hidden>
-    {{ if ne .Code "" }}
-    <input name="code" type="text" value="{{ .Code }}" readonly><br>
-    {{ else }}
-    <input name="code" placeholder="Verification Code" type="text"><br>
-    {{ end }}
-    <input name="password" type="password" placeholder="Password"><br>
-    <input name="confirm-password" type="password" placeholder="Confirm Password"><br>
-    <input type="submit" value="Submit">
-  </form>
-  {{ end }}
+  <label for="email-address">Email Address:</label>
+  <input name="email" id="email-address" style="margin-left: 0" type="text" value="{{ .Email }}">
+  <input id="submit" type="submit" value="Submit">
   {{ template "messages.html" . }}
 </div>
 {{ template "footer.html" . }}

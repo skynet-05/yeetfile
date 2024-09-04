@@ -215,6 +215,26 @@ func (ctx *Context) ChangePassword(password shared.ChangePassword) error {
 	return nil
 }
 
+// ChangePasswordHint accepts a plaintext password hint that will be encrypted
+// by the server and sent to the user's email if they forget their password
+func (ctx *Context) ChangePasswordHint(hint string) error {
+	change := shared.ChangePasswordHint{Hint: hint}
+	reqData, err := json.Marshal(change)
+	if err != nil {
+		return err
+	}
+
+	url := endpoints.ChangeHint.Format(ctx.Server)
+	resp, err := requests.PostRequest(ctx.Session, url, reqData)
+	if err != nil {
+		return err
+	} else if resp.StatusCode != http.StatusOK {
+		return utils.ParseHTTPError(resp)
+	}
+
+	return nil
+}
+
 // DeleteAccount removes the current user's YeetFile account.
 func (ctx *Context) DeleteAccount(id string) error {
 	url := endpoints.Account.Format(ctx.Server)
@@ -224,6 +244,25 @@ func (ctx *Context) DeleteAccount(id string) error {
 	}
 
 	response, err := requests.DeleteRequest(ctx.Session, url, reqData)
+	if err != nil {
+		return err
+	} else if response.StatusCode != http.StatusOK {
+		return utils.ParseHTTPError(response)
+	}
+
+	return nil
+}
+
+// ForgotPassword sends a request for the user's password to be sent to the
+// provided email (must have an account and have a hint set first).
+func (ctx *Context) ForgotPassword(email string) error {
+	url := endpoints.Forgot.Format(ctx.Server)
+	reqData, err := json.Marshal(shared.ForgotPassword{Email: email})
+	if err != nil {
+		return err
+	}
+
+	response, err := requests.PostRequest(ctx.Session, url, reqData)
 	if err != nil {
 		return err
 	} else if response.StatusCode != http.StatusOK {

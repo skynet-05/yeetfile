@@ -5,7 +5,7 @@
   <h1>Account</h1>
   <hr class="accent-hr">
   <div>
-    <table>
+    <table class="account-table">
       <tr>
         <td>
           <label>Email:</label>
@@ -34,7 +34,7 @@
           <span>{{ .SendUsed }} / {{ .SendAvailable }} / month</span>
         </td>
       </tr>
-      {{ if .BillingConfigured }}
+      {{ if .Base.Config.BillingEnabled }}
       <tr>
         <td>
           <label>Subscription:</label>
@@ -44,6 +44,20 @@
           <span>Active (expires {{ .ExpString }})</span>
           {{ else }}
           <span>Inactive</span>
+          {{ end }}
+        </td>
+      </tr>
+      {{ end }}
+      {{ if ne .Email "" }}
+      <tr>
+        <td>
+          <label>Password Hint:</label>
+        </td>
+        <td>
+          {{ if .HasPasswordHint }}
+          <span class="green-text">Enabled</span> — <a href="{{ .Base.Endpoints.ChangeHint }}">Update / Disable</a>
+          {{ else }}
+          <span class="red-text">Not Set</span> — <a href="{{ .Base.Endpoints.ChangeHint }}">Enable</a>
           {{ end }}
         </td>
       </tr>
@@ -64,7 +78,7 @@
     </details>
   </div>
   {{ template "messages.html" . }}
-  {{ if or .StripeConfigured .BTCPayConfigured }}
+  {{ if or .Base.Config.StripeEnabled .Base.Config.BTCPayEnabled }}
     <hr>
     <div class="subscription-container">
       <h1>Subscriptions</h1>
@@ -94,24 +108,25 @@
           </ul>
           {{ if .IsYearly }}
           <span><b>${{ .SubscriptionTemplate.YearlyNovicePrice }}/year</b></span><br>
-            {{ if .StripeConfigured }}
+            {{ if .Base.Config.StripeEnabled }}
             <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.YearlyNovice }}">
               <button class="stripe-btn payment-btn">Purchase</button>
             </a><br class="mobile-only">
             {{ end }}
-            {{ if .BTCPayConfigured }}
+            {{ if .Base.Config.BTCPayEnabled }}
             <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.YearlyNovice }}">
               {{ template "btcpay-button.html" }}
             </a>
             {{ end }}
           {{ else }}
           <span><b>${{ .SubscriptionTemplate.MonthlyNovicePrice }}/month</b></span><br>
-            {{ if .StripeConfigured }}
+
+            {{ if .Base.Config.StripeEnabled }}
             <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.MonthlyNovice }}">
               <button class="stripe-btn payment-btn">Purchase</button>
             </a><br class="mobile-only">
             {{ end }}
-            {{ if .BTCPayConfigured }}
+            {{ if .Base.Config.BTCPayEnabled }}
             <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.MonthlyNovice }}">
               {{ template "btcpay-button.html" }}
             </a>
@@ -126,24 +141,24 @@
           </ul>
           {{ if .IsYearly }}
           <span><b>${{ .SubscriptionTemplate.YearlyRegularPrice }}/year</b></span><br>
-            {{ if .StripeConfigured }}
+            {{ if .Base.Config.StripeEnabled }}
             <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.YearlyRegular }}">
               <button class="stripe-btn payment-btn">Purchase</button>
             </a><br class="mobile-only">
             {{ end }}
-            {{ if .BTCPayConfigured }}
+            {{ if .Base.Config.BTCPayEnabled }}
             <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.YearlyRegular }}">
               {{ template "btcpay-button.html" }}
             </a>
             {{ end }}
           {{ else }}
           <span><b>${{ .SubscriptionTemplate.MonthlyRegularPrice }}/month</b></span><br>
-            {{ if .StripeConfigured }}
+            {{ if .Base.Config.StripeEnabled }}
             <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.MonthlyRegular }}">
               <button class="stripe-btn payment-btn">Purchase</button>
             </a><br class="mobile-only">
             {{ end }}
-            {{ if .BTCPayConfigured }}
+            {{ if .Base.Config.BTCPayEnabled }}
             <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.MonthlyRegular }}">
               {{ template "btcpay-button.html" }}
             </a>
@@ -158,24 +173,24 @@
           </ul>
           {{ if .IsYearly }}
           <span><b>${{ .SubscriptionTemplate.YearlyAdvancedPrice }}/year</b></span><br>
-            {{ if .StripeConfigured }}
+            {{ if .Base.Config.StripeEnabled }}
             <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.YearlyAdvanced }}">
               <button class="stripe-btn payment-btn">Purchase</button>
             </a><br class="mobile-only">
             {{ end }}
-            {{ if .BTCPayConfigured }}
+            {{ if .Base.Config.BTCPayEnabled }}
             <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.YearlyAdvanced }}">
               {{ template "btcpay-button.html" }}
             </a>
             {{ end }}
           {{ else }}
           <span><b>${{ .SubscriptionTemplate.MonthlyAdvancedPrice }}/month</b></span><br>
-            {{ if .StripeConfigured }}
+            {{ if .Base.Config.StripeEnabled }}
             <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.MonthlyAdvanced }}">
               <button class="stripe-btn payment-btn">Purchase</button>
             </a><br class="mobile-only">
             {{ end }}
-            {{ if .BTCPayConfigured }}
+            {{ if .Base.Config.BTCPayEnabled }}
             <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.MonthlyAdvanced }}">
               {{ template "btcpay-button.html" }}
             </a>

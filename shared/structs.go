@@ -4,6 +4,7 @@ import "time"
 
 type AccountResponse struct {
 	Email              string    `json:"email"`
+	HasPasswordHint    bool      `json:"hasPasswordHint"`
 	StorageAvailable   int       `json:"storageAvailable"`
 	StorageUsed        int       `json:"storageUsed"`
 	SendAvailable      int       `json:"sendAvailable"`
@@ -118,6 +119,7 @@ type Signup struct {
 	PublicKey      []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	ProtectedKey   []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	RootFolderKey  []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PasswordHint   string `json:"passwordHint"`
 	ServerPassword string `json:"serverPassword"`
 }
 
@@ -164,6 +166,10 @@ type ResetPassword struct {
 	Code            string `json:"code"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
+}
+
+type ChangePasswordHint struct {
+	Hint string `json:"hint"`
 }
 
 type PubKeyResponse struct {

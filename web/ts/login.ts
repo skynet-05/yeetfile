@@ -19,6 +19,17 @@ const init = () => {
         await login();
     });
 
+    let forgotLink = document.getElementById("forgot-password") as HTMLAnchorElement;
+    forgotLink.addEventListener("click", event => {
+        event.preventDefault();
+        let identifier = document.getElementById("identifier") as HTMLInputElement;
+        if (identifier.value.indexOf("@") > 0) {
+            window.location.assign(forgotLink.href + `?email=${identifier.value}`);
+        } else {
+            window.location.assign(forgotLink.href);
+        }
+    });
+
     vaultPasswordCB.checked = localStorage.getItem(useVaultPasswordKey) === useVaultPasswordValue;
 
     // Enter key submits login form
@@ -67,7 +78,7 @@ const login = async () => {
                 localStorage.setItem(useVaultPasswordKey, "");
                 new YeetFileDB().insertVaultKeyPair(decPrivKeyBytes, pubKeyBytes, "", success => {
                     if (success) {
-                        window.location.assign("/account");
+                        window.location.assign(Endpoints.HTMLAccount.path);
                     } else {
                         alert("Failed to insert vault keys into indexeddb");
                         window.location.assign(Endpoints.Logout.path);
@@ -129,7 +140,7 @@ const showVaultPassDialog = (privKeyBytes, pubKeyBytes) => {
             password,
             success => {
                 if (success) {
-                    window.location.assign("/account");
+                    window.location.assign(Endpoints.HTMLAccount.path);
                 } else {
                     alert("Failed to insert keys into indexeddb");
                 }

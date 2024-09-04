@@ -81,7 +81,8 @@ func main() {
 		Add(shared.DeleteAccount{}).
 		Add(shared.ChangePassword{}).
 		Add(shared.ProtectedKeyResponse{}).
-		Add(shared.VerifyEmail{})
+		Add(shared.VerifyEmail{}).
+		Add(shared.ChangePasswordHint{})
 
 	converter.WithBackupDir("")
 	err = converter.ConvertToFile(structsOut)

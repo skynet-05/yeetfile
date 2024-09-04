@@ -14,10 +14,17 @@ fieldset {
 
 table input {
     margin: 2px;
+    width: 100%;
 }
 
 .signup-btn {
     margin-left: 2px;
+}
+
+.hint-input {
+    margin-left: 0;
+    width: 100%;
+    max-width: unset;
 }
 
 #account-id-verify {
@@ -31,4 +38,17 @@ table input {
 #center-div {
     width: 50%;
     max-width: 600px;
+}
+
+@media (max-width:425px) {
+    table tr {
+        display: flex;
+        flex-direction: column;
+    }
+
+    input {
+        margin-left: 0;
+        width: 100%;
+        max-width: unset;
+    }
 }

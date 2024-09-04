@@ -33,6 +33,17 @@
                     <td><input type="password" id="confirm-password" placeholder="Confirm Password"></td>
                 </tr>
             </table>
+            <hr class="half-hr">
+            <table>
+                <tr><td><label for="password-hint">Password Hint (optional):</label></td></tr>
+                <tr><td><input class="hint-input" type="text" id="password-hint" placeholder="Hint..."></td></tr>
+                <tr id="hint-row"><td>
+                    <span class="small-text">
+                        Note: Passwords cannot be recovered if lost.
+                        Setting a password hint is recommended. <br>Read more
+                        <a href="https://docs.yeetfile.com/security/#losing-account-password">here.</a></span>
+                </td></tr>
+            </table>
 
             <input class="signup-btn" type="submit" id="create-email-account" value="Create Account"/>
         </div>
@@ -47,13 +58,15 @@
                     <td><input data-testid="account-confirm-password" type="password" id="account-confirm-password" placeholder="Confirm Password"></td>
                 </tr>
             </table>
-            <input data-testid="create-id-only-account" class="signup-btn" type="submit" id="create-id-only-account" value="Create Account ID">
 
-            <p class="note-text">
+            <span class="small-text">
                 Note: By signing up with an account number only,
                 you will be unable to recover your account if you
                 ever lose your account number or your password.
-            </p>
+            </span>
+            <br>
+
+            <input data-testid="create-id-only-account" class="signup-btn" type="submit" id="create-id-only-account" value="Create Account ID">
         </div>
     </fieldset>
 

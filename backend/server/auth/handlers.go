@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"yeetfile/backend/config"
+	"yeetfile/backend/crypto"
 	"yeetfile/backend/db"
 	"yeetfile/backend/mail"
-	"yeetfile/backend/server/html"
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/server/transfer/vault"
 	"yeetfile/backend/utils"
@@ -64,7 +64,6 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 		err := bcrypt.CompareHashAndPassword(
 			config.YeetFileConfig.PasswordHash,
 			[]byte(signupData.ServerPassword))
-
 		if err != nil {
 			w.WriteHeader(http.StatusForbidden)
 			_, _ = w.Write([]byte("Missing or invalid server password"))
@@ -182,6 +181,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			SendAvailable:    user.SendAvailable,
 			SendUsed:         user.SendUsed,
 			SubscriptionExp:  user.MemberExp,
+			HasPasswordHint:  len(user.PasswordHint) > 0,
 		})
 	}
 }
@@ -191,24 +191,21 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	var verifyEmail shared.VerifyEmail
 	if json.NewDecoder(req.Body).Decode(&verifyEmail) != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("error decoding request"))
+		http.Error(w, "Error decoding request", http.StatusBadRequest)
 		return
 	}
 
 	// Ensure the request has the correct params for verification, otherwise
 	// it should return the HTML verification page
 	if len(verifyEmail.Email) == 0 || len(verifyEmail.Code) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Missing required fields"))
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
 	// Verify user verification code and fetch password hash
 	accountValues, err := db.VerifyUser(verifyEmail.Email, verifyEmail.Code)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte("Incorrect verification code"))
+		http.Error(w, "Incorrect verification code", http.StatusUnauthorized)
 		return
 	}
 
@@ -218,20 +215,19 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 		PasswordHash: accountValues.PasswordHash,
 		ProtectedKey: accountValues.ProtectedKey,
 		PublicKey:    accountValues.PublicKey,
+		PasswordHint: accountValues.PasswordHint,
 	})
 
 	if err != nil {
 		log.Printf("Error initializing new account: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("Error initializing new account"))
+		http.Error(w, "Error creating account", http.StatusInternalServerError)
 		return
 	}
 
 	err = db.NewRootFolder(id, accountValues.RootFolderKey)
 	if err != nil {
 		log.Printf("Error initializing user vault: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("Error initializing user vault"))
+		http.Error(w, "Error creating user vault", http.StatusInternalServerError)
 		return
 	}
 
@@ -248,22 +244,19 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 	var verify shared.VerifyAccount
 	if json.NewDecoder(req.Body).Decode(&verify) != nil {
 		utils.Log("Unable to parse request")
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Unable to parse request"))
+		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	} else if utils.IsStructMissingAnyField(verify) {
 		utils.Log("Missing required fields for verification")
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Unable to parse request"))
+		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	}
 
 	// Verify user verification code
 	_, err := db.VerifyUser(verify.ID, verify.Code)
 	if err != nil {
-		utils.Log("Incorrect verification code")
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte("Incorrect verification code"))
+		log.Printf("Error verifying user: %v\n", err)
+		http.Error(w, "Incorrect verification code", http.StatusUnauthorized)
 		return
 	}
 
@@ -308,78 +301,58 @@ func LogoutHandler(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 }
 
-// ForgotPasswordHandler handles a GET request for returning a form for the user
-// to fill out to recover their password, or a POST request for submitting the
-// request to reset their password.
+// ForgotPasswordHandler handles a request for a user's password hint, if one
+// has been set. If it has, an email will be sent to the user. If not, nothing
+// is sent.
 func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
-	if session.IsValidSession(req) {
-		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+	var forgot shared.ForgotPassword
+	if json.NewDecoder(req.Body).Decode(&forgot) != nil {
+		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	}
 
-	if req.Method == http.MethodGet {
-		html.ForgotPageHandler(w, req)
-		return
-	} else if req.Method == http.MethodPost {
-		_ = req.ParseForm()
-
-		var forgot shared.ForgotPassword
-		forgot, err := utils.GetStructFromFormOrJSON(&forgot, req)
-
-		id, err := db.GetUserIDByEmail(forgot.Email)
-		if err == nil && len(id) > 0 && len(forgot.Email) > 0 {
-			code, err := db.NewVerification(
-				shared.Signup{Identifier: forgot.Email},
-				nil,
-				true)
-			if err != nil || len(code) == 0 {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			_ = mail.SendResetEmail(code, forgot.Email)
-		}
-
-		redirect := fmt.Sprintf("/forgot?email=%s", forgot.Email)
-		http.Redirect(w, req, redirect, http.StatusSeeOther)
-	}
-}
-
-// ResetPasswordHandler receives a request with a verification code, email,
-// and new password to reset a user's password.
-func ResetPasswordHandler(w http.ResponseWriter, req *http.Request) {
-	var reset shared.ResetPassword
-	reset, err := utils.GetStructFromFormOrJSON(&reset, req)
+	canRequest, err := db.CanRequestPasswordHint(forgot.Email)
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("Error checking forgot table: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	} else if !canRequest {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	errorMsg := ""
-	_, err = db.VerifyUser(reset.Email, reset.Code)
-	if utils.HandleError(w, err, http.StatusBadRequest, "unable to reset password") {
-		return
-	}
-
+	hint, err := db.GetUserPasswordHintByEmail(forgot.Email)
 	if err != nil {
-		errorMsg = "Incorrect verification code"
-	} else if reset.Password != reset.ConfirmPassword {
-		errorMsg = "Passwords don't match"
-	}
-
-	if len(errorMsg) > 0 {
-		w.WriteHeader(http.StatusForbidden)
-		w.Header().Set(html.ErrorHeader, errorMsg)
-		html.ForgotPageHandler(w, req)
+		log.Printf("Error fetching user pw hint: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	_ = db.DeleteVerification(reset.Email)
-	hash, _ := bcrypt.GenerateFromPassword([]byte(reset.Password), 8)
-	_ = db.SetNewPassword(reset.Email, hash)
+	if hint == nil || len(hint) == 0 {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-	w.Header().Set(html.SuccessHeader, "Password successfully reset!")
-	html.LoginPageHandler(w, req)
+	decryptedHint, err := crypto.Decrypt(hint)
+	if err != nil {
+		log.Printf("Error decrypting user pw hint: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = mail.SendPasswordHintEmail(decryptedHint, forgot.Email)
+	if err != nil {
+		log.Printf("Error sending password hint email: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = db.AddForgotEntry(forgot.Email)
+	if err != nil {
+		log.Printf("Error adding forgot table entry: %v\n", err)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // PubKeyHandler handles requests for a YeetFile user's public key, which can
@@ -441,15 +414,13 @@ func ProtectedKeyHandler(w http.ResponseWriter, _ *http.Request, id string) {
 func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) {
 	var changePassword shared.ChangePassword
 	if json.NewDecoder(req.Body).Decode(&changePassword) != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Unable to decode request body"))
+		http.Error(w, "Unable to decode request", http.StatusBadRequest)
 		return
 	}
 
 	userID, err := ValidateCredentials(id, changePassword.PrevLoginKeyHash)
 	if err != nil || id != userID {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("Incorrect password"))
+		http.Error(w, "Incorrect password", http.StatusUnauthorized)
 		return
 	}
 
@@ -457,16 +428,53 @@ func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) 
 		changePassword.NewLoginKeyHash, 8)
 	if err != nil {
 		log.Printf("Error generating bcrypt hash: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
 	err = db.UpdateUserLogin(id, bcryptHash, changePassword.ProtectedKey)
 	if err != nil {
 		log.Printf("Error updating user login credentials: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
+}
+
+// ChangeHintHandler handles a plaintext hint sent to the server, which is
+// encrypted and stored in the user's db entry.
+func ChangeHintHandler(w http.ResponseWriter, req *http.Request, id string) {
+	var changeHint shared.ChangePasswordHint
+	if json.NewDecoder(req.Body).Decode(&changeHint) != nil {
+		http.Error(w, "Unable to decode request", http.StatusBadRequest)
+		return
+	}
+
+	if len(changeHint.Hint) > constants.MaxHintLen {
+		http.Error(w, "Hint is too long", http.StatusBadRequest)
+		return
+	}
+
+	var encHint []byte
+	var err error
+	if len(changeHint.Hint) == 0 {
+		encHint = nil
+	} else {
+		encHint, err = crypto.Encrypt(changeHint.Hint)
+		if err != nil {
+			log.Printf("Error encrypting hint: %v\n", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	err = db.UpdatePasswordHint(id, encHint)
+	if err != nil {
+		log.Printf("Error updating pw hint: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // RecyclePaymentIDHandler handles replacing the user's current payment ID with

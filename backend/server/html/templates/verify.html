@@ -5,6 +5,7 @@
   <h1>Verify Email</h1>
   <hr>
   <p>A verification code has been sent to <b>{{.Email}}</b>, please enter it below.</p>
+  <p>If you haven't received an email after a few minutes, check your spam folder.</p>
   <fieldset style="border: 0;" id="verify-fieldset">
     <input hidden id="email" type="text" name="email" value="{{.Email}}">
     <label for="verify">Code: <input id="verify" name="code" type="text" value="{{.Code}}"></label>

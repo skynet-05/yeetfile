@@ -9,14 +9,20 @@ import (
 	"yeetfile/shared"
 )
 
-var MissingField = errors.New("missing username or email")
+var MissingField = errors.New("missing required signup fields")
 
 // SignupWithEmail uses values from the Signup struct to complete registration
 // of a new user. A hash is generated from the provided password and entered
 // into the "users" db table.
 func SignupWithEmail(signup shared.Signup) error {
 	// When signing up with email, no part of the signup struct can be empty
-	if utils.IsStructMissingAnyField(signup) {
+	isMissingByteSlices := utils.IsAnyByteSliceMissing(
+		signup.ProtectedKey,
+		signup.PublicKey,
+		signup.LoginKeyHash,
+		signup.RootFolderKey)
+	isMissingStrings := utils.IsAnyStringMissing(signup.Identifier)
+	if isMissingStrings || isMissingByteSlices {
 		return MissingField
 	}
 

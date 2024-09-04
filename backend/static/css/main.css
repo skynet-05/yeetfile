@@ -189,7 +189,7 @@ summary {
 
 input {
     margin: 5px;
-    max-width: 200px;
+    max-width: 250px;
 }
 
 input:is([type="number"], [type="password"], [type="text"]) {
@@ -279,6 +279,14 @@ input:disabled, textarea:disabled {
     text-decoration: none;
 }
 
+.red-text {
+    color: var(--destructive-color) !important;
+}
+
+.green-text {
+    color: var(--shared-color) !important;
+}
+
 .header * {
     background-color: transparent;
     max-height: 63px;
@@ -315,7 +323,15 @@ input:disabled, textarea:disabled {
     padding-right: 25px;
 }
 
-.footer a {
+.footer-column {
+    flex-direction: column;
+}
+
+.footer-row {
+    flex-direction: row;
+}
+
+.footer-row a {
     margin-left: 20px;
     font-weight: 500;
     text-decoration: none;
@@ -348,6 +364,11 @@ input:disabled, textarea:disabled {
     color: var(--light-border);
 }
 
+.half-hr {
+    width: 50%;
+    margin-left: 0;
+}
+
 .italic {
     font-style: italic;
 }
@@ -357,8 +378,10 @@ input:disabled, textarea:disabled {
         /*--accent-color: #a1a125;*/
         /*--button-color: #171720;*/
         --button-color: #242333;
+        --destructive-color: #D04D4D;
         /*--card-bg-color: #171720;*/
         --card-bg-color: #242333;
+        --shared-color: #3EB974;
     }
 
     input:disabled {
@@ -405,6 +428,7 @@ input:disabled, textarea:disabled {
 
     button, input:is([type="button"], [type="submit"]) {
         color: white !important;
+        cursor: pointer;
     }
 
     #center-div {

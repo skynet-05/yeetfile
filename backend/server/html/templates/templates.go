@@ -20,7 +20,7 @@ type BaseTemplate struct {
 	Javascript     []string
 	CSS            []string
 	Version        string
-	Config         config.ServerConfig
+	Config         config.TemplateConfig
 	Endpoints      endpoints.HTMLEndpoints
 }
 
@@ -61,6 +61,7 @@ type AccountTemplate struct {
 	StripeConfigured     bool
 	BTCPayConfigured     bool
 	BillingConfigured    bool
+	HasPasswordHint      bool
 	BillingEndpoints     endpoints.BillingEndpoints
 	SubscriptionTemplate subscriptions.SubscriptionTemplateValues
 }
@@ -86,8 +87,8 @@ const (
 	LoginHTML          = "login.html"
 	AccountHTML        = "account.html"
 	ForgotHTML         = "forgot.html"
-	FaqHTML            = "faq.html"
 	ChangePasswordHTML = "change_password.html"
+	ChangeHintHTML     = "change_hint.html"
 )
 
 //go:embed *.html

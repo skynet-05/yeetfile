@@ -1,3 +1,4 @@
+import {MaxHintLen} from "./constants.js";
 import * as crypto from "./crypto.js";
 import {Endpoints} from "./endpoints.js";
 import {YeetFileDB} from "./db.js";
@@ -111,6 +112,9 @@ const emailSignup = async (btn: HTMLButtonElement) => {
                 inputsDisabled(false);
             }
         });
+    } else {
+        inputsDisabled(false);
+        alert("Missing required fields");
     }
 }
 
@@ -158,9 +162,16 @@ const submitSignupForm = (submitBtn, email, userKeys) => {
         }
     };
 
+    let hintInput = document.getElementById("password-hint") as HTMLInputElement;
+    if (hintInput.value.length > MaxHintLen) {
+        alert(`Password hint too long (max ${MaxHintLen} characters)`);
+        return;
+    }
+
     let sendData = new interfaces.Signup();
     sendData.identifier = email;
     sendData.serverPassword = serverPassword.value;
+    sendData.passwordHint = hintInput.value;
 
     if (userKeys) {
         sendData.loginKeyHash = Uint8Array.from(userKeys["loginKeyHash"]);

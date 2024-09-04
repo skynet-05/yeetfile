@@ -40,3 +40,10 @@ func LogIn(identifier, password string, sessionKey, vaultKey []byte) error {
 
 	return nil
 }
+
+// RequestPasswordHint sends a request for the password hint set for the account
+// matching the provided email.
+func RequestPasswordHint(email string) error {
+	err := globals.API.ForgotPassword(email)
+	return err
+}

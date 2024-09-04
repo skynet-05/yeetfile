@@ -19,9 +19,11 @@ type Action int
 const (
 	ChangeEmail Action = iota
 	ChangePassword
+	SetPasswordHint
 	ManageSubscription
 	PurchaseSubscription
 	DeleteAccount
+	Exit
 )
 
 var actionMap map[Action]func()
@@ -49,6 +51,68 @@ func ShowAccountModel() {
 	if ok {
 		actionViewFunc()
 	}
+}
+
+func showPasswordHintView() {
+	var changed bool
+	var err error
+	var passwordHint string
+
+	passwordHintForm := func(prevErr error) (bool, error) {
+		var submitted bool
+		var errMsg string
+		if prevErr != nil {
+			errMsg = styles.ErrStyle.Render(prevErr.Error())
+		}
+
+		err := huh.NewForm(huh.NewGroup(
+			huh.NewNote().
+				Title(utils.GenerateTitle("Set Password Hint")).
+				Description("Set a new password hint below, or leave blank to disable."),
+			huh.NewText().
+				Title("Password Hint").
+				Placeholder("Hint...").
+				Value(&passwordHint),
+			huh.NewConfirm().
+				Affirmative("Submit").
+				Negative("Cancel").
+				Description(errMsg).
+				Value(&submitted)),
+		).WithTheme(styles.Theme).Run()
+
+		if err == huh.ErrUserAborted || !submitted {
+			return false, nil
+		} else if err != nil {
+			return false, err
+		} else {
+			return true, nil
+		}
+	}
+
+	changed, err = passwordHintForm(nil)
+	for err != nil || changed {
+		if !changed {
+			break
+		}
+
+		err = changePasswordHint(passwordHint)
+		if err != nil {
+			changed, err = passwordHintForm(err)
+		} else {
+			break
+		}
+	}
+
+	if changed && err == nil {
+		_ = huh.NewForm(huh.NewGroup(
+			huh.NewNote().
+				Title(utils.GenerateTitle("Set Password Hint")).
+				Description("Your password hint has been modified"),
+			huh.NewConfirm().Affirmative("OK").Negative(""),
+		)).WithTheme(styles.Theme).Run()
+	}
+
+	ShowAccountModel()
 }
 
 func showChangePasswordView() {
@@ -187,6 +251,21 @@ func generateSelectOptions(
 		huh.NewOption("Change Password", ChangePassword),
 	}
 
+	if len(account.Email) > 0 {
+		var passwordHintOption huh.Option[Action]
+		if account.HasPasswordHint {
+			passwordHintOption = huh.NewOption(
+				"Update / Remove Password Hint",
+				SetPasswordHint)
+		} else {
+			passwordHintOption = huh.NewOption(
+				"Set Password Hint",
+				SetPasswordHint)
+		}
+
+		options = append(options, passwordHintOption)
+	}
+
 	if account.SubscriptionExp.After(time.Now()) &&
 		account.SubscriptionMethod == constants.SubMethodStripe {
 		options = append(
@@ -199,12 +278,17 @@ func generateSelectOptions(
 	}
 
 	options = append(options, huh.NewOption("Delete Account", DeleteAccount))
+	options = append(options, huh.NewOption("Exit", Exit))
 	return options
 }
 
+func exitView() {}
+
 func init() {
 	actionMap = map[Action]func(){
-		ChangePassword: showChangePasswordView,
-		DeleteAccount:  showAccountDeletionView,
+		ChangePassword:  showChangePasswordView,
+		SetPasswordHint: showPasswordHintView,
+		DeleteAccount:   showAccountDeletionView,
+		Exit:            exitView,
 	}
 }

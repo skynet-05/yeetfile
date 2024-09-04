@@ -69,11 +69,11 @@ func Run(addr string) {
 		{POST, endpoints.Login, auth.LoginHandler},
 		{POST, endpoints.Signup, LimiterMiddleware(auth.SignupHandler)},
 		{GET | PUT | DELETE, endpoints.Account, AuthMiddleware(auth.AccountHandler)},
-		{POST, endpoints.Forgot, auth.ForgotPasswordHandler},
-		{POST, endpoints.Reset, auth.ResetPasswordHandler},
+		{POST, endpoints.Forgot, LimiterMiddleware(auth.ForgotPasswordHandler)},
 		{GET, endpoints.PubKey, AuthLimiterMiddleware(auth.PubKeyHandler)},
 		{GET, endpoints.ProtectedKey, AuthMiddleware(auth.ProtectedKeyHandler)},
 		{PUT, endpoints.ChangePassword, AuthMiddleware(auth.ChangePasswordHandler)},
+		{POST, endpoints.ChangeHint, AuthMiddleware(auth.ChangeHintHandler)},
 
 		// Payments (Stripe, BTCPay)
 		{POST, endpoints.StripeWebhook, payments.StripeWebhook},
@@ -94,6 +94,7 @@ func Run(addr string) {
 		{GET, endpoints.HTMLAccount, AuthMiddleware(html.AccountPageHandler)},
 		{GET, endpoints.HTMLVerifyEmail, html.VerifyPageHandler},
 		{GET, endpoints.HTMLChangePassword, AuthMiddleware(html.ChangePasswordPageHandler)},
+		{GET, endpoints.HTMLChangeHint, AuthMiddleware(html.ChangeHintPageHandler)},
 
 		// Misc
 		{

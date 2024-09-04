@@ -4,6 +4,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
+	"strings"
 	"yeetfile/backend/utils"
 	"yeetfile/shared/constants"
 )
@@ -14,6 +15,7 @@ import (
 
 const LocalStorage = "local"
 const B2Storage = "b2"
+const defaultSecret = "yeetfile-secret-key"
 
 var storageType = utils.GetEnvVar("YEETFILE_STORAGE", B2Storage)
 var callbackDomain = os.Getenv("YEETFILE_CALLBACK_DOMAIN")
@@ -25,6 +27,7 @@ var defaultUserSend = utils.GetEnvVarInt(
 	5000000) // 5MB
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
 var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
+var secret = utils.GetEnvVar("YEETFILE_SERVER_SECRET", defaultSecret)
 
 var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 
@@ -163,9 +166,21 @@ type ServerConfig struct {
 	BillingEnabled     bool
 	Version            string
 	PasswordHash       []byte
+	ServerSecret       []byte
+}
+
+type TemplateConfig struct {
+	Version          *string
+	CurrentUserCount *int
+	MaxUserCount     *int
+	EmailEnabled     *bool
+	BillingEnabled   *bool
+	StripeEnabled    *bool
+	BTCPayEnabled    *bool
 }
 
 var YeetFileConfig ServerConfig
+var HTMLConfig TemplateConfig
 
 func init() {
 	email.Configured = !utils.IsStructMissingAnyField(email)
@@ -183,6 +198,17 @@ func init() {
 		}
 	}
 
+	if secret == defaultSecret {
+		logWarning(
+			"Server secret is set to the default value.",
+			"YEETFILE_SERVER_SECRET should be set to a ",
+			"unique, random value in production.")
+		secret += strings.Repeat("0", constants.KeySize-len(secret))
+	} else if len(secret) != constants.KeySize {
+		log.Fatalf("ERROR: YEETFILE_SERVER_SECRET is %d bytes, but %d "+
+			"bytes are required.", len(secret), constants.KeySize)
+	}
+
 	YeetFileConfig = ServerConfig{
 		StorageType:        storageType,
 		CallbackDomain:     callbackDomain,
@@ -195,6 +221,17 @@ func init() {
 		BillingEnabled:     stripeBilling.Configured || btcPayBilling.Configured,
 		Version:            constants.VERSION,
 		PasswordHash:       passwordHash,
+		ServerSecret:       []byte(secret),
+	}
+
+	// Subset of main server config to use in HTML templating
+	HTMLConfig = TemplateConfig{
+		Version:        &YeetFileConfig.Version,
+		MaxUserCount:   &YeetFileConfig.MaxUserCount,
+		EmailEnabled:   &YeetFileConfig.Email.Configured,
+		BillingEnabled: &YeetFileConfig.BillingEnabled,
+		StripeEnabled:  &YeetFileConfig.StripeBilling.Configured,
+		BTCPayEnabled:  &YeetFileConfig.BTCPayBilling.Configured,
 	}
 
 	log.Printf("Configuration:\n"+
@@ -207,8 +244,16 @@ func init() {
 	)
 
 	if IsDebugMode {
-		log.Printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n")
-		log.Printf("DEBUG MODE IS ACTIVE! DO NOT USE THIS SETTING IN PRODUCTION!\n\n")
-		log.Printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+		logWarning(
+			"DEBUG MODE IS ACTIVE!",
+			"DO NOT USE THIS SETTING IN PRODUCTION!")
 	}
+}
+
+func logWarning(warnings ...string) {
+	log.Println(strings.Repeat("@", 57))
+	for _, warning := range warnings {
+		log.Printf("!!! " + warning + "\n")
+	}
+	log.Println(strings.Repeat("@", 57))
 }

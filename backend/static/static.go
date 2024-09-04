@@ -11,6 +11,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"yeetfile/backend/config"
 )
 
 //go:embed js/*
@@ -50,16 +51,18 @@ func minifyStaticFiles(assetType string, fn minifyFn) {
 				log.Fatal(err)
 			}
 			defer func(originalFile fs.File) {
-				err := originalFile.Close()
-				if err != nil {
-
-				}
+				_ = originalFile.Close()
 			}(originalFile)
 
-			reader := io.Reader(originalFile)
+			if config.IsDebugMode {
+				fileBytes, _ := io.ReadAll(originalFile)
+				MinifiedFiles[file.Name()] = fileBytes
+			} else {
+				reader := io.Reader(originalFile)
+				minifiedBytes := minifyFile(reader, fn)
+				MinifiedFiles[file.Name()] = minifiedBytes
+			}
 
-			minifiedBytes := minifyFile(reader, fn)
-			MinifiedFiles[file.Name()] = minifiedBytes
 		}
 	}
 }

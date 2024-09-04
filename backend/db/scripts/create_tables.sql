@@ -50,7 +50,8 @@ create table if not exists users
     sub_duration        text     default ''::text,
     sub_type            text     default ''::text,
     sub_method          text     default ''::text,
-    bandwidth           bigint   default 0
+    bandwidth           bigint   default 0,
+    pw_hint             bytea    default '\x'::bytea
 );
 
 create table if not exists stripe
@@ -73,7 +74,8 @@ create table if not exists verify
     pw_hash         bytea,
     protected_key   bytea,
     public_key      bytea,
-    root_folder_key bytea
+    root_folder_key bytea,
+    pw_hint         bytea
 );
 
 create table if not exists vault
@@ -132,3 +134,12 @@ create table if not exists downloads
     total_chunks integer,
     updated      timestamp
 );
+
+create table if not exists forgot
+(
+    email     text not null
+        constraint forgot_pk
+            primary key,
+    requested timestamp
+);
+

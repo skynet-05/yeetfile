@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 	"yeetfile/backend/config"
+	"yeetfile/backend/crypto"
 	"yeetfile/shared"
 )
 
@@ -15,6 +16,7 @@ type NewAccountValues struct {
 	ProtectedKey  []byte
 	PublicKey     []byte
 	RootFolderKey []byte
+	PasswordHint  []byte
 }
 
 // NewVerification creates a new verification entry for a user
@@ -43,6 +45,14 @@ func NewVerification(
 		return "", err
 	}
 
+	var pwHintEncrypted []byte
+	if len(signupData.PasswordHint) > 0 {
+		pwHintEncrypted, err = crypto.Encrypt(signupData.PasswordHint)
+		if err != nil {
+			return "", err
+		}
+	}
+
 	defer rows.Close()
 	if rows.Next() {
 		var date time.Time
@@ -52,18 +62,20 @@ func NewVerification(
 		} else if time.Now().UTC().Before(date) {
 			// This user already has a verification entry, but it's
 			// too early to send a new code. Update the other values
-			// (in the password changed) and move on
+			// (in case the password changed)
 			s := `UPDATE verify
 			      SET pw_hash=$1, 
 			          protected_key=$2, 
 			          public_key=$3, 
-			          root_folder_key=$4 
-			      WHERE identity=$5`
+			          root_folder_key=$4,
+			          pw_hint=$5
+			      WHERE identity=$6`
 			_, err = db.Exec(s,
 				pwHash,
 				signupData.ProtectedKey,
 				signupData.PublicKey,
 				signupData.RootFolderKey,
+				pwHintEncrypted,
 				signupData.Identifier)
 			if err != nil {
 				return "", err
@@ -80,8 +92,9 @@ func NewVerification(
 			          date=$3,
 			          protected_key=$4,
 			          public_key=$5,
-			          root_folder_key=$6
-			      WHERE identity=$7`
+			          root_folder_key=$6,
+			          pw_hint=$7
+			      WHERE identity=$8`
 			_, err = db.Exec(s,
 				code,
 				pwHash,
@@ -89,6 +102,7 @@ func NewVerification(
 				signupData.ProtectedKey,
 				signupData.PublicKey,
 				signupData.RootFolderKey,
+				pwHintEncrypted,
 				signupData.Identifier)
 			if err != nil {
 				return "", err
@@ -104,8 +118,9 @@ func NewVerification(
                     pw_hash,
                     protected_key,
                     public_key,
-                    root_folder_key) 
-		      VALUES ($1, $2, $3, $4, $5, $6, $7)`
+                    root_folder_key,
+                    pw_hint) 
+		      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 		_, err = db.Exec(
 			s,
 			signupData.Identifier,
@@ -114,7 +129,8 @@ func NewVerification(
 			pwHash,
 			signupData.ProtectedKey,
 			signupData.PublicKey,
-			signupData.RootFolderKey)
+			signupData.RootFolderKey,
+			pwHintEncrypted)
 		if err != nil {
 			return "", err
 		}
@@ -127,42 +143,50 @@ func NewVerification(
 // table. If the code matches the user's password hash and protected key are
 // returned so that a new user can be added to the `users` table.
 func VerifyUser(identity string, code string) (NewAccountValues, error) {
-	var rows *sql.Rows
-	var err error
+	var (
+		pwHash        []byte
+		protectedKey  []byte
+		publicKey     []byte
+		rootFolderKey []byte
+		encPwHint     []byte
+	)
 
-	// Skip code verification in debug mode
-	if config.IsDebugMode {
-		rows, err = db.Query(`SELECT pw_hash, protected_key, public_key, root_folder_key FROM verify 
-                               WHERE identity = $1`, identity)
+	s := `SELECT 
+	          pw_hash, 
+	          protected_key, 
+	          public_key, 
+	          root_folder_key, 
+	          pw_hint 
+	      FROM verify WHERE identity = $1`
+
+	var row *sql.Row
+
+	// Add code verification if not in debug mode
+	if !config.IsDebugMode {
+		s += ` AND code=$2`
+		row = db.QueryRow(s, identity, code)
 	} else {
-		rows, err = db.Query(`SELECT pw_hash, protected_key, public_key, root_folder_key FROM verify 
-                               WHERE identity = $1 AND code = $2`, identity, code)
+		row = db.QueryRow(s, identity)
 	}
+
+	err := row.Scan(
+		&pwHash,
+		&protectedKey,
+		&publicKey,
+		&rootFolderKey,
+		&encPwHint)
 
 	if err != nil {
 		return NewAccountValues{}, err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var pwHash []byte
-		var protectedKey []byte
-		var publicKey []byte
-		var rootFolderKey []byte
-		err = rows.Scan(&pwHash, &protectedKey, &publicKey, &rootFolderKey)
-		if err != nil {
-			return NewAccountValues{}, err
-		}
-
-		return NewAccountValues{
-			PasswordHash:  pwHash,
-			ProtectedKey:  protectedKey,
-			PublicKey:     publicKey,
-			RootFolderKey: rootFolderKey,
-		}, nil
-	}
-
-	return NewAccountValues{}, errors.New("unable to find user")
+	return NewAccountValues{
+		PasswordHash:  pwHash,
+		ProtectedKey:  protectedKey,
+		PublicKey:     publicKey,
+		RootFolderKey: rootFolderKey,
+		PasswordHint:  encPwHint,
+	}, nil
 }
 
 // DeleteVerification removes a verification entry from the table

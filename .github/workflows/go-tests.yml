@@ -19,7 +19,7 @@ jobs:
     - name: Set up Docker
       uses: docker/setup-buildx-action@master
 
-    - name: Test API
+    - name: Start container
       run: |
         git submodule init
         git submodule update
@@ -28,4 +28,11 @@ jobs:
         docker compose pull
         docker compose up --build -d
         docker compose logs
-        go test -v -tags server_test ./cli/api/...
+
+    - name: Test API
+      run: go test -v -tags server_test ./cli/api/...
+
+    - name: Inspect logs
+      if: failure()
+      run: YEETFILE_ENV_FILE=.tests.env docker compose logs
+

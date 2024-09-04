@@ -45,7 +45,7 @@ func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
 					"ponyfill.min.js",
 				},
 				CSS:       []string{"vault.css"},
-				Config:    config.YeetFileConfig,
+				Config:    config.HTMLConfig,
 				Endpoints: endpoints.HTMLPageEndpoints,
 			},
 			StorageUsed:      userStorage.StorageUsed,
@@ -72,7 +72,7 @@ func SendPageHandler(w http.ResponseWriter, req *http.Request) {
 					"share.js",
 				},
 				CSS:       []string{"upload.css"},
-				Config:    config.YeetFileConfig,
+				Config:    config.HTMLConfig,
 				Endpoints: endpoints.HTMLPageEndpoints,
 			},
 			Meter: 0,
@@ -96,7 +96,7 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 				"download.js",
 			},
 			CSS:       []string{"download.css"},
-			Config:    config.YeetFileConfig,
+			Config:    config.HTMLConfig,
 			Endpoints: endpoints.HTMLPageEndpoints,
 		}},
 	)
@@ -116,7 +116,7 @@ func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"signup.js"},
 				CSS:          []string{"auth.css"},
-				Config:       config.YeetFileConfig,
+				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 			ServerPasswordRequired: config.YeetFileConfig.PasswordHash != nil,
@@ -139,7 +139,7 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 				ErrorMessage:   w.Header().Get(ErrorHeader),
 				Javascript:     []string{"login.js"},
 				CSS:            []string{"auth.css"},
-				Config:         config.YeetFileConfig,
+				Config:         config.HTMLConfig,
 				Endpoints:      endpoints.HTMLPageEndpoints,
 			},
 		},
@@ -158,6 +158,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 
 	successMsg, errorMsg := generateAccountMessages(req)
 	isYearly := req.URL.Query().Has("yearly")
+	hasHint := user.PasswordHint != nil && len(user.PasswordHint) > 0
 
 	err = templates.ServeTemplate(
 		w,
@@ -171,25 +172,22 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 				SuccessMessage: successMsg,
 				Javascript:     []string{"account.js"},
 				CSS:            []string{"account.css"},
-				Config:         config.YeetFileConfig,
+				Config:         config.HTMLConfig,
 				Endpoints:      endpoints.HTMLPageEndpoints,
 			},
-			Email:            user.Email,
-			PaymentID:        user.PaymentID,
-			ExpString:        user.MemberExp.Format("2 Jan 2006"),
-			IsActive:         time.Now().Before(user.MemberExp),
-			SendAvailable:    shared.ReadableFileSize(user.SendAvailable),
-			SendUsed:         shared.ReadableFileSize(user.SendUsed),
-			StorageAvailable: shared.ReadableFileSize(user.StorageAvailable),
-			StorageUsed:      shared.ReadableFileSize(user.StorageUsed),
-			IsYearly:         isYearly,
-			IsStripeUser:     user.SubscriptionMethod == constants.SubMethodStripe,
-			StripeConfigured: config.YeetFileConfig.StripeBilling.Configured,
-			BTCPayConfigured: config.YeetFileConfig.BTCPayBilling.Configured,
-			BillingConfigured: config.YeetFileConfig.StripeBilling.Configured ||
-				config.YeetFileConfig.BTCPayBilling.Configured,
+			Email:                user.Email,
+			PaymentID:            user.PaymentID,
+			ExpString:            user.MemberExp.Format("2 Jan 2006"),
+			IsActive:             time.Now().Before(user.MemberExp),
+			SendAvailable:        shared.ReadableFileSize(user.SendAvailable),
+			SendUsed:             shared.ReadableFileSize(user.SendUsed),
+			StorageAvailable:     shared.ReadableFileSize(user.StorageAvailable),
+			StorageUsed:          shared.ReadableFileSize(user.StorageUsed),
+			IsYearly:             isYearly,
+			IsStripeUser:         user.SubscriptionMethod == constants.SubMethodStripe,
 			SubscriptionTemplate: subscriptions.TemplateValues,
 			BillingEndpoints:     endpoints.BillingPageEndpoints,
+			HasPasswordHint:      hasHint,
 		},
 	)
 
@@ -211,7 +209,7 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request) {
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"verify.js"},
 				CSS:          nil,
-				Config:       config.YeetFileConfig,
+				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 			Email: email,
@@ -222,7 +220,7 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request) {
 	handleError(w, err)
 }
 
-func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, id string) {
+func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	err := templates.ServeTemplate(
 		w,
 		templates.ChangePasswordHTML,
@@ -233,7 +231,7 @@ func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, id stri
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"change_password.js"},
 				CSS:          nil,
-				Config:       config.YeetFileConfig,
+				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 		},
@@ -242,19 +240,18 @@ func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, id stri
 	handleError(w, err)
 }
 
-// FAQPageHandler returns the FAQ HTML page
-func FAQPageHandler(w http.ResponseWriter, req *http.Request) {
+func ChangeHintPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	err := templates.ServeTemplate(
 		w,
-		templates.FaqHTML,
+		templates.ChangeHintHTML,
 		templates.Template{
 			Base: templates.BaseTemplate{
 				LoggedIn:     session.IsValidSession(req),
-				Title:        "FAQ",
+				Title:        "Set Password Hint",
 				ErrorMessage: w.Header().Get(ErrorHeader),
-				Javascript:   nil,
-				CSS:          []string{"faq.css"},
-				Config:       config.YeetFileConfig,
+				Javascript:   []string{"change_hint.js"},
+				CSS:          nil,
+				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 		},
@@ -275,9 +272,9 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request) {
 				LoggedIn:     false,
 				Title:        "Forgot Password",
 				ErrorMessage: w.Header().Get(ErrorHeader),
-				Javascript:   nil,
+				Javascript:   []string{"forgot.js"},
 				CSS:          nil,
-				Config:       config.YeetFileConfig,
+				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 			Email: email,

@@ -31,6 +31,7 @@ This is what you will use to log in, and will not be shown again.`
 func ShowSignupModel() {
 	var email string
 	var password string
+	var passwordHint string
 	var signupType string
 
 	err := huh.NewForm(
@@ -66,6 +67,12 @@ func ShowSignupModel() {
 
 					return nil
 				}),
+			huh.NewText().
+				Title("Password Hint (optional)").
+				Description("Note: Passwords cannot be recovered if lost.\n"+
+					"Setting a password hint is recommended.").
+				Lines(2).
+				Value(&passwordHint),
 			huh.NewConfirm().Affirmative("Submit").Negative(""),
 		).WithHideFunc(func() bool {
 			return signupType != signupEmail
@@ -95,24 +102,24 @@ func ShowSignupModel() {
 	if signupType == signupIDOnly {
 		showIDOnlySignupModel(password, "")
 	} else if signupType == signupEmail {
-		showEmailSignupModel(email, password, "")
+		showEmailSignupModel(email, password, passwordHint, "")
 	}
 }
 
 // showEmailSignupModel shows a spinner while the user's account is created
 // and finalized.
-func showEmailSignupModel(email, password, serverPw string) {
+func showEmailSignupModel(email, password, hint, serverPw string) {
 	var signupErr error
 	err := spinner.New().Title("Creating account...").Action(
 		func() {
-			signup := CreateSignupRequest(email, password, serverPw)
+			signup := CreateSignupRequest(email, password, hint, serverPw)
 			_, signupErr = globals.API.SubmitSignup(signup)
 		}).Run()
 	utils.HandleCLIError("", err)
 
 	if signupErr == api.ServerPasswordError {
 		serverPassword := showServerPasswordPrompt()
-		showEmailSignupModel(email, password, serverPassword)
+		showEmailSignupModel(email, password, hint, serverPassword)
 		return
 	}
 

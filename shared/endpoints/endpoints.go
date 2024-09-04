@@ -14,6 +14,7 @@ type HTMLEndpoints struct {
 	Login          string
 	Signup         string
 	Forgot         string
+	ChangeHint     string
 	ChangePassword string
 	VerifyEmail    string
 }
@@ -33,11 +34,11 @@ var (
 	Logout         = Endpoint("/api/logout")
 	Account        = Endpoint("/api/account")
 	Forgot         = Endpoint("/api/forgot")
-	Reset          = Endpoint("/api/reset")
 	Session        = Endpoint("/api/session")
-	VerifyAccount  = Endpoint("/api/verify")
-	VerifyEmail    = Endpoint("/api/verify_email")
-	ChangePassword = Endpoint("/api/change_password")
+	VerifyAccount  = Endpoint("/api/verify/account")
+	VerifyEmail    = Endpoint("/api/verify/email")
+	ChangePassword = Endpoint("/api/change/password")
+	ChangeHint     = Endpoint("/api/change/hint")
 
 	VaultRoot   = Endpoint("/api/vault")
 	VaultFolder = Endpoint("/api/vault/folder/*")
@@ -74,8 +75,9 @@ var (
 	HTMLLogin          = Endpoint("/login")
 	HTMLSignup         = Endpoint("/signup")
 	HTMLForgot         = Endpoint("/forgot")
-	HTMLChangePassword = Endpoint("/change_password")
-	HTMLVerifyEmail    = Endpoint("/verify_email")
+	HTMLChangePassword = Endpoint("/change/password")
+	HTMLChangeHint     = Endpoint("/change/hint")
+	HTMLVerifyEmail    = Endpoint("/verify/email")
 )
 
 var JSVarNameMap = map[Endpoint]string{
@@ -83,12 +85,12 @@ var JSVarNameMap = map[Endpoint]string{
 	Login:          "Login",
 	Logout:         "Logout",
 	Forgot:         "Forgot",
-	Reset:          "Reset",
 	Session:        "Session",
 	Account:        "Account",
 	VerifyAccount:  "VerifyAccount",
 	VerifyEmail:    "VerifyEmail",
 	ChangePassword: "ChangePassword",
+	ChangeHint:     "ChangeHint",
 
 	VaultRoot:   "VaultRoot",
 	VaultFolder: "VaultFolder",
@@ -119,6 +121,7 @@ var JSVarNameMap = map[Endpoint]string{
 	HTMLLogin:          "HTMLLogin",
 	HTMLSignup:         "HTMLSignup",
 	HTMLChangePassword: "HTMLChangePassword",
+	HTMLChangeHint:     "HTMLChangeHint",
 	HTMLVerifyEmail:    "HTMLVerifyEmail",
 }
 
@@ -146,6 +149,7 @@ func init() {
 		Signup:         string(HTMLSignup),
 		Forgot:         string(HTMLForgot),
 		ChangePassword: string(HTMLChangePassword),
+		ChangeHint:     string(HTMLChangeHint),
 		VerifyEmail:    string(HTMLVerifyEmail),
 	}
 
