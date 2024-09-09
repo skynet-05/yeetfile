@@ -37,6 +37,7 @@ var (
 	Session        = Endpoint("/api/session")
 	VerifyAccount  = Endpoint("/api/verify/account")
 	VerifyEmail    = Endpoint("/api/verify/email")
+	ChangeEmail    = Endpoint("/api/change/email/*")
 	ChangePassword = Endpoint("/api/change/password")
 	ChangeHint     = Endpoint("/api/change/hint")
 
@@ -75,6 +76,7 @@ var (
 	HTMLLogin          = Endpoint("/login")
 	HTMLSignup         = Endpoint("/signup")
 	HTMLForgot         = Endpoint("/forgot")
+	HTMLChangeEmail    = Endpoint("/change/email/*")
 	HTMLChangePassword = Endpoint("/change/password")
 	HTMLChangeHint     = Endpoint("/change/hint")
 	HTMLVerifyEmail    = Endpoint("/verify/email")
@@ -89,6 +91,7 @@ var JSVarNameMap = map[Endpoint]string{
 	Account:        "Account",
 	VerifyAccount:  "VerifyAccount",
 	VerifyEmail:    "VerifyEmail",
+	ChangeEmail:    "ChangeEmail",
 	ChangePassword: "ChangePassword",
 	ChangeHint:     "ChangeHint",
 
@@ -120,6 +123,7 @@ var JSVarNameMap = map[Endpoint]string{
 	HTMLVaultFolder:    "HTMLVaultFolder",
 	HTMLLogin:          "HTMLLogin",
 	HTMLSignup:         "HTMLSignup",
+	HTMLChangeEmail:    "HTMLChangeEmail",
 	HTMLChangePassword: "HTMLChangePassword",
 	HTMLChangeHint:     "HTMLChangeHint",
 	HTMLVerifyEmail:    "HTMLVerifyEmail",

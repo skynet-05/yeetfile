@@ -95,7 +95,9 @@ func GenRandomArray(n int, runes []rune) []rune {
 }
 
 func EscapeString(s string) string {
-	return strings.ReplaceAll(s, "_", "\\_")
+	s = strings.ReplaceAll(s, "*", "\\*")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
 }
 
 func CalculateNumChunks(fileSize int64) int {

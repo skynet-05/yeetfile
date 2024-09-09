@@ -120,6 +120,16 @@ func NewUser(user User) (string, error) {
 	return user.ID, nil
 }
 
+// UpdateUser is used to update user values that can change as a result of a
+// user changing their email or password.
+func UpdateUser(user User, accountID string) error {
+	s := `UPDATE users 
+	      SET email=$1, pw_hash=$2, protected_key=$3
+	      WHERE id=$4`
+	_, err := db.Exec(s, user.Email, user.PasswordHash, user.ProtectedKey, accountID)
+	return err
+}
+
 // GetUserCount returns the total number of users in the table
 func GetUserCount() (int, error) {
 	rows, err := db.Query(`SELECT COUNT(*) from users`)
@@ -334,27 +344,17 @@ func PaymentIDExists(paymentID string) bool {
 // GetUserPasswordHashByEmail retrieves the password hash for a user with the
 // provided email address.
 func GetUserPasswordHashByEmail(email string) ([]byte, error) {
-	rows, err := db.Query(`
+	var pwHash []byte
+	err := db.QueryRow(`
 		SELECT pw_hash
 		FROM users 
-		WHERE email = $1`, email)
-	if err != nil {
+		WHERE email = $1`, email).Scan(&pwHash)
+	if err != nil && err != sql.ErrNoRows {
 		log.Printf("Error querying for user by email: %v", err)
 		return nil, err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var pwHash []byte
-		err = rows.Scan(&pwHash)
-		if err != nil {
-			return nil, err
-		}
-
-		return pwHash, nil
-	}
-
-	return nil, errors.New("unable to find user")
+	return pwHash, nil
 }
 
 // GetUserPasswordHashByID retrieves the password hash for a user with the
@@ -445,6 +445,7 @@ func GetUserByID(id string) (User, error) {
 		}
 
 		return User{
+			ID:                 id,
 			Email:              email,
 			PaymentID:          paymentID,
 			MemberExp:          expiration,
@@ -514,7 +515,7 @@ func GetUserIDByEmail(email string) (string, error) {
 		SELECT id
 		FROM users 
 		WHERE email = $1`, email).Scan(&id)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		log.Printf("Error querying for user by email: %v", err)
 		return "", err
 	}
@@ -609,6 +610,26 @@ func GetPaymentIDByUserID(userID string) (string, error) {
 	}
 
 	return "", errors.New("unable to find payment id by user id")
+}
+
+func GetUserEmailByID(userID string) (string, error) {
+	var email string
+	s := `SELECT email FROM users WHERE id=$1`
+	err := db.QueryRow(s, userID).Scan(&email)
+	return email, err
+}
+
+func GetUserSessionKey(userID string) (string, error) {
+	var sessionKey string
+	s := `SELECT session_key FROM users WHERE id=$1`
+	err := db.QueryRow(s, userID).Scan(&sessionKey)
+	return sessionKey, err
+}
+
+func SetUserSessionKey(userID, sessionKey string) error {
+	s := `UPDATE users SET session_key=$2 WHERE id=$1`
+	_, err := db.Exec(s, userID, sessionKey)
+	return err
 }
 
 func GetUserEmailByPaymentID(paymentID string) (string, error) {

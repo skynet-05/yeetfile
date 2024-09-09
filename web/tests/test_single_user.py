@@ -119,7 +119,7 @@ def test_file_send(browser_context: BrowserContext):
     page.get_by_test_id("upload-file-btn").click()
     page.get_by_test_id("upload-file").set_input_files(demo_file)
 
-    page.get_by_test_id("downloads").fill("1")
+    page.get_by_test_id("downloads").fill("2")
     page.get_by_test_id("expiration").fill("5")
     page.get_by_test_id("use-password").click()
 
@@ -153,6 +153,7 @@ def test_file_send(browser_context: BrowserContext):
 
     # The correct password was used, so the download prompt should be visible
     expect(page.get_by_test_id("download-prompt-div")).to_be_hidden()
+    expect(page.get_by_test_id("download-nopass")).to_be_visible()
 
     with page.expect_download() as download_info:
         page.get_by_test_id("download-nopass").click()

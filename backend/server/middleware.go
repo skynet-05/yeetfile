@@ -1,10 +1,12 @@
 package server
 
 import (
+	"fmt"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/time/rate"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 	"yeetfile/backend/config"
@@ -76,7 +78,6 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // handling.
 func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		// Skip auth if the app is in debug mode, otherwise validate session
 		if session.IsValidSession(req) {
 			// Call the next handler
 			id, err := session.GetSessionAndUserID(req)
@@ -88,11 +89,41 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
+		redirect := fmt.Sprintf("/login?next=%s", req.URL.Path)
+		http.Redirect(w, req, redirect, http.StatusTemporaryRedirect)
 		return
 	}
 
 	return handler
+}
+
+// DefaultHeadersMiddleware applies headers to every route, regardless of
+// other middlewares already applied.
+func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	csp := "" +
+		"default-src 'self';" +
+		"img-src 'self' https://docs.yeetfile.com data:;" +
+		"media-src 'self' data:;" +
+		"script-src 'self' 'wasm-unsafe-eval';" +
+		"style-src 'self' 'unsafe-inline';"
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(config.YeetFileConfig.Domain, "https") {
+			w.Header().Set("X-Frame-Options", "DENY")
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			w.Header().Set("Expect-CT", "max-age=86400, enforce")
+		} else {
+			// Required by StreamSaver.js in non-https contexts
+			csp += "frame-src 'self' https://jimmywarting.github.io/"
+		}
+
+		w.Header().Set("Content-Security-Policy", csp)
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+		next.ServeHTTP(w, r)
+	}
 }
 
 // AuthLimiterMiddleware is like AuthMiddleware, but also restricts requests to

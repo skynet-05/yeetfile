@@ -192,7 +192,7 @@ const generateAccountIDSignupHTML = (id, img) => {
 
     return `<br>
     <img src="data:image/jpeg;base64,${img}"<br>
-    <p style="margin-bottom: 0;">
+    <p id="verify-note">
     Please enter the 6-digit code above to verify your account.
     </p>
     <input type="text" data-testid="account-code" id="account-code" name="code" placeholder="Code"><br>

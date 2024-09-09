@@ -126,20 +126,16 @@ func TestInitVaultFile(t *testing.T) {
 		t.Fatalf("Error generating upload: %v\n", err)
 	}
 
-	meta, err := UserA.context.InitVaultFile(upload)
+	_, err = UserA.context.InitVaultFile(upload)
 
 	if err != nil {
 		t.Fatalf("Error initializing vault file: %v\n", err)
 	}
-
-	addTestFile(UserA, meta.ID)
 }
 
 func TestUploadVaultFile(t *testing.T) {
 	upload, _ := generateRandomUpload(UserA, "", nil)
 	meta, _ := UserA.context.InitVaultFile(upload)
-
-	addTestFile(UserA, meta.ID)
 
 	key, _ := crypto.DecryptRSA(UserA.privKey, upload.ProtectedKey)
 	encData, _ := crypto.EncryptChunk(key, []byte(fileContent))
@@ -167,8 +163,6 @@ func TestDownloadFile(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to upload random file")
 	}
-
-	addTestFile(UserA, id)
 
 	// Test downloading metadata with another user
 	_, err = UserB.context.GetVaultItemMetadata(id)

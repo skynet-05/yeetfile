@@ -44,15 +44,16 @@ func (r *router) AddRoutes(routes []RouteDef) {
 			}
 
 			path := string(route.Path)
+			handler := DefaultHeadersMiddleware(route.Handler)
 
 			// Check for paths with optional segments
 			if strings.Contains(path, "/?") {
 				optPath := strings.Replace(path, "/?", "", 1)
 				wildPath := strings.Replace(path, "/?", "/*", 1)
-				r.AddRoute(methodStr, optPath, route.Handler)
-				r.AddRoute(methodStr, wildPath, route.Handler)
+				r.AddRoute(methodStr, optPath, handler)
+				r.AddRoute(methodStr, wildPath, handler)
 			} else {
-				r.AddRoute(methodStr, path, route.Handler)
+				r.AddRoute(methodStr, path, handler)
 			}
 		}
 	}

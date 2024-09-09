@@ -3,11 +3,13 @@ package mail
 import (
 	"bytes"
 	"text/template"
+	"yeetfile/backend/config"
 )
 
 type OrderEmail struct {
-	Product string
-	Email   string
+	Product      string
+	Email        string
+	SupportEmail string
 }
 
 var orderSubject = "YeetFile Order Confirmation"
@@ -15,14 +17,15 @@ var orderBodyTemplate = template.Must(template.New("").Parse(
 	"Thank you for using YeetFile! Your order summary is below.\n\n" +
 		"{{.Product}}\n\n" +
 		"If you have any questions about your order, feel free to email " +
-		"support@yeetfile.com or reply to this email."))
+		"{{ .SupportEmail }} or reply to this email."))
 
 // CreateOrderEmail creates an OrderEmail struct for sending the order
 // confirmation email
 func CreateOrderEmail(desc string, email string) OrderEmail {
 	return OrderEmail{
-		Product: desc,
-		Email:   email,
+		Product:      desc,
+		Email:        email,
+		SupportEmail: config.YeetFileConfig.Email.Address,
 	}
 }
 

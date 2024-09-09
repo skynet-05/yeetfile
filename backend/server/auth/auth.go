@@ -2,6 +2,7 @@ package auth
 
 import (
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"strings"
 	"yeetfile/backend/db"
 )
@@ -37,4 +38,42 @@ func ValidateCredentials(identifier string, keyHash []byte) (string, error) {
 	}
 
 	return userID, nil
+}
+
+func createNewUser(values db.VerifiedAccountValues) error {
+	// Create new user
+	id, err := db.NewUser(db.User{
+		Email:        values.Email,
+		PasswordHash: values.PasswordHash,
+		ProtectedKey: values.ProtectedKey,
+		PublicKey:    values.PublicKey,
+		PasswordHint: values.PasswordHint,
+	})
+
+	if err != nil {
+		log.Printf("Error initializing new account: %v\n", err)
+		return err
+	}
+
+	err = db.NewRootFolder(id, values.RootFolderKey)
+	if err != nil {
+		log.Printf("Error initializing user vault: %v\n", err)
+		return err
+	}
+
+	return nil
+}
+
+func updateUser(values db.VerifiedAccountValues) error {
+	err := db.UpdateUser(db.User{
+		Email:        values.Email,
+		PasswordHash: values.PasswordHash,
+		ProtectedKey: values.ProtectedKey,
+	}, values.AccountID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

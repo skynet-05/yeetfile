@@ -196,6 +196,48 @@ func (ctx *Context) GetUserProtectedKey() ([]byte, error) {
 	return protectedKey.ProtectedKey, err
 }
 
+// StartChangeEmail initiates the process for changing a user's email. If the
+// user doesn't have an email set, the response will contain the change ID
+// needed to confirm setting a new email. If they do have an email set, this
+// ID will be sent to their current email.
+func (ctx *Context) StartChangeEmail() (shared.StartEmailChangeResponse, error) {
+	url := endpoints.ChangeEmail.Format(ctx.Server, "")
+	resp, err := requests.PostRequest(ctx.Session, url, nil)
+	if err != nil {
+		return shared.StartEmailChangeResponse{}, err
+	} else if resp.StatusCode != http.StatusOK {
+		return shared.StartEmailChangeResponse{}, utils.ParseHTTPError(resp)
+	}
+
+	var changeResponse shared.StartEmailChangeResponse
+	err = json.NewDecoder(resp.Body).Decode(&changeResponse)
+	if err != nil {
+		return shared.StartEmailChangeResponse{}, err
+	}
+
+	return changeResponse, nil
+}
+
+// ChangeEmail finalizes the change email process, sending a verification code
+// to the user's new email and temporarily storing their updated user details
+// in the db until the verification code is confirmed.
+func (ctx *Context) ChangeEmail(changeEmail shared.ChangeEmail, changeID string) error {
+	reqData, err := json.Marshal(changeEmail)
+	if err != nil {
+		return err
+	}
+
+	url := endpoints.ChangeEmail.Format(ctx.Server, changeID)
+	resp, err := requests.PutRequest(ctx.Session, url, reqData)
+	if err != nil {
+		return err
+	} else if resp.StatusCode != http.StatusOK {
+		return utils.ParseHTTPError(resp)
+	}
+
+	return nil
+}
+
 // ChangePassword changes a user's password, updating their login key hash
 // and their encrypted private key.
 func (ctx *Context) ChangePassword(password shared.ChangePassword) error {

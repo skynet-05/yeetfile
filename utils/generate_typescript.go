@@ -82,7 +82,9 @@ func main() {
 		Add(shared.ChangePassword{}).
 		Add(shared.ProtectedKeyResponse{}).
 		Add(shared.VerifyEmail{}).
-		Add(shared.ChangePasswordHint{})
+		Add(shared.ChangePasswordHint{}).
+		Add(shared.StartEmailChangeResponse{}).
+		Add(shared.ChangeEmail{})
 
 	converter.WithBackupDir("")
 	err = converter.ConvertToFile(structsOut)

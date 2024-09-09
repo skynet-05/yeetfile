@@ -12,6 +12,16 @@ const init = () => {
     let changePwBtn = document.getElementById("change-pw-btn");
     changePwBtn.addEventListener("click", changePassword);
 
+    let changeEmailLink = document.getElementById("change-email");
+    if (changeEmailLink) {
+        changeEmailLink.addEventListener("click", changeEmail);
+    }
+
+    let setEmailLink = document.getElementById("set-email");
+    if (setEmailLink) {
+        setEmailLink.addEventListener("click", setEmail);
+    }
+
     // let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
     // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
 
@@ -53,7 +63,7 @@ const deleteAccount = () => {
         fetch(Endpoints.Account.path, {
             method: "DELETE",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json"
             },
             body: JSON.stringify(request)
         }).then(async response => {
@@ -69,6 +79,51 @@ const deleteAccount = () => {
             console.error(error);
             alert("There was an error deleting your account!");
         })
+    }
+}
+
+const changeEmail = () => {
+    let changeMsg = "An email will be sent to your current email to initiate " +
+        "the process of changing your email. Do you want to continue?"
+    if (confirm(changeMsg)) {
+        fetch(Endpoints.format(Endpoints.ChangeEmail, ""), {
+            method: "POST",
+        }).then(async response => {
+            if (response.ok) {
+                showMessage("Check your email for instructions on how to " +
+                    "update your YeetFile email.", false);
+            } else {
+                showMessage("Error: " + await response.text(), true);
+            }
+        }).catch(() => {
+            alert("Request failed");
+        });
+    }
+}
+
+const setEmail = () => {
+    let setMsg = "If you set an email for your account, you will use it to log " +
+        "in instead of your account ID. Do you want to continue?"
+    if (confirm(setMsg)) {
+        fetch(Endpoints.format(Endpoints.ChangeEmail, ""), {
+            method: "POST",
+        }).then(async response => {
+            if (response.ok) {
+                let changeResponse = new interfaces.StartEmailChangeResponse(
+                    await response.json()
+                );
+
+                if (changeResponse.changeID) {
+                    window.location.assign(Endpoints.format(
+                        Endpoints.HTMLChangeEmail,
+                        changeResponse.changeID));
+                }
+            } else {
+                showMessage("Error: " + await response.text(), true);
+            }
+        }).catch(() => {
+            alert("Request failed");
+        });
     }
 }
 

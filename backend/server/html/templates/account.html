@@ -12,9 +12,9 @@
         </td>
         <td>
           {{ if ne .Email "" }}
-            <span>{{ .Email }}</span>
+            <span>{{ .Email }}</span> — <a id="change-email" href="#">Change Email</a>
           {{ else }}
-            <span>None</span>
+            <span>None</span> — <a id="set-email" href="#">Set Email</a>
           {{ end }}
         </td>
       </tr>

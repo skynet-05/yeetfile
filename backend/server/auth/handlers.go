@@ -174,8 +174,9 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			return
 		}
 
+		obscuredEmail, _ := utils.ObscureEmail(user.Email)
 		_ = json.NewEncoder(w).Encode(shared.AccountResponse{
-			Email:            user.Email,
+			Email:            obscuredEmail,
 			StorageAvailable: user.StorageAvailable,
 			StorageUsed:      user.StorageUsed,
 			SendAvailable:    user.SendAvailable,
@@ -209,31 +210,40 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Create new user
-	id, err := db.NewUser(db.User{
-		Email:        verifyEmail.Email,
-		PasswordHash: accountValues.PasswordHash,
-		ProtectedKey: accountValues.ProtectedKey,
-		PublicKey:    accountValues.PublicKey,
-		PasswordHint: accountValues.PasswordHint,
-	})
+	var id string
+	if len(accountValues.AccountID) == 0 {
+		err = createNewUser(accountValues)
+		if err != nil {
+			http.Error(w, "Error creating account", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// User is verifying a new email, need to validate auth too
+		if !session.IsValidSession(req) {
+			http.Error(w, "You must be logged in", http.StatusUnauthorized)
+			return
+		}
 
-	if err != nil {
-		log.Printf("Error initializing new account: %v\n", err)
-		http.Error(w, "Error creating account", http.StatusInternalServerError)
-		return
-	}
+		userID, err := session.GetSessionAndUserID(req)
+		if err != nil || userID != accountValues.AccountID {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
-	err = db.NewRootFolder(id, accountValues.RootFolderKey)
-	if err != nil {
-		log.Printf("Error initializing user vault: %v\n", err)
-		http.Error(w, "Error creating user vault", http.StatusInternalServerError)
-		return
+		err = updateUser(accountValues)
+		if err != nil {
+			http.Error(w, "Unable to verify email", http.StatusInternalServerError)
+			return
+		}
+
+		err = session.InvalidateOtherSessions(w, req)
+		if err != nil {
+			log.Printf("Error invalidating user's other sessions")
+		}
 	}
 
 	// Remove verification entry
 	_ = db.DeleteVerification(verifyEmail.Email)
-
 	_ = session.SetSession(id, w, req)
 	http.Redirect(w, req, "/account", http.StatusMovedPermanently)
 }
@@ -408,6 +418,123 @@ func ProtectedKeyHandler(w http.ResponseWriter, _ *http.Request, id string) {
 	_, _ = w.Write(jsonData)
 }
 
+// ChangeEmailHandler validates the user's old login information, and uses the
+// ChangeEmail request struct to send a verification email to their new email
+// in preparation for updating their login key hash, encrypted protected key, etc
+func ChangeEmailHandler(w http.ResponseWriter, req *http.Request, id string) {
+	var fn session.HandlerFunc
+	switch req.Method {
+	case http.MethodPost:
+		fn = startEmailChangeHandler
+	case http.MethodPut:
+		fn = finishEmailChangeHandler
+	}
+
+	fn(w, req, id)
+}
+
+func startEmailChangeHandler(w http.ResponseWriter, _ *http.Request, id string) {
+	email, err := db.GetUserEmailByID(id)
+	if err != nil {
+		log.Printf("Error fetching user email: %v\n", err)
+		http.Error(w, "Error fetching user email", http.StatusBadRequest)
+		return
+	} else if len(email) == 0 {
+		// Account ID-only user is setting up an email
+		changeID, err := db.NewChangeEmailEntry(id, "")
+		if err != nil && err != db.ChangeEmailEntryTooNew {
+			log.Printf("Error creating email change entry for account ID user: %v\n", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
+		jsonData, _ := json.Marshal(shared.StartEmailChangeResponse{
+			ChangeID: changeID,
+		})
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jsonData)
+		return
+	}
+
+	changeID, err := db.NewChangeEmailEntry(id, email)
+	if err != nil && err != db.ChangeEmailEntryTooNew {
+		log.Printf("Error creating new change email entry: %v\n", err)
+		http.Error(w, "Error creating new change email entry", http.StatusInternalServerError)
+		return
+	} else if err == db.ChangeEmailEntryTooNew {
+		log.Printf("Change email request is too new")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	err = mail.SendEmailChangeNotification(email, changeID)
+	if err != nil {
+		log.Printf("Error sending email change notification: %v\n", err)
+		http.Error(w, "Error sending email", http.StatusInternalServerError)
+		return
+	}
+
+	jsonData, _ := json.Marshal(shared.StartEmailChangeResponse{
+		ChangeID: "", // Change ID is sent to the user's current email
+	})
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(jsonData)
+}
+
+func finishEmailChangeHandler(w http.ResponseWriter, req *http.Request, id string) {
+	var changeEmail shared.ChangeEmail
+	if json.NewDecoder(req.Body).Decode(&changeEmail) != nil {
+		http.Error(w, "Unable to decode request", http.StatusBadRequest)
+		return
+	}
+
+	pathSegments := strings.Split(req.URL.Path, "/")
+	changeID := pathSegments[len(pathSegments)-1]
+	if !db.IsChangeIDValid(changeID, id) {
+		log.Printf("Change email ID is invalid")
+		http.Error(w, "Invalid email change ID", http.StatusUnauthorized)
+		return
+	}
+
+	fetchedID, err := db.GetUserIDByEmail(changeEmail.NewEmail)
+	if err == nil && len(fetchedID) > 0 {
+		http.Error(w, "An account with this email already exists", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := ValidateCredentials(id, changeEmail.OldLoginKeyHash)
+	if err != nil || id != userID {
+		http.Error(w, "Incorrect password", http.StatusUnauthorized)
+		return
+	}
+
+	bcryptHash, err := bcrypt.GenerateFromPassword(changeEmail.NewLoginKeyHash, 8)
+	if err != nil {
+		log.Printf("Error generating bcrypt hash: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	code, err := db.NewVerification(shared.Signup{
+		Identifier:   changeEmail.NewEmail,
+		ProtectedKey: changeEmail.ProtectedKey,
+	}, bcryptHash, userID)
+	if err != nil {
+		log.Printf("Error creating email verification entry: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	err = mail.SendVerificationEmail(code, changeEmail.NewEmail)
+	if err != nil {
+		log.Printf("Error sending verification email: %v\n", err)
+		http.Error(w, "SMTP error", http.StatusInternalServerError)
+		return
+	}
+
+	_ = db.RemoveEmailChangeByChangeID(changeID)
+}
+
 // ChangePasswordHandler validates the user's old login information, and uses
 // the ChangePassword request struct to update their login info and protected
 // key with new values.
@@ -418,7 +545,7 @@ func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) 
 		return
 	}
 
-	userID, err := ValidateCredentials(id, changePassword.PrevLoginKeyHash)
+	userID, err := ValidateCredentials(id, changePassword.OldLoginKeyHash)
 	if err != nil || id != userID {
 		http.Error(w, "Incorrect password", http.StatusUnauthorized)
 		return

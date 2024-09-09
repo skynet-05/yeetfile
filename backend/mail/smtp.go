@@ -66,6 +66,6 @@ func init() {
 		Host:           config.YeetFileConfig.Email.Host,
 		Port:           port,
 		Password:       config.YeetFileConfig.Email.Password,
-		CallbackDomain: config.YeetFileConfig.CallbackDomain,
+		CallbackDomain: config.YeetFileConfig.Domain,
 	}
 }

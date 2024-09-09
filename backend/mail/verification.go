@@ -17,7 +17,7 @@ var verificationSubject = "YeetFile Email Verification"
 var verificationBodyTemplate = template.Must(template.New("").Parse(
 	"Your YeetFile verification code is:\n\n{{.Code}}\n\n" +
 		"Enter this code on the verification page, or use the link " +
-		"below to finish verifying your account.\n\n" +
+		"below to finish verifying your email.\n\n" +
 		"{{.Domain}}{{.Endpoint}}?email={{.Email}}&code={{.Code}}"))
 
 // SendVerificationEmail formats a standard verification email body using the

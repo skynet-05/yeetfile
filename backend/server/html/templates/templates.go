@@ -11,6 +11,26 @@ import (
 	"yeetfile/shared/endpoints"
 )
 
+const (
+	SendHTML           = "send.html"
+	VaultHTML          = "vault.html"
+	DownloadHTML       = "download.html"
+	VerificationHTML   = "verify.html"
+	SignupHTML         = "signup.html"
+	LoginHTML          = "login.html"
+	AccountHTML        = "account.html"
+	ForgotHTML         = "forgot.html"
+	ChangeEmailHTML    = "change_email.html"
+	ChangePasswordHTML = "change_password.html"
+	ChangeHintHTML     = "change_hint.html"
+)
+
+//go:embed *.html
+//go:embed items/*.html
+var HTML embed.FS
+
+var templates *template.Template
+
 type BaseTemplate struct {
 	LoggedIn       bool
 	Title          string
@@ -78,24 +98,10 @@ type ForgotPasswordTemplate struct {
 	Code  string
 }
 
-const (
-	SendHTML           = "send.html"
-	VaultHTML          = "vault.html"
-	DownloadHTML       = "download.html"
-	VerificationHTML   = "verify.html"
-	SignupHTML         = "signup.html"
-	LoginHTML          = "login.html"
-	AccountHTML        = "account.html"
-	ForgotHTML         = "forgot.html"
-	ChangePasswordHTML = "change_password.html"
-	ChangeHintHTML     = "change_hint.html"
-)
-
-//go:embed *.html
-//go:embed items/*.html
-var HTML embed.FS
-
-var templates *template.Template
+type ChangeEmailTemplate struct {
+	Base         BaseTemplate
+	CurrentEmail string
+}
 
 // ServeTemplate uses the name of a template and a generic struct and attempts to
 // generate the template content using the provided struct. If there's an issue

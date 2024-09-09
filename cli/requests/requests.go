@@ -30,7 +30,7 @@ func sendRequest(session, method, url string, data []byte) (*http.Response, erro
 
 	if err == nil && len(session) > 0 {
 		req.AddCookie(&http.Cookie{
-			Name:  "session",
+			Name:  constants.AuthSessionStore,
 			Value: session,
 		})
 	}

@@ -68,9 +68,9 @@ func changePassword(identifier, password, newPassword string) error {
 	}
 
 	return globals.API.ChangePassword(shared.ChangePassword{
-		PrevLoginKeyHash: oldLoginKeyHash,
-		NewLoginKeyHash:  newLoginKeyHash,
-		ProtectedKey:     newProtectedKey,
+		OldLoginKeyHash: oldLoginKeyHash,
+		NewLoginKeyHash: newLoginKeyHash,
+		ProtectedKey:    newProtectedKey,
 	})
 }
 
@@ -78,19 +78,50 @@ func changePasswordHint(passwordHint string) error {
 	return globals.API.ChangePasswordHint(passwordHint)
 }
 
+func changeEmail(identifier, password, newEmail, changeID string) error {
+	userKey := crypto.GenerateUserKey([]byte(identifier), []byte(password))
+	oldLoginKeyHash := crypto.GenerateLoginKeyHash(userKey, []byte(password))
+
+	newUserKey := crypto.GenerateUserKey([]byte(newEmail), []byte(password))
+	newLoginKeyHash := crypto.GenerateLoginKeyHash(newUserKey, []byte(password))
+
+	protectedKey, err := globals.API.GetUserProtectedKey()
+	if err != nil {
+		return errors.New("error fetching protected key")
+	}
+
+	privateKey, err := crypto.DecryptChunk(userKey, protectedKey)
+	if err != nil {
+		return errors.New("error decrypting protected key")
+	}
+
+	newProtectedKey, err := crypto.EncryptChunk(newUserKey, privateKey)
+	if err != nil {
+		return errors.New("error encrypting private key")
+	}
+
+	return globals.API.ChangeEmail(shared.ChangeEmail{
+		NewEmail:        newEmail,
+		OldLoginKeyHash: oldLoginKeyHash,
+		NewLoginKeyHash: newLoginKeyHash,
+		ProtectedKey:    newProtectedKey,
+	}, changeID)
+}
+
 func FetchAccountDetails() (shared.AccountResponse, string) {
 	account, err := globals.API.GetAccountInfo()
 	if err != nil {
-		return account,
-			fmt.Sprintf("Error fetching account details: %v\n", err)
+		msg := fmt.Sprintf("Error fetching account details: %v\n", err)
+		return account, msg
 	}
 
 	subscriptionStr := getSubscriptionString(account.SubscriptionExp)
 	storageStr := getStorageString(account.StorageUsed, account.StorageAvailable, false)
 	sendStr := getStorageString(account.SendUsed, account.SendAvailable, true)
 
+	emailStr := account.Email
 	if len(account.Email) == 0 {
-		account.Email = "None"
+		emailStr = "None"
 	}
 
 	passwordHintStr := "Not Set"
@@ -104,7 +135,7 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		"Send:  %s\n\n"+
 		"Subscription: %s\n"+
 		"Password Hint: %s",
-		account.Email,
+		shared.EscapeString(emailStr),
 		storageStr,
 		sendStr,
 		subscriptionStr,

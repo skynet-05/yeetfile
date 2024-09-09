@@ -3,12 +3,14 @@ package html
 import (
 	"log"
 	"net/http"
+	"strings"
 	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/html/templates"
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
@@ -17,26 +19,21 @@ import (
 const ErrorHeader = "ErrorMsg"
 const SuccessHeader = "SuccessMsg"
 
-const OrderConfMsg = "Your order confirmation code " +
-	"is \"%s\" -- if you don't have an email on file, please " +
-	"write this down in case you need to contact YeetFile " +
-	"about your order!"
-
 // VaultPageHandler returns the html template used for interacting with files
 // (uploading, renaming, downloading, deleting) in the user's vault
-func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
+func VaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string) {
 	userStorage, _, err := db.GetUserStorage(userID)
 	if err != nil {
-		handleError(w, err)
+		handleError(w, "Error fetching vault", http.StatusInternalServerError)
 		return
 	}
 
-	err = templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.VaultHTML,
 		templates.VaultTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:     session.IsValidSession(req),
+				LoggedIn:     true,
 				Title:        "Vault",
 				Page:         "vault",
 				ErrorMessage: w.Header().Get(ErrorHeader),
@@ -52,13 +49,11 @@ func VaultPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
 			StorageAvailable: userStorage.StorageAvailable,
 		},
 	)
-
-	handleError(w, err)
 }
 
 // SendPageHandler returns the html template used for sending files
 func SendPageHandler(w http.ResponseWriter, req *http.Request) {
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.SendHTML,
 		templates.LoginTemplate{
@@ -71,20 +66,18 @@ func SendPageHandler(w http.ResponseWriter, req *http.Request) {
 					"jszip.min.js",
 					"share.js",
 				},
-				CSS:       []string{"upload.css"},
+				CSS:       []string{"send.css"},
 				Config:    config.HTMLConfig,
 				Endpoints: endpoints.HTMLPageEndpoints,
 			},
 			Meter: 0,
 		},
 	)
-
-	handleError(w, err)
 }
 
 // DownloadPageHandler returns the HTML page for downloading a file
 func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.DownloadHTML,
 		templates.Template{Base: templates.BaseTemplate{
@@ -100,13 +93,11 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 			Endpoints: endpoints.HTMLPageEndpoints,
 		}},
 	)
-
-	handleError(w, err)
 }
 
 // SignupPageHandler returns the HTML page for signing up for an account
 func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.SignupHTML,
 		templates.SignupTemplate{
@@ -122,13 +113,11 @@ func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
 			ServerPasswordRequired: config.YeetFileConfig.PasswordHash != nil,
 		},
 	)
-
-	handleError(w, err)
 }
 
 // LoginPageHandler returns the HTML page for logging in
 func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.LoginHTML,
 		templates.Template{
@@ -144,15 +133,15 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 	)
-
-	handleError(w, err)
 }
 
 // AccountPageHandler returns the HTML page for a user managing their account
 func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	user, err := db.GetUserByID(userID)
-	if err != nil {
-		handleError(w, err)
+	if err != nil || user.ID != userID {
+		log.Println(user.ID)
+		log.Println(userID)
+		handleError(w, "Unable to fetch user info", http.StatusUnauthorized)
 		return
 	}
 
@@ -160,12 +149,14 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 	isYearly := req.URL.Query().Has("yearly")
 	hasHint := user.PasswordHint != nil && len(user.PasswordHint) > 0
 
-	err = templates.ServeTemplate(
+	obscuredEmail, _ := utils.ObscureEmail(user.Email)
+
+	_ = templates.ServeTemplate(
 		w,
 		templates.AccountHTML,
 		templates.AccountTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:       session.IsValidSession(req),
+				LoggedIn:       true,
 				Title:          "My Account",
 				Page:           "account",
 				ErrorMessage:   errorMsg,
@@ -175,7 +166,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 				Config:         config.HTMLConfig,
 				Endpoints:      endpoints.HTMLPageEndpoints,
 			},
-			Email:                user.Email,
+			Email:                obscuredEmail,
 			PaymentID:            user.PaymentID,
 			ExpString:            user.MemberExp.Format("2 Jan 2006"),
 			IsActive:             time.Now().Before(user.MemberExp),
@@ -190,8 +181,6 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 			HasPasswordHint:      hasHint,
 		},
 	)
-
-	handleError(w, err)
 }
 
 // VerifyPageHandler returns the HTML page for verifying the user's email
@@ -199,7 +188,7 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request) {
 	email := req.URL.Query().Get("email")
 	code := req.URL.Query().Get("code")
 
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.VerificationHTML,
 		templates.VerificationTemplate{
@@ -216,12 +205,46 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request) {
 			Code:  code,
 		},
 	)
+}
 
-	handleError(w, err)
+// ChangeEmailPageHandler returns the HTML page for updating a user's email. This
+// can be for users changing their email from one to another, or for an account
+// ID-only user adding an email to their account
+func ChangeEmailPageHandler(w http.ResponseWriter, req *http.Request, id string) {
+	email, err := db.GetUserEmailByID(id)
+	if err != nil {
+		handleError(w, "Unable to fetch user", http.StatusInternalServerError)
+		return
+	} else if len(email) > 0 {
+		pathSegments := strings.Split(req.URL.Path, "/")
+		changeID := pathSegments[len(pathSegments)-1]
+		valid := db.IsChangeIDValid(changeID, id)
+		if !valid {
+			handleError(w, "Invalid access", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	_ = templates.ServeTemplate(
+		w,
+		templates.ChangeEmailHTML,
+		templates.ChangeEmailTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:     session.IsValidSession(req),
+				Title:        "Change Email",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   []string{"change_email.js"},
+				CSS:          []string{"change.css"},
+				Config:       config.HTMLConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
+			},
+			CurrentEmail: email,
+		},
+	)
 }
 
 func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.ChangePasswordHTML,
 		templates.Template{
@@ -230,18 +253,16 @@ func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, _ strin
 				Title:        "Change Password",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"change_password.js"},
-				CSS:          nil,
+				CSS:          []string{"change.css"},
 				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 		},
 	)
-
-	handleError(w, err)
 }
 
 func ChangeHintPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.ChangeHintHTML,
 		templates.Template{
@@ -250,21 +271,19 @@ func ChangeHintPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
 				Title:        "Set Password Hint",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"change_hint.js"},
-				CSS:          nil,
+				CSS:          []string{"change.css"},
 				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
 		},
 	)
-
-	handleError(w, err)
 }
 
 // ForgotPageHandler returns the HTML page for resetting a user's password
 func ForgotPageHandler(w http.ResponseWriter, req *http.Request) {
 	email := req.URL.Query().Get("email")
 	code := req.URL.Query().Get("code")
-	err := templates.ServeTemplate(
+	_ = templates.ServeTemplate(
 		w,
 		templates.ForgotHTML,
 		templates.ForgotPasswordTemplate{
@@ -273,7 +292,7 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request) {
 				Title:        "Forgot Password",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"forgot.js"},
-				CSS:          nil,
+				CSS:          []string{"auth.css"},
 				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},
@@ -281,8 +300,6 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request) {
 			Code:  code,
 		},
 	)
-
-	handleError(w, err)
 }
 
 // generateAccountMessages takes a request and generates success and error messages from
@@ -308,9 +325,7 @@ func generateAccountMessages(req *http.Request) (string, string) {
 	return successMsg, errorMsg
 }
 
-func handleError(w http.ResponseWriter, err error) {
-	if err != nil {
-		log.Printf("template error: %v\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
+func handleError(w http.ResponseWriter, msg string, status int) {
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(msg))
 }

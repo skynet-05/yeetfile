@@ -170,7 +170,7 @@ func processCheckoutEvent(event *stripe.EventData) error {
 		// Send email (if applicable)
 		email, err := db.GetUserEmailByPaymentID(userPaymentID)
 		if err == nil && len(email) != 0 {
-			err := mail.CreateOrderEmail(
+			err = mail.CreateOrderEmail(
 				stripeDescMap[productID],
 				email,
 			).Send()
@@ -196,7 +196,7 @@ func GetCustomerPortalLink(id string) (string, error) {
 		ReturnURL: stripe.String(
 			fmt.Sprintf(
 				"%s/account",
-				config.YeetFileConfig.CallbackDomain)),
+				config.YeetFileConfig.Domain)),
 	}
 
 	result, err := billingsession.New(params)

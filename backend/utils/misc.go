@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -262,15 +263,34 @@ func ParseSizeString(str string) int {
 	return 0
 }
 
-func HandleError(w http.ResponseWriter, err error, statusCode int, message string) bool {
-	if err != nil {
-		Log(fmt.Sprintf("%s: %v\n", message, err))
-		w.WriteHeader(statusCode)
-		_, _ = w.Write([]byte(message))
-		return true
+// ObscureEmail takes an email and strips out the majority of the address and
+// domain, adding "***" as an indicator of the obfuscation for both.
+func ObscureEmail(email string) (string, error) {
+	segments := strings.Split(email, "@")
+	if len(segments) != 2 {
+		return "", errors.New("invalid email")
 	}
 
-	return false
+	address := segments[0]
+	domain := segments[1]
+
+	var hiddenEmail string
+	if len(address) > 1 {
+		hiddenEmail = fmt.Sprintf(
+			"%c%c***%c@%c***.com",
+			address[0],
+			address[1],
+			address[len(address)-1],
+			domain[0])
+	} else {
+		hiddenEmail = fmt.Sprintf(
+			"%c***%c@%c***.com",
+			address[0],
+			address[len(address)-1],
+			domain[0])
+	}
+
+	return hiddenEmail, nil
 }
 
 // LimitedReader reads the request body, limited to max chunk size + encryption

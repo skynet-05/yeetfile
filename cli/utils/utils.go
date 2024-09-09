@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/charmbracelet/huh"
 	"io"
 	"net/http"
 	"os"
@@ -49,6 +50,12 @@ func CopyBytesToFile(contents []byte, to string) error {
 	return err
 }
 
+func CreateHeader(title string, desc string) *huh.Note {
+	return huh.NewNote().
+		Title(GenerateTitle(title)).
+		Description(GenerateWrappedText(desc))
+}
+
 func GenerateTitle(s string) string {
 	prefix := "YeetFile CLI: "
 	verticalEdge := strings.Repeat("═", len(s)+len(prefix)+2)
@@ -57,6 +64,30 @@ func GenerateTitle(s string) string {
 			"║ %s%s ║\n"+
 			"╚"+verticalEdge+"╝", prefix, s))
 	return title
+}
+
+func GenerateWrappedText(s string) string {
+	maxLen := 50
+	words := strings.Split(s, " ")
+	var wrappedWords []string
+
+	lineLen := 0
+	i := 0
+	for j, word := range words {
+		if lineLen+len(word) > maxLen {
+			lineLen = 0
+			wrappedWords = append(wrappedWords, words[i:j]...)
+			wrappedWords = append(wrappedWords, "\n")
+			i = j
+		}
+
+		lineLen += len(word)
+	}
+
+	wrappedWords = append(wrappedWords, words[i:]...)
+	joined := strings.Join(wrappedWords, " ")
+	formatted := strings.ReplaceAll(joined, "\n ", "\n")
+	return formatted
 }
 
 // GenerateDescription generates a text box with the provided description
@@ -86,12 +117,20 @@ func GenerateDescriptionSection(title, desc string, minLen int) string {
 	verticalEdge := strings.Repeat("─", maxLen+2)
 	out += styles.BoldStyle.Render("┌"+verticalEdge+"┐") + "\n"
 	if len(title) > 0 {
-		out += styles.BoldStyle.Render("│ ") + title + strings.Repeat(" ", maxLen-len(title)) + styles.BoldStyle.Render(" │") + "\n"
-		out += styles.BoldStyle.Render("│ ") + strings.Repeat("-", maxLen) + styles.BoldStyle.Render(" │") + "\n"
+		out += styles.BoldStyle.Render("│ ") +
+			title +
+			strings.Repeat(" ", maxLen-len(title)) +
+			styles.BoldStyle.Render(" │") + "\n"
+		out += styles.BoldStyle.Render("│ ") +
+			strings.Repeat("-", maxLen) +
+			styles.BoldStyle.Render(" │") + "\n"
 	}
 
 	for _, s := range split {
-		out += styles.BoldStyle.Render("│ ") + s + (strings.Repeat(" ", maxLen-len(s))) + styles.BoldStyle.Render(" │") + "\n"
+		out += styles.BoldStyle.Render("│ ") +
+			s +
+			strings.Repeat(" ", maxLen-len(s)+strings.Count(s, "\\")) +
+			styles.BoldStyle.Render(" │") + "\n"
 	}
 	out += styles.BoldStyle.Render("└" + verticalEdge + "┘")
 
@@ -124,4 +163,15 @@ func ParseHTTPError(response *http.Response) error {
 	errCode := fmt.Sprintf(httpErrorCodeFormat, response.StatusCode)
 	msg := fmt.Sprintf("server error %s: %s", errCode, body)
 	return errors.New(msg)
+}
+
+func ShowErrorForm(msg string) {
+	_ = huh.NewForm(huh.NewGroup(
+		huh.NewNote().
+			Title(styles.ErrStyle.Render(GenerateTitle("Error"))).
+			Description(msg),
+		huh.NewConfirm().
+			Affirmative("OK").
+			Negative("")),
+	).WithTheme(styles.Theme).Run()
 }

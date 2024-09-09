@@ -30,13 +30,7 @@ var (
 	UserB TestUser
 )
 
-type TestFile struct {
-	ID       string
-	FolderID string
-}
-
 var userFileIDs map[string][]string
-var userFolderIDs map[string][]string
 
 func setupTestUser() TestUser {
 	ctx := InitContext(server, "")
@@ -89,10 +83,6 @@ func setupTestUser() TestUser {
 		privKey: privKey,
 		pubKey:  signupKeys.PublicKey,
 	}
-}
-
-func addTestFile(user TestUser, fileID string) {
-	userFileIDs[user.id] = append(userFileIDs[user.id], fileID)
 }
 
 func cleanUpUserAccount(user TestUser) {

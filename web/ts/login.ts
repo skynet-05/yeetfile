@@ -61,6 +61,13 @@ const login = async () => {
     let userKey = await crypto.generateUserKey(identifier.value, password.value);
     let loginKeyHash = await crypto.generateLoginKeyHash(userKey, password.value);
 
+    let url = new URL(window.location.href);
+    let params = new URLSearchParams(url.search);
+    let next = Endpoints.HTMLAccount.path;
+    if (params.get("next")) {
+        next = params.get("next")
+    }
+
     let xhr = new XMLHttpRequest();
     xhr.open("POST", Endpoints.Login.path, false);
     xhr.setRequestHeader("Content-Type", "application/json");
@@ -78,7 +85,7 @@ const login = async () => {
                 localStorage.setItem(useVaultPasswordKey, "");
                 new YeetFileDB().insertVaultKeyPair(decPrivKeyBytes, pubKeyBytes, "", success => {
                     if (success) {
-                        window.location.assign(Endpoints.HTMLAccount.path);
+                        window.location.assign(next);
                     } else {
                         alert("Failed to insert vault keys into indexeddb");
                         window.location.assign(Endpoints.Logout.path);

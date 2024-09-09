@@ -51,7 +51,8 @@ create table if not exists users
     sub_type            text     default ''::text,
     sub_method          text     default ''::text,
     bandwidth           bigint   default 0,
-    pw_hint             bytea    default '\x'::bytea
+    pw_hint             bytea    default '\x'::bytea,
+    session_key         text     default ''::text
 );
 
 create table if not exists stripe
@@ -75,7 +76,8 @@ create table if not exists verify
     protected_key   bytea,
     public_key      bytea,
     root_folder_key bytea,
-    pw_hint         bytea
+    pw_hint         bytea,
+    account_id      text
 );
 
 create table if not exists vault
@@ -142,4 +144,17 @@ create table if not exists forgot
             primary key,
     requested timestamp
 );
+
+create table if not exists change_email
+(
+    id         text not null
+        constraint change_email_pk
+            primary key,
+    account_id text,
+    old_email  text
+        constraint change_email_pk2
+            unique,
+    date       timestamp
+);
+
 

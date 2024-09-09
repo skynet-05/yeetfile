@@ -64,7 +64,7 @@ const submitPasswordChange = async () => {
     }
 
     let changePassword = new interfaces.ChangePassword();
-    changePassword.prevLoginKeyHash = oldLoginKeyHash;
+    changePassword.oldLoginKeyHash = oldLoginKeyHash;
     changePassword.newLoginKeyHash = newLoginKeyHash;
     changePassword.protectedKey = newProtectedKey;
 

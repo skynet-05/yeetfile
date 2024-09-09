@@ -17,3 +17,7 @@ func TestValidSessions(t *testing.T) {
 		t.Fatalf("User B session error: %v\n", err)
 	}
 }
+
+func TestChangeEmail(t *testing.T) {
+
+}

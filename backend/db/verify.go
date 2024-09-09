@@ -11,7 +11,9 @@ import (
 
 var VerificationCodeExistsError = errors.New("verification code already sent")
 
-type NewAccountValues struct {
+type VerifiedAccountValues struct {
+	AccountID     string
+	Email         string
 	PasswordHash  []byte
 	ProtectedKey  []byte
 	PublicKey     []byte
@@ -19,21 +21,21 @@ type NewAccountValues struct {
 	PasswordHint  []byte
 }
 
-// NewVerification creates a new verification entry for a user
+// NewVerification creates a new verification entry for a user. Account ID can
+// be left empty for new user verification, otherwise should be provided if
+// an existing user is verifying their new email.
 func NewVerification(
 	signupData shared.Signup,
 	pwHash []byte,
-	reset bool,
+	accountID string,
 ) (string, error) {
-	if !reset {
-		r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`,
-			signupData.Identifier)
+	r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`,
+		signupData.Identifier)
 
-		if e != nil {
-			return "", e
-		} else if r.Next() {
-			return "", UserAlreadyExists
-		}
+	if e != nil {
+		return "", e
+	} else if r.Next() {
+		return "", UserAlreadyExists
 	}
 
 	// Generate verification code
@@ -68,14 +70,16 @@ func NewVerification(
 			          protected_key=$2, 
 			          public_key=$3, 
 			          root_folder_key=$4,
-			          pw_hint=$5
-			      WHERE identity=$6`
+			          pw_hint=$5,
+			          account_id=$6
+			      WHERE identity=$7`
 			_, err = db.Exec(s,
 				pwHash,
 				signupData.ProtectedKey,
 				signupData.PublicKey,
 				signupData.RootFolderKey,
 				pwHintEncrypted,
+				accountID,
 				signupData.Identifier)
 			if err != nil {
 				return "", err
@@ -93,8 +97,9 @@ func NewVerification(
 			          protected_key=$4,
 			          public_key=$5,
 			          root_folder_key=$6,
-			          pw_hint=$7
-			      WHERE identity=$8`
+			          pw_hint=$7,
+			          account_id=$8
+			      WHERE identity=$9`
 			_, err = db.Exec(s,
 				code,
 				pwHash,
@@ -103,6 +108,7 @@ func NewVerification(
 				signupData.PublicKey,
 				signupData.RootFolderKey,
 				pwHintEncrypted,
+				accountID,
 				signupData.Identifier)
 			if err != nil {
 				return "", err
@@ -119,8 +125,9 @@ func NewVerification(
                     protected_key,
                     public_key,
                     root_folder_key,
+                    account_id,
                     pw_hint) 
-		      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 		_, err = db.Exec(
 			s,
 			signupData.Identifier,
@@ -130,6 +137,7 @@ func NewVerification(
 			signupData.ProtectedKey,
 			signupData.PublicKey,
 			signupData.RootFolderKey,
+			accountID,
 			pwHintEncrypted)
 		if err != nil {
 			return "", err
@@ -142,8 +150,9 @@ func NewVerification(
 // VerifyUser verifies the user's email against the code stored in the `verify`
 // table. If the code matches the user's password hash and protected key are
 // returned so that a new user can be added to the `users` table.
-func VerifyUser(identity string, code string) (NewAccountValues, error) {
+func VerifyUser(identity string, code string) (VerifiedAccountValues, error) {
 	var (
+		accountID     string
 		pwHash        []byte
 		protectedKey  []byte
 		publicKey     []byte
@@ -152,6 +161,7 @@ func VerifyUser(identity string, code string) (NewAccountValues, error) {
 	)
 
 	s := `SELECT 
+	          account_id,
 	          pw_hash, 
 	          protected_key, 
 	          public_key, 
@@ -170,6 +180,7 @@ func VerifyUser(identity string, code string) (NewAccountValues, error) {
 	}
 
 	err := row.Scan(
+		&accountID,
 		&pwHash,
 		&protectedKey,
 		&publicKey,
@@ -177,10 +188,12 @@ func VerifyUser(identity string, code string) (NewAccountValues, error) {
 		&encPwHint)
 
 	if err != nil {
-		return NewAccountValues{}, err
+		return VerifiedAccountValues{}, err
 	}
 
-	return NewAccountValues{
+	return VerifiedAccountValues{
+		Email:         identity,
+		AccountID:     accountID,
 		PasswordHash:  pwHash,
 		ProtectedKey:  protectedKey,
 		PublicKey:     publicKey,

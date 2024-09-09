@@ -6,6 +6,10 @@
     display: inherit;
 }
 
+#email-address {
+    margin-left: 0;
+}
+
 fieldset {
     width: 100%;
     min-width: 100px;
@@ -33,6 +37,10 @@ table input {
 
 #account-code {
     margin-left: 0;
+}
+
+#verify-note {
+    margin-bottom: 0;
 }
 
 #center-div {

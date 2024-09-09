@@ -18,7 +18,7 @@ const B2Storage = "b2"
 const defaultSecret = "yeetfile-secret-key"
 
 var storageType = utils.GetEnvVar("YEETFILE_STORAGE", B2Storage)
-var callbackDomain = os.Getenv("YEETFILE_CALLBACK_DOMAIN")
+var domain = os.Getenv("YEETFILE_DOMAIN")
 var defaultUserStorage = utils.GetEnvVarInt(
 	"YEETFILE_DEFAULT_USER_STORAGE",
 	15000000) // 15MB
@@ -155,7 +155,7 @@ var btcPayBilling = BTCPayBillingConfig{
 
 type ServerConfig struct {
 	StorageType        string
-	CallbackDomain     string
+	Domain             string
 	DefaultUserStorage int
 	DefaultUserSend    int
 	MaxUserCount       int
@@ -211,7 +211,7 @@ func init() {
 
 	YeetFileConfig = ServerConfig{
 		StorageType:        storageType,
-		CallbackDomain:     callbackDomain,
+		Domain:             domain,
 		DefaultUserStorage: defaultUserStorage,
 		DefaultUserSend:    defaultUserSend,
 		MaxUserCount:       maxNumUsers,

@@ -43,14 +43,14 @@ func Run(addr string) {
 	}
 
 	r.AddRoutes([]RouteDef{
-		// File Share
+		// YeetFile Send
 		{POST, endpoints.UploadSendFileMetadata, AuthMiddleware(send.UploadMetadataHandler)},
 		{POST, endpoints.UploadSendFileData, AuthMiddleware(send.UploadDataHandler)},
 		{POST, endpoints.UploadSendText, LimiterMiddleware(send.UploadPlaintextHandler)},
 		{GET, endpoints.DownloadSendFileMetadata, send.DownloadHandler},
 		{GET, endpoints.DownloadSendFileData, send.DownloadChunkHandler},
 
-		// File Vault
+		// YeetFile Vault
 		{ALL, endpoints.VaultFolder, AuthMiddleware(vault.FolderHandler)},
 		{PUT | DELETE, endpoints.VaultFile, AuthMiddleware(vault.FileHandler)},
 		{POST, endpoints.UploadVaultFileMetadata, AuthMiddleware(vault.UploadMetadataHandler)},
@@ -72,6 +72,7 @@ func Run(addr string) {
 		{POST, endpoints.Forgot, LimiterMiddleware(auth.ForgotPasswordHandler)},
 		{GET, endpoints.PubKey, AuthLimiterMiddleware(auth.PubKeyHandler)},
 		{GET, endpoints.ProtectedKey, AuthMiddleware(auth.ProtectedKeyHandler)},
+		{POST | PUT, endpoints.ChangeEmail, AuthMiddleware(auth.ChangeEmailHandler)},
 		{PUT, endpoints.ChangePassword, AuthMiddleware(auth.ChangePasswordHandler)},
 		{POST, endpoints.ChangeHint, AuthMiddleware(auth.ChangeHintHandler)},
 
@@ -93,6 +94,7 @@ func Run(addr string) {
 		{GET, endpoints.HTMLForgot, html.ForgotPageHandler},
 		{GET, endpoints.HTMLAccount, AuthMiddleware(html.AccountPageHandler)},
 		{GET, endpoints.HTMLVerifyEmail, html.VerifyPageHandler},
+		{GET, endpoints.HTMLChangeEmail, AuthMiddleware(html.ChangeEmailPageHandler)},
 		{GET, endpoints.HTMLChangePassword, AuthMiddleware(html.ChangePasswordPageHandler)},
 		{GET, endpoints.HTMLChangeHint, AuthMiddleware(html.ChangeHintPageHandler)},
 
