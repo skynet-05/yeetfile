@@ -1,20 +1,32 @@
 package auth
 
 import (
+	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"strings"
 	"yeetfile/backend/db"
 )
 
+var (
+	Missing2FAErr = errors.New("TOTP code missing")
+	Failed2FAErr  = errors.New("TOTP code failed")
+)
+
 // ValidateCredentials checks the provided key hash against the one stored in
 // the database, and if there's a match, returns the user's true account ID.
-func ValidateCredentials(identifier string, keyHash []byte) (string, error) {
+func ValidateCredentials(
+	identifier string,
+	keyHash []byte,
+	code string,
+	validate2FA bool,
+) (string, error) {
 	var userID string
 	var pwHash []byte
+	var secret []byte
 	var err error
 	if strings.Contains(identifier, "@") {
-		pwHash, err = db.GetUserPasswordHashByEmail(identifier)
+		pwHash, secret, err = db.GetUserPasswordHashByEmail(identifier)
 		if err != nil {
 			return "", err
 		}
@@ -24,7 +36,7 @@ func ValidateCredentials(identifier string, keyHash []byte) (string, error) {
 			return "", err
 		}
 	} else {
-		pwHash, err = db.GetUserPasswordHashByID(identifier)
+		pwHash, secret, err = db.GetUserPasswordHashByID(identifier)
 		if err != nil {
 			return "", err
 		}
@@ -35,6 +47,13 @@ func ValidateCredentials(identifier string, keyHash []byte) (string, error) {
 	err = bcrypt.CompareHashAndPassword(pwHash, keyHash)
 	if err != nil {
 		return "", err
+	}
+
+	if secret != nil && len(secret) > 0 && validate2FA {
+		err = validateTOTP(secret, code, userID)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return userID, nil

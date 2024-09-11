@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/charmbracelet/huh/spinner"
+	"github.com/mdp/qrterminal/v3"
+	"strings"
 	"time"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
@@ -21,6 +23,8 @@ const (
 	SetEmail
 	ChangePassword
 	SetPasswordHint
+	SetTwoFactor
+	DeleteTwoFactor
 	ManageSubscription
 	PurchaseSubscription
 	DeleteAccount
@@ -394,6 +398,149 @@ func showAccountDeletionView() {
 	fmt.Println("Your YeetFile account has been deleted.")
 }
 
+func showSetTwoFactorView() {
+	var newTOTP shared.NewTOTP
+	var err error
+	_ = spinner.New().Title("Generating 2FA...").Action(func() {
+		newTOTP, err = globals.API.Generate2FA()
+	}).Run()
+
+	if err != nil {
+		utils.ShowErrorForm("Error generating 2FA")
+		ShowAccountModel()
+		return
+	}
+
+	builder := strings.Builder{}
+	qrterminal.GenerateHalfBlock(newTOTP.URI, qrterminal.L, &builder)
+
+	var totpCode string
+	var submitted bool
+	var response shared.SetTOTPResponse
+
+	var show2FASetup func(errMsg string) error
+	show2FASetup = func(errMsg string) error {
+		err = huh.NewForm(huh.NewGroup(
+			utils.CreateHeader("Enable 2FA", ""),
+			huh.NewNote().Title("Secret: "+newTOTP.Secret).Description(builder.String()),
+			huh.NewInput().
+				Title("2FA Code").
+				Description("Use your authenticator app to scan the "+
+					"QR above, then input the 6-digit code below").
+				Value(&totpCode).
+				Validate(func(s string) error {
+					if len(s) == 6 {
+						return nil
+					}
+
+					return errors.New("code must be 6 digits")
+				}),
+			huh.NewConfirm().
+				Affirmative("Submit").
+				Negative("Cancel").
+				Description(errMsg).
+				Value(&submitted),
+		)).WithTheme(styles.Theme).Run()
+
+		if err != nil {
+			return err
+		} else if !submitted {
+			return huh.ErrUserAborted
+		}
+
+		_ = spinner.New().Title("Setting up 2FA...").Action(func() {
+			response, err = globals.API.Finalize2FA(shared.SetTOTP{
+				Secret: newTOTP.Secret,
+				Code:   totpCode,
+			})
+		}).Run()
+
+		if err != nil {
+			return show2FASetup(styles.ErrStyle.Render(err.Error()))
+		}
+
+		return nil
+	}
+
+	err = show2FASetup("")
+	if err == huh.ErrUserAborted {
+		ShowAccountModel()
+		return
+	}
+
+	var recoveryCodes string
+	for _, code := range response.RecoveryCodes {
+		recoveryCodes += fmt.Sprintf("\n%s", code)
+	}
+
+	_ = huh.NewForm(huh.NewGroup(
+		utils.CreateHeader(
+			"2FA Enabled", "Two-factor authentication has been "+
+				"enabled for your account!"),
+		huh.NewNote().
+			Title("Recovery Codes").
+			Description(utils.GenerateWrappedText("These are "+
+				"ONE-TIME recovery codes that "+
+				"can be used to log in if you ever lose your "+
+				"2FA app. Write these down somewhere safe.\n"+
+				recoveryCodes)),
+		huh.NewConfirm().Affirmative("OK").Negative(""),
+	)).WithTheme(styles.Theme).Run()
+
+	ShowAccountModel()
+}
+
+func showDeleteTwoFactorView() {
+	var code string
+	var confirmed bool
+
+	var deleteFunc func(string) error
+	deleteFunc = func(errMsg string) error {
+		err := huh.NewForm(huh.NewGroup(
+			utils.CreateHeader(
+				"Disable 2FA", "To disable 2FA, enter your "+
+					"2FA or recovery code below."),
+			huh.NewInput().Title("2FA Code").Value(&code),
+			huh.NewConfirm().
+				Affirmative("Disable 2FA").
+				Negative("Cancel").
+				Description(errMsg).
+				Value(&confirmed),
+		)).WithTheme(styles.Theme).Run()
+
+		if err != nil {
+			return err
+		} else if !confirmed {
+			return huh.ErrUserAborted
+		}
+
+		_ = spinner.New().Title("Disabling 2FA...").Action(func() {
+			err = globals.API.Disable2FA(code)
+		}).Run()
+
+		if err != nil {
+			return deleteFunc(styles.ErrStyle.Render(err.Error()))
+		}
+
+		return nil
+	}
+
+	err := deleteFunc("")
+	if err == huh.ErrUserAborted {
+		ShowAccountModel()
+		return
+	} else if confirmed && err == nil {
+		_ = huh.NewForm(huh.NewGroup(
+			utils.CreateHeader(
+				"2FA Disabled",
+				"Your account 2FA has been disabled"),
+			huh.NewConfirm().Affirmative("OK").Negative(""),
+		)).WithTheme(styles.Theme).Run()
+	}
+
+	ShowAccountModel()
+}
+
 func generateSelectOptions(
 	account shared.AccountResponse,
 ) []huh.Option[Action] {
@@ -424,6 +571,14 @@ func generateSelectOptions(
 		options = append(options, passwordHintOption)
 	}
 
+	var twoFactorOption huh.Option[Action]
+	if account.Has2FA {
+		twoFactorOption = huh.NewOption("Remove 2FA", DeleteTwoFactor)
+	} else {
+		twoFactorOption = huh.NewOption("Enable 2FA", SetTwoFactor)
+	}
+	options = append(options, twoFactorOption)
+
 	if account.SubscriptionExp.After(time.Now()) &&
 		account.SubscriptionMethod == constants.SubMethodStripe {
 		options = append(
@@ -448,6 +603,8 @@ func init() {
 		ChangeEmail:     showChangeEmailWarning,
 		ChangePassword:  showChangePasswordView,
 		SetPasswordHint: showPasswordHintView,
+		SetTwoFactor:    showSetTwoFactorView,
+		DeleteTwoFactor: showDeleteTwoFactorView,
 		DeleteAccount:   showAccountDeletionView,
 		Exit:            exitView,
 	}

@@ -43,7 +43,22 @@ func SetSession(id string, w http.ResponseWriter, req *http.Request) error {
 
 	session.Values[UserSessionKey] = sessionKey
 	session.Values[UserIDKey] = id
+	session.Options.SameSite = http.SameSiteStrictMode
 	return session.Save(req, w)
+}
+
+func HasSession(req *http.Request) bool {
+	session, err := GetSession(req)
+	if err != nil {
+		return false
+	}
+
+	id, found := session.Values[UserIDKey].(string)
+	if !found || len(id) == 0 {
+		return false
+	}
+
+	return true
 }
 
 func IsValidSession(req *http.Request) bool {
@@ -92,10 +107,14 @@ func InvalidateOtherSessions(w http.ResponseWriter, req *http.Request) error {
 func RemoveSession(w http.ResponseWriter, req *http.Request) error {
 	session, _ := GetSession(req)
 
-	session.Options.MaxAge = -1
-	session.Values[UserSessionKey] = ""
-	session.Values[UserIDKey] = ""
-	return session.Save(req, w)
+	if session.Values[UserIDKey] != nil || session.Values[UserSessionKey] != nil {
+		session.Options.MaxAge = -1
+		session.Values[UserSessionKey] = ""
+		session.Values[UserIDKey] = ""
+		return session.Save(req, w)
+	}
+
+	return nil
 }
 
 func GetSessionUserID(session *sessions.Session) string {

@@ -51,6 +51,6 @@ func SignupAccountIDOnly(isCLI bool) (string, string, error) {
 		return "", "", err
 	}
 
-	captchaBase64 := GenerateCaptchaImage(code, isCLI)
-	return id, captchaBase64, nil
+	captchaBase64, err := GenerateCaptchaImage(code, isCLI)
+	return id, captchaBase64, err
 }

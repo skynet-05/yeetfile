@@ -5,6 +5,7 @@ import "time"
 type AccountResponse struct {
 	Email              string    `json:"email"`
 	HasPasswordHint    bool      `json:"hasPasswordHint"`
+	Has2FA             bool      `json:"has2FA"`
 	StorageAvailable   int       `json:"storageAvailable"`
 	StorageUsed        int       `json:"storageUsed"`
 	SendAvailable      int       `json:"sendAvailable"`
@@ -141,6 +142,7 @@ type VerifyAccount struct {
 type Login struct {
 	Identifier   string `json:"identifier"`
 	LoginKeyHash []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	Code         string `json:"code"`
 }
 
 type LoginResponse struct {
@@ -241,4 +243,19 @@ type ChangePassword struct {
 	OldLoginKeyHash []byte `json:"oldLoginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	NewLoginKeyHash []byte `json:"newLoginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	ProtectedKey    []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+}
+
+type NewTOTP struct {
+	B64Image string `json:"b64Image"`
+	Secret   string `json:"secret"`
+	URI      string `json:"uri"`
+}
+
+type SetTOTP struct {
+	Secret string `json:"secret"`
+	Code   string `json:"code"`
+}
+
+type SetTOTPResponse struct {
+	RecoveryCodes [6]string `json:"recoveryCodes"`
 }

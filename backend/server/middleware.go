@@ -23,6 +23,13 @@ type Visitor struct {
 var visitors = make(map[[32]byte]*Visitor)
 var mu sync.Mutex
 
+const csp = "" +
+	"default-src 'self';" +
+	"img-src 'self' https://docs.yeetfile.com data:;" +
+	"media-src 'self' data:;" +
+	"script-src 'self' 'wasm-unsafe-eval';" +
+	"style-src 'self' 'unsafe-inline';"
+
 // getVisitor checks to see if an identifier (ip address or user id) is
 // associated with a rate limiter, and returns it if so. If not, it creates a
 // new entry in the visitors map associating the ip address with a new rate limiter.
@@ -89,8 +96,27 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		redirect := fmt.Sprintf("/login?next=%s", req.URL.Path)
-		http.Redirect(w, req, redirect, http.StatusTemporaryRedirect)
+		redirectURL := fmt.Sprintf("%s?next=%s", endpoints.HTMLLogin, req.URL.Path)
+		redirectCode := http.StatusTemporaryRedirect
+		http.Redirect(w, req, redirectURL, redirectCode)
+		return
+	}
+
+	return handler
+}
+
+// NoAuthMiddleware enforces that a particular request does NOT have a valid
+// session before handling.
+func NoAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		if !session.HasSession(req) {
+			next(w, req)
+			return
+		}
+
+		redirectURL := string(endpoints.HTMLAccount)
+		redirectCode := http.StatusTemporaryRedirect
+		http.Redirect(w, req, redirectURL, redirectCode)
 		return
 	}
 
@@ -100,24 +126,18 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 // DefaultHeadersMiddleware applies headers to every route, regardless of
 // other middlewares already applied.
 func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	csp := "" +
-		"default-src 'self';" +
-		"img-src 'self' https://docs.yeetfile.com data:;" +
-		"media-src 'self' data:;" +
-		"script-src 'self' 'wasm-unsafe-eval';" +
-		"style-src 'self' 'unsafe-inline';"
-
 	return func(w http.ResponseWriter, r *http.Request) {
+		cspHeader := csp
 		if strings.HasPrefix(config.YeetFileConfig.Domain, "https") {
 			w.Header().Set("X-Frame-Options", "DENY")
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 			w.Header().Set("Expect-CT", "max-age=86400, enforce")
 		} else {
 			// Required by StreamSaver.js in non-https contexts
-			csp += "frame-src 'self' https://jimmywarting.github.io/"
+			cspHeader += "frame-src 'self' https://jimmywarting.github.io/"
 		}
 
-		w.Header().Set("Content-Security-Policy", csp)
+		w.Header().Set("Content-Security-Policy", cspHeader)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Referrer-Policy", "no-referrer")

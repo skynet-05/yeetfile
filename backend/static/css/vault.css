@@ -67,11 +67,6 @@ tr:last-child td {
     background-color: rgba(0, 0, 0, 0.08);
 }
 
-.vault-icon {
-    cursor: pointer;
-    height: 23px;
-}
-
 .shared-with-div {
     display: inline;
 }
@@ -84,31 +79,6 @@ tr:last-child td {
 #vault-message {
     display: inline-flex;
     align-items: center;
-}
-
-.progress-spinner {
-    margin-right: 5px;
-    -webkit-transform-origin: 50% 50%;
-    -moz-transform-origin: 50% 50%;
-    -o-transform-origin: 50% 50%;
-    transform-origin: 50% 50%;
-    animation-name: spin;
-    animation-duration: 1000ms;
-    animation-iteration-count: infinite;
-    animation-timing-function: linear;
-}
-
-@-moz-keyframes spin {
-    from { -moz-transform: rotate(0deg); }
-    to { -moz-transform: rotate(360deg); }
-}
-@-webkit-keyframes spin {
-    from { -webkit-transform: rotate(0deg); }
-    to { -webkit-transform: rotate(360deg); }
-}
-@keyframes spin {
-    from {transform:rotate(0deg);}
-    to {transform:rotate(360deg);}
 }
 
 @media (prefers-color-scheme: dark) {
@@ -131,10 +101,6 @@ tr:last-child td {
 
     .folder-link {
         color: white;
-    }
-
-    .vault-icon {
-        filter: invert(100%);
     }
 }
 

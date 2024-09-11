@@ -129,17 +129,24 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		passwordHintStr = "Enabled"
 	}
 
+	twoFactorStr := "Not Set"
+	if account.Has2FA {
+		twoFactorStr = "Enabled"
+	}
+
 	accountDetails := fmt.Sprintf(""+
 		"Email: %s\n"+
 		"Vault: %s\n"+
 		"Send:  %s\n\n"+
 		"Subscription: %s\n"+
-		"Password Hint: %s",
+		"Password Hint: %s\n"+
+		"Two-Factor: %s",
 		shared.EscapeString(emailStr),
 		storageStr,
 		sendStr,
 		subscriptionStr,
-		passwordHintStr)
+		passwordHintStr,
+		twoFactorStr)
 
 	return account, accountDetails
 }

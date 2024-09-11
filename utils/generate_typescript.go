@@ -84,7 +84,10 @@ func main() {
 		Add(shared.VerifyEmail{}).
 		Add(shared.ChangePasswordHint{}).
 		Add(shared.StartEmailChangeResponse{}).
-		Add(shared.ChangeEmail{})
+		Add(shared.ChangeEmail{}).
+		Add(shared.NewTOTP{}).
+		Add(shared.SetTOTP{}).
+		Add(shared.SetTOTPResponse{})
 
 	converter.WithBackupDir("")
 	err = converter.ConvertToFile(structsOut)

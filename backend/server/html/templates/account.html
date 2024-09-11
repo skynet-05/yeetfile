@@ -61,6 +61,18 @@
           {{ end }}
         </td>
       </tr>
+      <tr>
+        <td>
+          <label>Two-Factor Auth:</label>
+        </td>
+        <td>
+          {{ if .Has2FA }}
+          <span class="green-text">Enabled</span> — <a id="disable-2fa" href="#">Disable</a>
+          {{ else }}
+          <span class="red-text">Not Set</span> — <a href="{{ .Base.Endpoints.TwoFactor }}">Enable</a>
+          {{ end }}
+        </td>
+      </tr>
       {{ end }}
     </table>
     <button id="change-pw-btn">Change Password</button> <button data-testid="logout-btn" id="logout-btn">Log Out</button>
@@ -206,5 +218,8 @@
     {{ end }}
   {{ end }}
 </div>
+
+{{ template "two-factor-dialog.html" }}
+
 {{ template "footer.html" . }}
 </body>

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/charmbracelet/huh"
 	"strings"
+	"yeetfile/cli/api"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
@@ -111,9 +112,18 @@ func ShowLoginModel() {
 			)
 		}
 
-		err = LogIn(identifier, password, sessionKey, vaultKey)
-		if err != nil {
+		err = LogIn(identifier, password, "", sessionKey, vaultKey)
+		if err != nil && err != api.TwoFactorError {
 			return runFunc(err.Error())
+		} else if err == api.TwoFactorError {
+			for err == api.TwoFactorError {
+				code := showTwoFactorPrompt()
+				err = LogIn(identifier, password, code, sessionKey, vaultKey)
+			}
+
+			if err != nil {
+				return err
+			}
 		}
 
 		showCLISessionNote(string(sessionKey))
@@ -124,6 +134,19 @@ func ShowLoginModel() {
 	if err != nil && err != huh.ErrUserAborted {
 		panic(err)
 	}
+}
+
+func showTwoFactorPrompt() string {
+	var code string
+	_ = huh.NewForm(huh.NewGroup(
+		utils.CreateHeader(
+			"Two-Factor Enabled",
+			"Enter your 2FA or recovery code below"),
+		huh.NewInput().Title("2FA Code").Value(&code),
+		huh.NewConfirm().Affirmative("Submit").Negative(""),
+	)).WithTheme(styles.Theme).Run()
+
+	return code
 }
 
 func showCLISessionNote(sessionKey string) {

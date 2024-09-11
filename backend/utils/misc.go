@@ -28,7 +28,6 @@ func Log(msg string) {
 func Logf(msg string, a ...any) {
 	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
 		log.Printf(msg, a...)
-
 	}
 }
 

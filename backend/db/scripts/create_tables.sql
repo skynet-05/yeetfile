@@ -52,7 +52,9 @@ create table if not exists users
     sub_method          text     default ''::text,
     bandwidth           bigint   default 0,
     pw_hint             bytea    default '\x'::bytea,
-    session_key         text     default ''::text
+    session_key         text     default ''::text,
+    secret              bytea    default '\x'::bytea,
+    recovery_hashes     text[]   default '{}'::text[]
 );
 
 create table if not exists stripe

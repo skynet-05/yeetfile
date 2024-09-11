@@ -15,7 +15,7 @@ import (
 
 // GenerateCaptchaImage takes a verification code string and generates an image
 // to use for verifying non-email users.
-func GenerateCaptchaImage(code string, isCLI bool) string {
+func GenerateCaptchaImage(code string, isCLI bool) (string, error) {
 	// Add spaces to code for legibility
 	//code = strings.Join(strings.Split(code, ""), " ")
 	img := image.NewRGBA(image.Rect(0, 0, 45, 25))
@@ -30,10 +30,10 @@ func GenerateCaptchaImage(code string, isCLI bool) string {
 
 	buf := new(bytes.Buffer)
 	if err := jpeg.Encode(buf, dst, &jpeg.Options{Quality: 100}); err != nil {
-		panic(err)
+		return "", err
 	}
 
-	return base64.StdEncoding.EncodeToString(buf.Bytes())
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
 func addLabel(img *image.RGBA, x, y int, label string) {

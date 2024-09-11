@@ -497,15 +497,15 @@ const generateItemRow = async (item) => {
 }
 
 const generateRow = (link, name, size, modified, id, isFolder, sharedWith, sharedBy) => {
-    let iconClasses = sharedBy ? "vault-icon shared-icon" : "vault-icon";
+    let iconClasses = sharedBy ? "small-icon shared-icon" : "small-icon";
     let icon = `<img class="${iconClasses}" src="/static/icons/file.svg">`
     if (isFolder) {
         icon = `<img class="${iconClasses} accent-icon" src="/static/icons/folder.svg">`
     }
 
     let sharedIcon = generateSharedWithIcon(id, sharedWith);
-    // let linkedIcon = isLinked ? `<img id="${id}-linked" class="vault-icon" src="/static/icons/link.svg">` : ""
-    let sharedByIndicator = sharedBy ? `<br><img class="vault-icon shared-icon" src="/static/icons/owner.svg">&nbsp;${sharedBy}` : ""
+    // let linkedIcon = isLinked ? `<img id="${id}-linked" class="small-icon" src="/static/icons/link.svg">` : ""
+    let sharedByIndicator = sharedBy ? `<br><img class="small-icon shared-icon" src="/static/icons/owner.svg">&nbsp;${sharedBy}` : ""
 
     let idStr = `${actionIDPrefix}-${id}`
     return `<tr id="${id}-row">
@@ -522,7 +522,7 @@ const generateSharedWithIcon = (id, sharedWithCount) => {
         return div + "</div>";
     }
 
-    return `${div}<img class="vault-icon" src="/static/icons/share.svg"> (${sharedWithCount})</div>`
+    return `${div}<img class="small-icon" src="/static/icons/share.svg"> (${sharedWithCount})</div>`
 }
 
 const updateRow = (id, isFolder, name) => {
@@ -853,7 +853,7 @@ const showFileIndicator = (msg: string) => {
 
 const setVaultMessage = msg => {
     let vaultMessage = document.getElementById("vault-message");
-    vaultMessage.innerHTML = `<img class="vault-icon progress-spinner" src="/static/icons/progress.svg">${msg}`;
+    vaultMessage.innerHTML = `<img class="small-icon progress-spinner" src="/static/icons/progress.svg">${msg}`;
 }
 
 if (document.readyState !== 'loading') {

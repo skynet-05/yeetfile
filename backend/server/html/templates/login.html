@@ -6,8 +6,11 @@
     <hr>
     <input type="text" data-testid="identifier" id="identifier" placeholder="Email / Account ID"><br>
     <input type="password" data-testid="password" id="password" placeholder="Password"><br>
-    <input type="submit" data-testid="login-btn" id="login-btn" value="Log In"/>
-    <a id="forgot-password" href="{{ .Base.Endpoints.Forgot }}">Forgot Password</a>
+    <div>
+        <input type="submit" data-testid="login-btn" id="login-btn" value="Log In"/>
+        <img id="login-spinner" class="hidden vert-align-sub small-icon progress-spinner" src="/static/icons/progress.svg">
+        <a id="forgot-password" href="{{ .Base.Endpoints.Forgot }}">Forgot Password</a>
+    </div>
 
     <details>
         <summary>Advanced</summary>
@@ -19,6 +22,8 @@
 </div>
 
 {{ template "vault-password-dialog.html" true }}
+
+{{ template "two-factor-dialog.html" }}
 
 {{ template "footer.html" . }}
 </body>

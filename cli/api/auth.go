@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"yeetfile/cli/requests"
@@ -12,6 +13,7 @@ import (
 )
 
 var ServerPasswordError = errors.New("signup is password restricted on this server")
+var TwoFactorError = errors.New("two factor code missing or incorrect")
 
 // GetAccountInfo fetches the current user's account info
 func (ctx *Context) GetAccountInfo() (shared.AccountResponse, error) {
@@ -45,6 +47,9 @@ func (ctx *Context) Login(login shared.Login) (shared.LoginResponse, string, err
 	if err != nil {
 		return shared.LoginResponse{}, "", err
 	} else if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusForbidden {
+			return shared.LoginResponse{}, "", TwoFactorError
+		}
 		return shared.LoginResponse{}, "", utils.ParseHTTPError(resp)
 	}
 
@@ -312,4 +317,65 @@ func (ctx *Context) ForgotPassword(email string) error {
 	}
 
 	return nil
+}
+
+// Generate2FA requests a TOTP secret from the server. This only succeeds if the
+// user doesn't already have 2FA enabled.
+func (ctx *Context) Generate2FA() (shared.NewTOTP, error) {
+	url := endpoints.TwoFactor.Format(ctx.Server)
+	resp, err := requests.GetRequest(ctx.Session, url)
+	if err != nil {
+		return shared.NewTOTP{}, err
+	} else if resp.StatusCode != http.StatusOK {
+		return shared.NewTOTP{}, utils.ParseHTTPError(resp)
+	}
+
+	var newTOTP shared.NewTOTP
+	err = json.NewDecoder(resp.Body).Decode(&newTOTP)
+	if err != nil {
+		return shared.NewTOTP{}, err
+	}
+
+	return newTOTP, nil
+}
+
+// Disable2FA disables two-factor authentication for a user's account
+func (ctx *Context) Disable2FA(code string) error {
+	endpoint := endpoints.TwoFactor.Format(ctx.Server)
+	url := fmt.Sprintf("%s?code=%s", endpoint, code)
+	resp, err := requests.DeleteRequest(ctx.Session, url, nil)
+	if err != nil {
+		return err
+	} else if resp.StatusCode != http.StatusOK {
+		return utils.ParseHTTPError(resp)
+	}
+
+	return nil
+}
+
+// Finalize2FA submits the secret returned by Generate2FA as well as a 6-digit
+// code generated in the user's 2FA app to finalize setting up 2FA for their
+// account. In response, they receive a number of one-time recovery codes that
+// they can use in the event that they lose their authentication app.
+func (ctx *Context) Finalize2FA(totp shared.SetTOTP) (shared.SetTOTPResponse, error) {
+	url := endpoints.TwoFactor.Format(ctx.Server)
+	reqData, err := json.Marshal(totp)
+	if err != nil {
+		return shared.SetTOTPResponse{}, err
+	}
+
+	resp, err := requests.PostRequest(ctx.Session, url, reqData)
+	if err != nil {
+		return shared.SetTOTPResponse{}, err
+	} else if resp.StatusCode != http.StatusOK {
+		return shared.SetTOTPResponse{}, utils.ParseHTTPError(resp)
+	}
+
+	var setTOTP shared.SetTOTPResponse
+	err = json.NewDecoder(resp.Body).Decode(&setTOTP)
+	if err != nil {
+		return shared.SetTOTPResponse{}, err
+	}
+
+	return setTOTP, nil
 }

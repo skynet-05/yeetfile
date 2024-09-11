@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/lib/pq"
 	"log"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ type User struct {
 	ProtectedKey       []byte
 	PublicKey          []byte
 	PasswordHint       []byte
+	Secret             []byte
 	PaymentID          string
 	MemberExp          time.Time
 	StorageAvailable   int
@@ -341,46 +343,38 @@ func PaymentIDExists(paymentID string) bool {
 	return false
 }
 
-// GetUserPasswordHashByEmail retrieves the password hash for a user with the
-// provided email address.
-func GetUserPasswordHashByEmail(email string) ([]byte, error) {
+// GetUserPasswordHashByEmail retrieves the password hash and the encrypted
+// secret for a user with the provided email address.
+func GetUserPasswordHashByEmail(email string) ([]byte, []byte, error) {
 	var pwHash []byte
+	var secret []byte
 	err := db.QueryRow(`
-		SELECT pw_hash
+		SELECT pw_hash, secret
 		FROM users 
-		WHERE email = $1`, email).Scan(&pwHash)
-	if err != nil && err != sql.ErrNoRows {
+		WHERE email = $1`, email).Scan(&pwHash, &secret)
+	if err != nil {
 		log.Printf("Error querying for user by email: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
-	return pwHash, nil
+	return pwHash, secret, nil
 }
 
-// GetUserPasswordHashByID retrieves the password hash for a user with the
-// provided ID.
-func GetUserPasswordHashByID(id string) ([]byte, error) {
-	rows, err := db.Query(`
-		SELECT pw_hash
+// GetUserPasswordHashByID retrieves the password hash and the encrypted secret
+// for a user with the provided ID.
+func GetUserPasswordHashByID(id string) ([]byte, []byte, error) {
+	var pwHash []byte
+	var secret []byte
+	err := db.QueryRow(`
+		SELECT pw_hash, secret
 		FROM users 
-		WHERE id = $1`, id)
+		WHERE id = $1`, id).Scan(&pwHash, &secret)
 	if err != nil {
 		log.Printf("Error querying for user by id: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var pwHash []byte
-		err = rows.Scan(&pwHash)
-		if err != nil {
-			return nil, err
-		}
-
-		return pwHash, nil
-	}
-
-	return nil, errors.New("unable to find user")
+	return pwHash, secret, nil
 }
 
 // GetUserKeys retrieves the user's public key and their private key, the latter
@@ -412,53 +406,87 @@ func GetUserKeys(id string) ([]byte, []byte, error) {
 
 // GetUserByID retrieves a User struct for given user ID.
 func GetUserByID(id string) (User, error) {
-	rows, err := db.Query(`
-		SELECT email, payment_id, member_expiration,
-		       send_available, send_used, 
-		       storage_available, storage_used,
-		       sub_method, pw_hint
-		FROM users
-		WHERE id = $1`, id)
+	var (
+		email            string
+		paymentID        string
+		expiration       time.Time
+		sendAvailable    int
+		sendUsed         int
+		storageAvailable int
+		storageUsed      int
+		subMethod        string
+		pwHint           []byte
+		secret           []byte
+	)
+	s := `SELECT email, payment_id, member_expiration,
+	             send_available, send_used, 
+		     storage_available, storage_used,
+		     sub_method, pw_hint, secret
+	      FROM users
+	      WHERE id = $1`
+	err := db.QueryRow(s, id).Scan(
+		&email, &paymentID, &expiration,
+		&sendAvailable, &sendUsed,
+		&storageAvailable, &storageUsed,
+		&subMethod, &pwHint, &secret,
+	)
+
 	if err != nil {
 		log.Printf("Error querying for user by id: %s\n", id)
 		return User{}, err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var email string
-		var paymentID string
-		var expiration time.Time
-		var sendAvailable int
-		var sendUsed int
-		var storageAvailable int
-		var storageUsed int
-		var subMethod string
-		var pwHint []byte
-		err = rows.Scan(
-			&email, &paymentID, &expiration,
-			&sendAvailable, &sendUsed,
-			&storageAvailable, &storageUsed,
-			&subMethod, &pwHint)
-		if err != nil {
-			return User{}, err
-		}
+	return User{
+		ID:                 id,
+		Email:              email,
+		PaymentID:          paymentID,
+		MemberExp:          expiration,
+		SendAvailable:      sendAvailable,
+		SendUsed:           sendUsed,
+		StorageAvailable:   storageAvailable,
+		StorageUsed:        storageUsed,
+		SubscriptionMethod: subMethod,
+		PasswordHint:       pwHint,
+		Secret:             secret,
+	}, nil
+}
 
-		return User{
-			ID:                 id,
-			Email:              email,
-			PaymentID:          paymentID,
-			MemberExp:          expiration,
-			SendAvailable:      sendAvailable,
-			SendUsed:           sendUsed,
-			StorageAvailable:   storageAvailable,
-			StorageUsed:        storageUsed,
-			SubscriptionMethod: subMethod,
-			PasswordHint:       pwHint,
-		}, nil
+func GetUserSecret(userID string) ([]byte, error) {
+	var secret []byte
+	s := `SELECT secret FROM users WHERE id=$1`
+	err := db.QueryRow(s, userID).Scan(&secret)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
+	return secret, err
+}
 
-	return User{}, errors.New("error fetching user by id")
+func SetUserSecret(userID string, secret []byte) error {
+	s := `UPDATE users SET secret=$2 WHERE id=$1`
+	_, err := db.Exec(s, userID, secret)
+	return err
+}
+
+func RemoveUser2FA(userID string) error {
+	s := `UPDATE users 
+	      SET secret='\x'::bytea, recovery_hashes='{}'::bytea[]
+	      WHERE id=$1`
+	_, err := db.Exec(s, userID)
+	return err
+}
+
+func GetUserRecoveryCodeHashes(userID string) ([]string, error) {
+	var hashes []string
+	s := `SELECT recovery_hashes FROM users WHERE id=$1`
+	err := db.QueryRow(s, userID).Scan(pq.Array(&hashes))
+
+	return hashes, err
+}
+
+func SetUserRecoveryCodeHashes(userID string, hashes []string) error {
+	s := `UPDATE users SET recovery_hashes=$2 WHERE id=$1`
+	_, err := db.Exec(s, userID, pq.Array(hashes))
+	return err
 }
 
 func GetUserPubKey(userID string) ([]byte, error) {
@@ -483,29 +511,19 @@ func GetUserPubKey(userID string) ([]byte, error) {
 }
 
 func GetUserPublicName(userID string) (string, error) {
-	rows, err := db.Query(`SELECT email FROM users WHERE id=$1`, userID)
+	var email string
+	err := db.QueryRow(`SELECT email FROM users WHERE id=$1`, userID).Scan(&email)
 	if err != nil {
 		log.Printf("Error querying for user's public name")
 		return "", err
 	}
 
-	defer rows.Close()
-	if rows.Next() {
-		var email string
-		err = rows.Scan(&email)
-		if err != nil {
-			return "", err
-		}
-
-		if len(email) == 0 {
-			idTail := userID[len(userID)-4:]
-			return fmt.Sprintf("*%s", idTail), nil
-		}
-
-		return email, nil
+	if len(email) == 0 {
+		idTail := userID[len(userID)-4:]
+		return fmt.Sprintf("*%s", idTail), nil
 	}
 
-	return "", errors.New("unable to fetch user's public name")
+	return email, nil
 }
 
 // GetUserIDByEmail returns a user's ID given their email address.

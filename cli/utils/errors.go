@@ -17,7 +17,3 @@ func HandleCLIError(msg string, err error) {
 	styles.PrintErrStr(fmt.Sprintf("ERROR: %s - %v\n", msg, err))
 	os.Exit(1)
 }
-
-//func ErrOK(err error) {
-//	return err == nil || err != huh.ErrUserAborted || err != char
-//}

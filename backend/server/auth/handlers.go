@@ -20,19 +20,23 @@ import (
 
 // LoginHandler handles a POST request to /login to log the user in.
 func LoginHandler(w http.ResponseWriter, req *http.Request) {
-	var err error
-
 	var login shared.Login
-	login, err = utils.GetStructFromFormOrJSON(&login, req)
-	if err != nil {
+	if json.NewDecoder(req.Body).Decode(&login) != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	userID, err := ValidateCredentials(login.Identifier, login.LoginKeyHash)
+	userID, err := ValidateCredentials(login.Identifier, login.LoginKeyHash, login.Code, true)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte("User not found, or incorrect password"))
+		if err == Missing2FAErr {
+			http.Error(w, "TOTP required", http.StatusForbidden)
+			return
+		} else if err == Failed2FAErr {
+			http.Error(w, "TOTP incorrect", http.StatusForbidden)
+			return
+		}
+
+		http.Error(w, "User not found, or incorrect password", http.StatusNotFound)
 		return
 	}
 
@@ -183,6 +187,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			SendUsed:         user.SendUsed,
 			SubscriptionExp:  user.MemberExp,
 			HasPasswordHint:  len(user.PasswordHint) > 0,
+			Has2FA:           len(user.Secret) > 0,
 		})
 	}
 }
@@ -304,6 +309,7 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 func LogoutHandler(w http.ResponseWriter, req *http.Request) {
 	err := session.RemoveSession(w, req)
 	if err != nil {
+		log.Printf("Error logging out: %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -502,7 +508,7 @@ func finishEmailChangeHandler(w http.ResponseWriter, req *http.Request, id strin
 		return
 	}
 
-	userID, err := ValidateCredentials(id, changeEmail.OldLoginKeyHash)
+	userID, err := ValidateCredentials(id, changeEmail.OldLoginKeyHash, "", false)
 	if err != nil || id != userID {
 		http.Error(w, "Incorrect password", http.StatusUnauthorized)
 		return
@@ -545,7 +551,7 @@ func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) 
 		return
 	}
 
-	userID, err := ValidateCredentials(id, changePassword.OldLoginKeyHash)
+	userID, err := ValidateCredentials(id, changePassword.OldLoginKeyHash, "", false)
 	if err != nil || id != userID {
 		http.Error(w, "Incorrect password", http.StatusUnauthorized)
 		return
@@ -602,6 +608,53 @@ func ChangeHintHandler(w http.ResponseWriter, req *http.Request, id string) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func TwoFactorHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	switch req.Method {
+	case http.MethodGet:
+		newTOTP, err := generateUserTotp(userID)
+		if err != nil {
+			log.Printf("Error generating 2FA: %v\n", err)
+			http.Error(w, "Error generating 2FA", http.StatusBadRequest)
+			return
+		}
+
+		err = json.NewEncoder(w).Encode(newTOTP)
+		if err != nil {
+			http.Error(w, "Error sending response", http.StatusInternalServerError)
+		}
+	case http.MethodPost:
+		var totp shared.SetTOTP
+		if err := json.NewDecoder(req.Body).Decode(&totp); err != nil {
+			http.Error(w, "Error decoding request body", http.StatusBadRequest)
+			return
+		}
+
+		response, err := setTOTP(userID, totp)
+		if err != nil {
+			log.Printf("Failed to set totp: %v\n", err)
+			http.Error(w, "Failed to set totp", http.StatusInternalServerError)
+			return
+		}
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			http.Error(w, "Error sending response", http.StatusInternalServerError)
+		}
+	case http.MethodDelete:
+		code := req.URL.Query().Get("code")
+		if len(code) == 0 {
+			http.Error(w, "Missing TOTP code", http.StatusBadRequest)
+			return
+		}
+
+		err := removeTOTP(userID, code)
+		if err != nil {
+			http.Error(w, "Invalid TOTP code", http.StatusUnauthorized)
+			return
+		}
+	}
 }
 
 // RecyclePaymentIDHandler handles replacing the user's current payment ID with

@@ -1,0 +1,31 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<div id="center-div">
+  <h1>Two-Factor Authentication</h1>
+  <hr>
+  <div id="loading-div">
+    Loading... <img id="login-spinner" class="vert-align-bottom small-icon progress-spinner" src="/static/icons/progress.svg">
+  </div>
+  <div class="hidden" id="2fa-div">
+    <p>Scan the QR below, and enter the 6-digit code from your authenticator app.</p>
+    <img id="2fa-qr" alt="2fa qr code"><br>
+    <code id="2fa-secret"></code><br><br>
+    <label for="2fa-code">Code:</label>
+    <input id="2fa-code" type="text">
+    <input type="submit" id="submit-2fa" value="Submit"/>
+  </div>
+  <div class="hidden" id="recovery-div">
+    <p>Two-factor authentication has been enabled for your account!</p>
+    <p>The recovery codes below are <i>one-time codes</i> that can be used to
+    access your account if you ever lose your 2FA device. It's highly
+    recommended that you write these down somewhere safe.</p>
+    <p>If you lose your 2FA device, and don't have a recovery code, you
+    will not be able to regain access to your account.</p>
+    <code id="recovery-codes"></code><br>
+    <a href="{{ .Base.Endpoints.Account }}">Back to Account</a>
+  </div>
+  {{ template "messages.html" . }}
+</div>
+{{ template "footer.html" . }}
+</body>

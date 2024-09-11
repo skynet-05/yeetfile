@@ -1,11 +1,13 @@
 import * as crypto from "./crypto.js";
 import { Endpoints } from "./endpoints.js";
 import { YeetFileDB } from "./db.js";
+import { Login, LoginResponse } from "./interfaces.js";
 
 const useVaultPasswordKey = "UseVaultPassword";
 const useVaultPasswordValue = "true";
 
 let vaultPasswordDialog;
+let twoFactorDialog;
 let vaultPasswordCB;
 let loginBtn;
 let buttonLabel;
@@ -13,10 +15,11 @@ let buttonLabel;
 const init = () => {
     vaultPasswordCB = document.getElementById("vault-pass-cb");
     vaultPasswordDialog = document.getElementById("vault-pass-dialog");
+    twoFactorDialog = document.getElementById("two-factor-dialog");
     loginBtn = document.getElementById("login-btn");
     buttonLabel = loginBtn.value;
     loginBtn.addEventListener("click", async () => {
-        await login();
+        await login("");
     });
 
     let forgotLink = document.getElementById("forgot-password") as HTMLAnchorElement;
@@ -46,10 +49,26 @@ const resetLoginButton = () => {
     btn.value = buttonLabel;
 }
 
-const login = async () => {
-    let btn = document.getElementById("login-btn") as HTMLButtonElement;
-    btn.disabled = true;
-    btn.value = "Logging in...";
+const disableInputs = (disabled: boolean) => {
+    let elements = [
+        document.getElementById("login-btn") as HTMLButtonElement,
+        document.getElementById("identifier") as HTMLInputElement,
+        document.getElementById("password") as HTMLInputElement
+    ];
+
+    for (let i in elements) {
+        elements[i].disabled = disabled;
+    }
+
+    let spinner = document.getElementById("login-spinner");
+    let forgotPw = document.getElementById("forgot-password");
+
+    spinner.style.display = disabled ? "inline" : "none";
+    forgotPw.style.display = disabled ? "none" : "inline";
+}
+
+const login = async (twoFactorCode: string) => {
+    disableInputs(true);
 
     let identifier = document.getElementById("identifier") as HTMLInputElement;
     let password = document.getElementById("password") as HTMLInputElement;
@@ -68,22 +87,35 @@ const login = async () => {
         next = params.get("next")
     }
 
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", Endpoints.Login.path, false);
-    xhr.setRequestHeader("Content-Type", "application/json");
+    let loginBody = new Login();
+    loginBody.loginKeyHash = loginKeyHash;
+    loginBody.identifier = identifier.value;
+    loginBody.code = twoFactorCode;
 
-    xhr.onreadystatechange = async () => {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            let response = JSON.parse(xhr.responseText);
-            let privKeyBytes = base64ToArray(response.protectedKey);
-            let pubKeyBytes = base64ToArray(response.publicKey);
-            let decPrivKeyBytes = new Uint8Array(await crypto.decryptChunk(userKey, privKeyBytes));
+    fetch(Endpoints.Login.path, {
+        method: "POST",
+        body: JSON.stringify(loginBody, jsonReplacer)
+    }).then(async response => {
+        if (!response.ok) {
+            if (response.status == 403) {
+                showTwoFactorDialog();
+            } else {
+                let errMsg = await response.text();
+                showMessage(`Error ${response.status}: ${errMsg}`, true);
+                disableInputs(false);
+            }
+        } else {
+            let loginResponse = new LoginResponse(await response.json());
+            let privKey = new Uint8Array(await crypto.decryptChunk(
+                userKey, loginResponse.protectedKey));
+            let pubKey = loginResponse.publicKey;
 
             if (vaultPasswordCB.checked) {
-                showVaultPassDialog(decPrivKeyBytes, pubKeyBytes);
+                showVaultPassDialog(privKey, pubKey);
             } else {
                 localStorage.setItem(useVaultPasswordKey, "");
-                new YeetFileDB().insertVaultKeyPair(decPrivKeyBytes, pubKeyBytes, "", success => {
+                let db = new YeetFileDB();
+                db.insertVaultKeyPair(privKey, pubKey, "", success => {
                     if (success) {
                         window.location.assign(next);
                     } else {
@@ -92,17 +124,8 @@ const login = async () => {
                     }
                 });
             }
-        } else if (xhr.readyState === 4 && xhr.status !== 200) {
-            showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
-            btn.disabled = false;
-            btn.value = "Log In";
         }
-    };
-
-    xhr.send(JSON.stringify({
-        identifier: identifier.value,
-        loginKeyHash: Array.from(loginKeyHash)
-    }));
+    });
 }
 
 const isValidIdentifier = (identifier) => {
@@ -111,13 +134,37 @@ const isValidIdentifier = (identifier) => {
     } else {
         if (identifier.length !== 16) {
             showMessage("Missing email or 16-digit account ID", true);
-            loginBtn.disabled = false;
-            loginBtn.value = buttonLabel;
+            disableInputs(false);
             return false;
         }
 
         return true;
     }
+}
+
+const showTwoFactorDialog = () => {
+    let dialog = document.getElementById("two-factor-dialog") as HTMLDialogElement;
+    let codeInput = document.getElementById("two-factor-code") as HTMLInputElement;
+    let submit = document.getElementById("submit-2fa") as HTMLButtonElement;
+    let cancel = document.getElementById("cancel-2fa") as HTMLButtonElement;
+
+    codeInput.addEventListener("keydown", (event: KeyboardEvent) => {
+        if (event.key === "Enter") {
+            submit.click();
+        }
+    });
+
+    submit.addEventListener("click",  () => {
+        dialog.close();
+        login(codeInput.value);
+    });
+
+    cancel.addEventListener("click", () => {
+        disableInputs(false);
+        dialog.close();
+    });
+
+    dialog.showModal();
 }
 
 const showVaultPassDialog = (privKeyBytes, pubKeyBytes) => {

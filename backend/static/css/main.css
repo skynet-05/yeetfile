@@ -135,6 +135,36 @@ progress {
     accent-color: var(--accent-color);
 }
 
+.progress-spinner {
+    margin-right: 5px;
+    -webkit-transform-origin: 50% 50%;
+    -moz-transform-origin: 50% 50%;
+    -o-transform-origin: 50% 50%;
+    transform-origin: 50% 50%;
+    animation-name: spin;
+    animation-duration: 1000ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+
+@-moz-keyframes spin {
+    from { -moz-transform: rotate(0deg); }
+    to { -moz-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+    from { -webkit-transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); }
+}
+@keyframes spin {
+    from {transform:rotate(0deg);}
+    to {transform:rotate(360deg);}
+}
+
+.small-icon {
+    cursor: pointer;
+    height: 23px;
+}
+
 #center-div, #nojs-div {
     position: absolute;
     top: 50%;
@@ -237,6 +267,14 @@ div {
 
 .hidden {
     display: none;
+}
+
+.vert-align-sub {
+    vertical-align: sub;
+}
+
+.vert-align-bottom {
+    vertical-align: bottom;
 }
 
 #messages {
@@ -461,6 +499,10 @@ input:disabled, textarea:disabled {
     .selected-page {
         border-bottom: 2px solid white !important;
         border-radius: 0 !important;
+    }
+
+    .small-icon {
+        filter: invert(100%);
     }
 }
 

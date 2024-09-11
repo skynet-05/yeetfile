@@ -1,7 +1,6 @@
 package html
 
 import (
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -96,13 +95,13 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // SignupPageHandler returns the HTML page for signing up for an account
-func SignupPageHandler(w http.ResponseWriter, req *http.Request) {
+func SignupPageHandler(w http.ResponseWriter, _ *http.Request) {
 	_ = templates.ServeTemplate(
 		w,
 		templates.SignupHTML,
 		templates.SignupTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:     session.IsValidSession(req),
+				LoggedIn:     false,
 				Title:        "Create Account",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"signup.js"},
@@ -122,7 +121,7 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 		templates.LoginHTML,
 		templates.Template{
 			Base: templates.BaseTemplate{
-				LoggedIn:       session.IsValidSession(req),
+				LoggedIn:       false,
 				Title:          "Log In",
 				SuccessMessage: w.Header().Get(SuccessHeader),
 				ErrorMessage:   w.Header().Get(ErrorHeader),
@@ -139,8 +138,6 @@ func LoginPageHandler(w http.ResponseWriter, req *http.Request) {
 func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	user, err := db.GetUserByID(userID)
 	if err != nil || user.ID != userID {
-		log.Println(user.ID)
-		log.Println(userID)
 		handleError(w, "Unable to fetch user info", http.StatusUnauthorized)
 		return
 	}
@@ -179,6 +176,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 			SubscriptionTemplate: subscriptions.TemplateValues,
 			BillingEndpoints:     endpoints.BillingPageEndpoints,
 			HasPasswordHint:      hasHint,
+			Has2FA:               user.Secret != nil && len(user.Secret) > 0,
 		},
 	)
 }
@@ -230,7 +228,7 @@ func ChangeEmailPageHandler(w http.ResponseWriter, req *http.Request, id string)
 		templates.ChangeEmailHTML,
 		templates.ChangeEmailTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:     session.IsValidSession(req),
+				LoggedIn:     true,
 				Title:        "Change Email",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"change_email.js"},
@@ -243,13 +241,13 @@ func ChangeEmailPageHandler(w http.ResponseWriter, req *http.Request, id string)
 	)
 }
 
-func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
+func ChangePasswordPageHandler(w http.ResponseWriter, _ *http.Request, _ string) {
 	_ = templates.ServeTemplate(
 		w,
 		templates.ChangePasswordHTML,
 		templates.Template{
 			Base: templates.BaseTemplate{
-				LoggedIn:     session.IsValidSession(req),
+				LoggedIn:     true,
 				Title:        "Change Password",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"change_password.js"},
@@ -261,17 +259,35 @@ func ChangePasswordPageHandler(w http.ResponseWriter, req *http.Request, _ strin
 	)
 }
 
-func ChangeHintPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
+func ChangeHintPageHandler(w http.ResponseWriter, _ *http.Request, _ string) {
 	_ = templates.ServeTemplate(
 		w,
 		templates.ChangeHintHTML,
 		templates.Template{
 			Base: templates.BaseTemplate{
-				LoggedIn:     session.IsValidSession(req),
+				LoggedIn:     true,
 				Title:        "Set Password Hint",
 				ErrorMessage: w.Header().Get(ErrorHeader),
 				Javascript:   []string{"change_hint.js"},
 				CSS:          []string{"change.css"},
+				Config:       config.HTMLConfig,
+				Endpoints:    endpoints.HTMLPageEndpoints,
+			},
+		},
+	)
+}
+
+func TwoFactorPageHandler(w http.ResponseWriter, _ *http.Request, _ string) {
+	_ = templates.ServeTemplate(
+		w,
+		templates.TwoFactorHTML,
+		templates.Template{
+			Base: templates.BaseTemplate{
+				LoggedIn:     true,
+				Title:        "Two-Factor Auth",
+				ErrorMessage: w.Header().Get(ErrorHeader),
+				Javascript:   []string{"enable_2fa.js"},
+				CSS:          nil,
 				Config:       config.HTMLConfig,
 				Endpoints:    endpoints.HTMLPageEndpoints,
 			},

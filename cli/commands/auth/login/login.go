@@ -10,12 +10,13 @@ import (
 // LogIn logs into YeetFile by using the provided identifier and password to
 // generate the login key hash, and stores the user's key pair in their config
 // directory
-func LogIn(identifier, password string, sessionKey, vaultKey []byte) error {
+func LogIn(identifier, password, code string, sessionKey, vaultKey []byte) error {
 	userKey, loginKeyHash := crypto.GenerateUserKeys(identifier, password)
 
 	login := shared.Login{
 		Identifier:   identifier,
 		LoginKeyHash: loginKeyHash,
+		Code:         code,
 	}
 
 	loginResponse, session, err := globals.API.Login(login)

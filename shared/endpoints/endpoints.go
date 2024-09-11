@@ -17,6 +17,7 @@ type HTMLEndpoints struct {
 	ChangeHint     string
 	ChangePassword string
 	VerifyEmail    string
+	TwoFactor      string
 }
 
 type BillingEndpoints struct {
@@ -35,6 +36,7 @@ var (
 	Account        = Endpoint("/api/account")
 	Forgot         = Endpoint("/api/forgot")
 	Session        = Endpoint("/api/session")
+	TwoFactor      = Endpoint("/api/2fa")
 	VerifyAccount  = Endpoint("/api/verify/account")
 	VerifyEmail    = Endpoint("/api/verify/email")
 	ChangeEmail    = Endpoint("/api/change/email/*")
@@ -80,6 +82,7 @@ var (
 	HTMLChangePassword = Endpoint("/change/password")
 	HTMLChangeHint     = Endpoint("/change/hint")
 	HTMLVerifyEmail    = Endpoint("/verify/email")
+	HTMLTwoFactor      = Endpoint("/2fa")
 )
 
 var JSVarNameMap = map[Endpoint]string{
@@ -89,6 +92,7 @@ var JSVarNameMap = map[Endpoint]string{
 	Forgot:         "Forgot",
 	Session:        "Session",
 	Account:        "Account",
+	TwoFactor:      "TwoFactor",
 	VerifyAccount:  "VerifyAccount",
 	VerifyEmail:    "VerifyEmail",
 	ChangeEmail:    "ChangeEmail",
@@ -127,6 +131,7 @@ var JSVarNameMap = map[Endpoint]string{
 	HTMLChangePassword: "HTMLChangePassword",
 	HTMLChangeHint:     "HTMLChangeHint",
 	HTMLVerifyEmail:    "HTMLVerifyEmail",
+	HTMLTwoFactor:      "HTMLTwoFactor",
 }
 
 func (e Endpoint) Format(server string, args ...string) string {
@@ -155,6 +160,7 @@ func init() {
 		ChangePassword: string(HTMLChangePassword),
 		ChangeHint:     string(HTMLChangeHint),
 		VerifyEmail:    string(HTMLVerifyEmail),
+		TwoFactor:      string(HTMLTwoFactor),
 	}
 
 	BillingPageEndpoints = BillingEndpoints{

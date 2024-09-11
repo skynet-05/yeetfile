@@ -22,6 +22,11 @@ const init = () => {
         setEmailLink.addEventListener("click", setEmail);
     }
 
+    let disable2FALink = document.getElementById("disable-2fa");
+    if (disable2FALink) {
+        disable2FALink.addEventListener("click", disable2FA);
+    }
+
     // let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
     // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
 
@@ -125,6 +130,45 @@ const setEmail = () => {
             alert("Request failed");
         });
     }
+}
+
+const disable2FA = () => {
+    let dialog = document.getElementById("two-factor-dialog") as HTMLDialogElement;
+    let message = document.getElementById("two-factor-message") as HTMLParagraphElement;
+    let codeInput = document.getElementById("two-factor-code") as HTMLInputElement;
+    let submit = document.getElementById("submit-2fa") as HTMLButtonElement;
+    let cancel = document.getElementById("cancel-2fa") as HTMLButtonElement;
+
+    message.innerHTML = "To disable two-factor authentication, type in your 2FA " +
+        "code or a recovery code below."
+
+    codeInput.addEventListener("keydown", (event: KeyboardEvent) => {
+        if (event.key === "Enter") {
+            submit.click();
+        }
+    });
+
+    submit.className = "destructive-btn";
+    submit.innerHTML = "Disable";
+    submit.addEventListener("click",  () => {
+        dialog.close();
+        fetch(`${Endpoints.TwoFactor.path}?code=${codeInput.value}`, {
+            method: "DELETE",
+        }).then(response => {
+            if (response.ok) {
+                alert("Two-factor authentication disabled!");
+                window.location.reload();
+            } else {
+                alert("Failed to disable 2FA -- double check your 2FA code and try again.");
+            }
+        });
+    });
+
+    cancel.addEventListener("click", () => {
+        dialog.close();
+    });
+
+    dialog.showModal();
 }
 
 const recyclePaymentID = () => {

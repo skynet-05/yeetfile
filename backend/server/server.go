@@ -66,7 +66,8 @@ func Run(addr string) {
 		{POST, endpoints.VerifyAccount, LimiterMiddleware(auth.VerifyAccountHandler)},
 		{GET, endpoints.Session, session.SessionHandler},
 		{GET, endpoints.Logout, auth.LogoutHandler},
-		{POST, endpoints.Login, auth.LoginHandler},
+		{GET | POST | DELETE, endpoints.TwoFactor, AuthMiddleware(auth.TwoFactorHandler)},
+		{POST, endpoints.Login, LimiterMiddleware(auth.LoginHandler)},
 		{POST, endpoints.Signup, LimiterMiddleware(auth.SignupHandler)},
 		{GET | PUT | DELETE, endpoints.Account, AuthMiddleware(auth.AccountHandler)},
 		{POST, endpoints.Forgot, LimiterMiddleware(auth.ForgotPasswordHandler)},
@@ -89,14 +90,15 @@ func Run(addr string) {
 		{GET, endpoints.HTMLVault, AuthMiddleware(html.VaultPageHandler)},
 		{GET, endpoints.HTMLVaultFolder, AuthMiddleware(html.VaultPageHandler)},
 		{GET, endpoints.HTMLSendDownload, html.DownloadPageHandler},
-		{GET, endpoints.HTMLSignup, html.SignupPageHandler},
-		{GET, endpoints.HTMLLogin, html.LoginPageHandler},
-		{GET, endpoints.HTMLForgot, html.ForgotPageHandler},
+		{GET, endpoints.HTMLSignup, NoAuthMiddleware(html.SignupPageHandler)},
+		{GET, endpoints.HTMLLogin, NoAuthMiddleware(html.LoginPageHandler)},
+		{GET, endpoints.HTMLForgot, NoAuthMiddleware(html.ForgotPageHandler)},
 		{GET, endpoints.HTMLAccount, AuthMiddleware(html.AccountPageHandler)},
 		{GET, endpoints.HTMLVerifyEmail, html.VerifyPageHandler},
 		{GET, endpoints.HTMLChangeEmail, AuthMiddleware(html.ChangeEmailPageHandler)},
 		{GET, endpoints.HTMLChangePassword, AuthMiddleware(html.ChangePasswordPageHandler)},
 		{GET, endpoints.HTMLChangeHint, AuthMiddleware(html.ChangeHintPageHandler)},
+		{GET, endpoints.HTMLTwoFactor, AuthMiddleware(html.TwoFactorPageHandler)},
 
 		// Misc
 		{

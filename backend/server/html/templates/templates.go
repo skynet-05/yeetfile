@@ -23,6 +23,7 @@ const (
 	ChangeEmailHTML    = "change_email.html"
 	ChangePasswordHTML = "change_password.html"
 	ChangeHintHTML     = "change_hint.html"
+	TwoFactorHTML      = "enable_2fa.html"
 )
 
 //go:embed *.html
@@ -82,6 +83,7 @@ type AccountTemplate struct {
 	BTCPayConfigured     bool
 	BillingConfigured    bool
 	HasPasswordHint      bool
+	Has2FA               bool
 	BillingEndpoints     endpoints.BillingEndpoints
 	SubscriptionTemplate subscriptions.SubscriptionTemplateValues
 }
