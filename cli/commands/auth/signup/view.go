@@ -260,7 +260,9 @@ func showCaptchaModel(captchaStr string, errorMessages ...string) string {
 
 	err = huh.NewForm(
 		huh.NewGroup(
-			huh.NewNote().Title("Verification Code").Description(codeStr),
+			huh.NewNote().
+				Title("Verification Code").
+				Description(codeStr),
 			huh.NewInput().
 				Title("Enter Code").
 				Description(desc).

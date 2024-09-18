@@ -79,46 +79,54 @@ func shareVaultItem(
 	}, shareErr
 }
 
-func DeleteVaultFolder(id, userID string, isShared bool) error {
+// DeleteVaultFolder recursively deletes the folder matching the specified
+// folder ID and all of its subfolders, returning the amount of freed space
+func DeleteVaultFolder(id, userID string, isShared bool) (int, error) {
+	freed := 0
 	if isShared {
 		// Delete shared folder reference and return
-		return db.DeleteSharedFolder(id, userID)
+		return 0, db.DeleteSharedFolder(id, userID)
 	}
 
 	subfolders, err := db.GetSubfolders(id, userID, shared.FolderOwnershipInfo{})
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, sub := range subfolders {
-		err = DeleteVaultFolder(sub.ID, userID, isShared)
+		subFreed, err := DeleteVaultFolder(sub.ID, userID, isShared)
 		if err != nil {
-			return err
+			return 0, err
 		}
+
+		freed += subFreed
 	}
 
 	items, _, err := db.GetVaultItems(userID, id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	for _, item := range items {
-		_, err = deleteVaultFile(item.ID, userID, false)
+		freedBytes, err := deleteVaultFile(item.ID, userID, false)
 		if err != nil {
-			return err
+			return 0, err
 		}
+
+		freed += freedBytes
 	}
 
 	err = db.DeleteVaultFolder(id, userID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	err = db.RemoveShareEntryByItemID(id)
 
-	return err
+	return freed, err
 }
 
+// deleteVaultFile deletes the file matching the specified ID and the
 func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 	if isShared {
 		// Delete shared file reference and return

@@ -12,10 +12,10 @@
         <a id="forgot-password" href="{{ .Base.Endpoints.Forgot }}">Forgot Password</a>
     </div>
 
-    <details>
+    <details data-testid="advanced-login-options">
         <summary>Advanced</summary>
         <label for="vault-pass-cb">Set session-specific Vault password:</label>
-        <input type="checkbox" id="vault-pass-cb"><br>
+        <input data-testid="vault-pass-cb" type="checkbox" id="vault-pass-cb"><br>
     </details>
 
     {{ template "messages.html" . }}

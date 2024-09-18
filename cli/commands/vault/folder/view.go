@@ -3,6 +3,7 @@ package folder
 import (
 	"github.com/charmbracelet/huh"
 	"yeetfile/cli/commands/vault/internal"
+	"yeetfile/cli/styles"
 )
 
 func RunModel() (internal.Event, error) {
@@ -16,7 +17,7 @@ func RunModel() (internal.Event, error) {
 		confirm,
 	))
 
-	err := form.Run()
+	err := form.WithTheme(styles.Theme).Run()
 	if confirmed {
 		return internal.Event{
 			Value:  folderName,

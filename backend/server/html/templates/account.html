@@ -89,7 +89,26 @@
       <button data-testid="delete-btn" id="delete-btn" class="red-button">Delete Account</button>
     </details>
   </div>
-  {{ template "messages.html" . }}
+  <script src="/static/js/messages.js"></script>
+  {{ if ne .ErrorMessage "" }}
+  <div class="important-message" id="messages">
+    <hr>
+    <p id="error-message">{{ .ErrorMessage }}</p>
+    <p id="success-message"></p>
+  </div>
+  {{ else if ne .SuccessMessage "" }}
+  <div class="important-message" id="messages">
+    <hr>
+    <p id="error-message"></p>
+    <p id="success-message">{{ .SuccessMessage }}</p>
+  </div>
+  {{ else }}
+  <div id="messages">
+    <hr>
+    <p id="error-message"></p>
+    <p id="success-message"></p>
+  </div>
+  {{ end }}
   {{ if or .Base.Config.StripeEnabled .Base.Config.BTCPayEnabled }}
     <hr>
     <div class="subscription-container">

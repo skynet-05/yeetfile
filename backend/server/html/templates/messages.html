@@ -1,20 +1,6 @@
 <script src="/static/js/messages.js"></script>
-{{ if ne .Base.ErrorMessage "" }}
-    <div class="important-message" id="messages">
-        <hr>
-        <p id="error-message">{{ .Base.ErrorMessage }}</p>
-        <p id="success-message"></p>
-    </div>
-{{ else if ne .Base.SuccessMessage "" }}
-    <div class="important-message" id="messages">
-        <hr>
-        <p id="error-message"></p>
-        <p id="success-message">{{ .Base.SuccessMessage }}</p>
-    </div>
-{{ else }}
-    <div id="messages">
-        <hr>
-        <p id="error-message"></p>
-        <p id="success-message"></p>
-    </div>
-{{ end }}
+<div id="messages">
+    <hr>
+    <p id="error-message"></p>
+    <p id="success-message"></p>
+</div>

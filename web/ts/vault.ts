@@ -5,16 +5,67 @@ import * as constants from "./constants.js";
 import { Endpoints } from "./endpoints.js";
 import * as interfaces from "./interfaces.js"
 import { YeetFileDB } from "./db.js";
+import * as render from "./render.js";
+import * as fragments from "./fragments.js";
+import {DeleteResponse, VaultItem} from "./interfaces.js";
 
 const gapFill = 9;
+const closeFileID = "close-file";
 const actionIDPrefix = "action";
 const folderIDPrefix = "load-folder";
 const itemIDPrefix = "load-item";
 const sharedWithSuffix = "sharedwith";
+const folderRowSuffix = "folder-row";
+const fileRowSuffix = "file-row";
 
 const emptyRow = `<tr class="blank-row"><td colspan="4"></td></tr>`
 const vaultHome = `<a id="${folderIDPrefix}-" href="#">Home</a>`;
+const closeFile = `<a id="${closeFileID}" href="#">Close</a>`;
 const folderPlaceholder = `<a href="/vault">← Back</a> / ...`
+
+class VaultViewFile {
+    decName: string;
+    key: CryptoKey;
+    [key: string]: any;
+
+    constructor(item: interfaces.VaultItem, key: CryptoKey, decName: string) {
+        Object.assign(this, item);
+        this.key = key;
+        this.decName = decName;
+    }
+}
+
+class VaultViewFolder {
+    decName: string;
+    key: CryptoKey;
+    [key: string]: any;
+
+    constructor(item: interfaces.VaultFolder, key: CryptoKey, decName: string) {
+        Object.assign(this, item);
+        this.key = key;
+        this.decName = decName;
+    }
+}
+
+type FolderCache = {
+    [key: string]: interfaces.VaultFolderResponse;
+};
+
+type CurrentFiles = {
+    [key: string]: VaultViewFile;
+}
+
+type CurrentFolders = {
+    [key: string]: VaultViewFolder;
+}
+
+enum View {
+    File = 0,
+    Folder
+}
+
+let cache: FolderCache = {};
+let folderStatus: string = "";
 
 let folderDialog;
 let subfolderParentID;
@@ -25,8 +76,8 @@ let folderKey;
 
 let pauseInteractions = false;
 
-let vaultItems = {};
-let vaultFolders = {};
+let currentFiles: CurrentFiles = {};
+let currentFolders: CurrentFolders = {};
 
 const init = () => {
     folderID = getFolderID();
@@ -57,21 +108,7 @@ const init = () => {
         vaultFileInput.click();
     });
 
-    vaultFileInput.addEventListener("change", async () => {
-        let currentFile = 0;
-        let totalFiles = vaultFileInput.files.length;
-
-        const startUpload = async idx => {
-            await uploadFile(vaultFileInput.files[idx], idx, totalFiles, async success => {
-                if (success && idx < totalFiles - 1) {
-                    await startUpload(idx + 1);
-                }
-            });
-        }
-
-        await startUpload(currentFile);
-    })
-
+    vaultFileInput.addEventListener("change", uploadUserSelectedFiles);
     vaultFileInput.addEventListener("click touchstart", () => {
         vaultFileInput.value = "";
     });
@@ -86,32 +123,66 @@ const init = () => {
 
     setupFolderDialog();
     showStorageBar("", 0);
+    document.addEventListener("click", clickListener, { passive: true });
+}
 
-    document.addEventListener("click", event => {
-        let target = (event.target as HTMLElement)
-        if (target.id.startsWith(folderIDPrefix)) {
-            let pageID = target.id.split("-");
-            let id = pageID[pageID.length - 1];
-            loadFolder(id);
-        } else if (target.id.startsWith(itemIDPrefix)) {
-            let itemID = target.id.split("-");
-            let id = itemID[itemID.length - 1];
-            downloadFile(id);
-        }
-    });
+/**
+ * Handles events when a user clicks on an element in the vault view (file,
+ * folder, actions button, etc).
+ * @param event {MouseEvent}
+ */
+const clickListener = (event: MouseEvent) => {
+    if (dialogs.isDialogOpen() || (event.target as Element).closest("code")) {
+        return;
+    }
 
-    document.addEventListener("click", event => {
-        if (dialogs.isDialogOpen()) {
-            return;
-        }
+    let target = (event.target as HTMLElement);
+    if (target.id.startsWith(actionIDPrefix)) {
+        let itemIDParts = target.id.split("-");
+        let itemID = itemIDParts[itemIDParts.length - 1];
+        showActionsDialog(itemID);
+    } else if (target.id.startsWith(folderIDPrefix)) {
+        let pageID = target.id.split("-");
+        let id = pageID[pageID.length - 1];
+        loadFolder(id);
+    } else if (target.id.startsWith(itemIDPrefix)) {
+        let itemID = target.id.split("-");
+        let id = itemID[itemID.length - 1];
+        loadFile(id);
+    } else if (target.id === closeFileID) {
+        closeFileView();
+    }
+}
 
-        let target = (event.target as HTMLElement)
-        if (target.id.startsWith(actionIDPrefix)) {
-            let itemIDParts = target.id.split("-");
-            let itemID = itemIDParts[itemIDParts.length - 1];
-            showActionsDialog(itemID);
-        }
-    });
+/**
+ * Initiates file upload after files are selected by the user
+ */
+const uploadUserSelectedFiles = async () => {
+    let vaultFileInput = document.getElementById("file-input") as HTMLInputElement;
+    let currentFile = 0;
+    let totalFiles = vaultFileInput.files.length;
+
+    const startUpload = async idx => {
+        await uploadFile(
+            vaultFileInput.files[idx],
+            idx,
+            totalFiles,
+            async (success, file, view ) => {
+                if (success) {
+                    console.log(file);
+                    console.log(view);
+                    let row = await generateFileRow(view);
+                    currentFiles[file.id] = view;
+                    cache[folderID].items.unshift(file);
+                    insertFileRow(row);
+                    if (idx < totalFiles - 1) {
+                        await startUpload(idx + 1);
+                    }
+                }
+            });
+    }
+
+    await startUpload(currentFile);
 }
 
 /**
@@ -178,14 +249,15 @@ const getFolderID = (): string => {
  * @param file {File} - The file to upload
  * @param idx {number} - The index of the file being uploaded (if multiple)
  * @param total {number} - The total number of files being uploaded
- * @param callback {function(boolean)} - A callback indicating if the upload was
- * successful
+ * @param callback {function(boolean, VaultItem, VaultViewFile)} - A callback
+ * indicating if the upload was successful, and if so, the file and view class
+ * for that file
  */
 const uploadFile = async (
     file: File,
     idx: number,
     total: number,
-    callback: (success: boolean) => void,
+    callback: (success: boolean, item: VaultItem, file: VaultViewFile) => void,
 ) => {
     showFileIndicator("");
 
@@ -224,18 +296,31 @@ const uploadFile = async (
                 } else {
                     showStorageBar("", file.size);
                 }
-                loadFolder(folderID);
-                callback(true);
+
+                let item = new VaultItem();
+                item.id = id;
+                item.refID = id;
+                item.name = hexName;
+                item.size = file.size;
+                item.modified = new Date();
+                item.protectedKey = protectedKey;
+                item.sharedBy = "";
+                item.sharedWith = 0;
+                item.canModify = cache[folderID].folder.canModify;
+                item.isOwner = cache[folderID].folder.isOwner;
+
+                let view = new VaultViewFile(item, importedKey, file.name);
+                callback(true, item, view);
             }
         }, errorMessage => {
             pauseInteractions = false;
-            callback(false);
+            callback(false, undefined, undefined);
             alert(errorMessage);
             showStorageBar("", 0);
         });
     }, () => {
         pauseInteractions = false;
-        callback(false);
+        callback(false, undefined, undefined);
         showStorageBar("", 0);
     });
 }
@@ -248,10 +333,8 @@ const uploadFile = async (
  */
 const decryptData = async (data: Uint8Array): Promise<Uint8Array> => {
     if (!folderKey || folderKey.length === 0) {
-        console.log("RSA decrypt")
         return await crypto.decryptRSA(privateKey, data);
     } else {
-        console.log("AES decrypt")
         return await crypto.decryptChunk(folderKey, data);
     }
 }
@@ -313,26 +396,75 @@ const downloadFile = (id: string): void => {
     xhr.send();
 }
 
+const setTableLoading = (loading: boolean) => {
+    let loadingHeader = document.getElementById("loading-header");
+    let tableHeader = document.getElementById("table-header");
+
+    if (loading) {
+        loadingHeader.className = "visible";
+        tableHeader.className = "hidden";
+    } else {
+        loadingHeader.className = "hidden";
+        tableHeader.className = "visible";
+    }
+}
+
+const setView = (view: View) => {
+    let fileDiv = document.getElementById("vault-file-div");
+    let folderDiv = document.getElementById("vault-items-div");
+
+    if (view === View.File) {
+        fileDiv.className = "visible";
+        folderDiv.className = "hidden";
+    } else if (view === View.Folder) {
+        fileDiv.innerHTML = fragments.VaultFileViewDiv();
+        fileDiv.className = "hidden";
+        folderDiv.className = "visible";
+    }
+}
+
+/**
+ * Update the status bar with new HTML
+ * @param contents {string}
+ */
+const setStatus = (contents: string) => {
+    let vaultStatus = document.getElementById("vault-status");
+    vaultStatus.innerHTML = contents;
+}
+
+/**
+ * Resets the decrypted file and folder cache
+ */
+const emptyCurrentItems = () => {
+    currentFiles = {};
+    currentFolders = {};
+}
+
 /**
  * Fetches the contents of a folder using its folder ID and displays the contents
  * of the folder in the vault view table.
  * @param newFolderID {string} - The new folder ID to fetch
  */
-const loadFolder = (newFolderID: string) => {
+const loadFolder = async (newFolderID: string) => {
     if (pauseInteractions) {
         return;
     }
 
-    vaultFolders = {};
-    vaultItems = {};
-    folderID = newFolderID;
-    folderKey = null;
+    setTableLoading(true);
+    setView(View.Folder);
 
     let tableBody = document.getElementById("table-body");
     tableBody.innerHTML = "";
-    window.history.pushState(folderID, "", `/vault/${folderID}`);
 
-    fetchVault(folderID, async (data: interfaces.VaultFolderResponse) => {
+    folderID = newFolderID;
+
+    let folderPath = Endpoints.format(Endpoints.HTMLVaultFolder, folderID);
+    window.history.pushState(folderID, "", folderPath);
+
+    const loadFolderData = async (data: interfaces.VaultFolderResponse) => {
+        emptyCurrentItems();
+        folderKey = null;
+
         subfolderParentID = data.folder.refID;
         allowUploads(data.folder.canModify);
         if (!data.keySequence || data.keySequence.length === 0) {
@@ -342,30 +474,77 @@ const loadFolder = (newFolderID: string) => {
             await loadVault(data);
         } else {
             // In sub folder, need to iterate through key sequence
-            folderKey = await unwindKeys(data.keySequence);
+            folderKey = await crypto.unwindKeys(privateKey, data.keySequence);
             await loadVault(data);
         }
+    }
+
+    if (cache[folderID]) {
+        await loadFolderData(cache[folderID]);
+    } else {
+        fetchVault(folderID, async (data: interfaces.VaultFolderResponse) => {
+            cache[folderID] = data;
+            await loadFolderData(data);
+        });
+    }
+}
+
+/**
+ * Displays file metadata and displays a preview of the file.
+ * @param fileID
+ */
+const loadFile = (fileID: string) => {
+    if (pauseInteractions) {
+        return;
+    }
+
+    setStatus(closeFile);
+    setView(View.File);
+
+    let file = currentFiles[fileID];
+    if (!file) {
+        alert("Unable to open file!");
+        loadFolder(folderID);
+        return;
+    }
+
+    let headerDiv = document.getElementById("vault-file-header");
+    let htmlDiv = document.getElementById("vault-file-content");
+    let textOnly = document.getElementById("vault-text-content");
+    let textWrapper = document.getElementById("vault-text-wrapper");
+
+    headerDiv.innerHTML = "";
+    htmlDiv.innerHTML = "";
+    textOnly.innerText = "";
+
+    generateItemView(file, header => {
+        headerDiv.innerHTML = header;
+    }, html => {
+        htmlDiv.innerHTML = html;
+        textWrapper.className = "hidden";
+        htmlDiv.className = "visible";
+    }, text => {
+        textOnly.innerText = text;
+        htmlDiv.className = "hidden";
+        textWrapper.className = "visible";
     });
 }
 
-const unwindKeys = async (keySequence: Uint8Array[]) => {
-    let parentKey;
-    for (let i = 0; i < keySequence.length; i++) {
-        console.log(keySequence[i]);
-        if (!parentKey) {
-            let protectedKey = keySequence[i];
-            parentKey = await crypto.decryptRSA(privateKey, protectedKey);
-            continue;
-        }
-
-        let parentKeyImport = await crypto.importKey(parentKey);
-        let protectedKey = keySequence[i];
-        parentKey = await crypto.decryptChunk(parentKeyImport, protectedKey);
-    }
-
-    return await crypto.importKey(parentKey);
+/**
+ * Closes the file viewer, re-opens the folder view, and resets the status
+ * bar to the current folder status.
+ */
+const closeFileView = () => {
+    setView(View.Folder);
+    setStatus(folderStatus);
 }
 
+/**
+ * Fetches the current vault folder contents by vault folder ID. Fires a
+ * callback containing the vault folder response when finished.
+ * @param folderID {string}
+ * @param callback {interfaces.VaultFolderResponse}
+ */
 const fetchVault = (
     folderID: string,
     callback: (response: interfaces.VaultFolderResponse) => void,
@@ -381,19 +560,24 @@ const fetchVault = (
         });
 }
 
-const loadVault = async (data) => {
-    vaultItems = {};
-    vaultFolders = {};
+/**
+ * Uses a VaultFolderResponse to load the contents into the view.
+ * @param data {interfaces.VaultFolderResponse}
+ */
+const loadVault = async (data: interfaces.VaultFolderResponse) => {
+    emptyCurrentItems();
 
-    let vaultStatus = document.getElementById("vault-status");
     if (data.folder.name.length > 0) {
         crypto.decryptString(folderKey, hexToBytes(data.folder.name)).then(folderName => {
-            vaultStatus.innerHTML = `${vaultHome} | <a id="${folderIDPrefix}-${data.folder.parentID}" href="#">← Back</a> / ${folderName}`
+            let folderLink = `${vaultHome} | <a id="${folderIDPrefix}-${data.folder.parentID}" href="#">← Back</a> / ${folderName}`;
+            folderStatus = folderLink;
+            setStatus(folderLink);
         }).catch(() => {
-            vaultStatus.innerHTML = "[decryption error]";
+            setStatus("[decryption error]");
         });
     } else {
-        vaultStatus.innerHTML = vaultHome;
+        setStatus(vaultHome);
+        folderStatus = vaultHome;
     }
 
     let tableBody = document.getElementById("table-body");
@@ -404,20 +588,11 @@ const loadVault = async (data) => {
         let folder = folders[i];
         let subFolderKey = await decryptData(folder.protectedKey);
         let tmpKey = await crypto.importKey(subFolderKey);
-        folder.name = await crypto.decryptString(tmpKey, hexToBytes(folder.name));
+        let decName = await crypto.decryptString(tmpKey, hexToBytes(folder.name));
 
-        vaultFolders[folder.refID] = {
-            id: folder.id,
-            name: folder.name,
-            encKey: folder.protectedKey,
-            key: tmpKey,
-            tag: folder.linkTag,
-            owned: folder.isOwner,
-            canModify: folder.canModify,
-            refID: folder.refID,
-        };
-
-        let row = await generateFolderRow(folder);
+        let vaultFolder = new VaultViewFolder(folder, tmpKey, decName);
+        currentFolders[folder.refID] = vaultFolder;
+        let row = await generateFolderRow(vaultFolder);
         tableBody.innerHTML += row;
     }
 
@@ -425,32 +600,64 @@ const loadVault = async (data) => {
         let item = items[i];
         let itemKey = await decryptData(item.protectedKey);
         let tmpKey = await crypto.importKey(itemKey);
-        item.name = await crypto.decryptString(tmpKey, hexToBytes(item.name));
+        let decName = await crypto.decryptString(tmpKey, hexToBytes(item.name));
 
-        vaultItems[item.refID] = {
-            id: item.id,
-            name: item.name,
-            encKey: item.protectedKey,
-            key: tmpKey,
-            owned: item.isOwner,
-            canModify: item.canModify,
-            refID: item.refID,
-        };
-
-        let row = await generateItemRow(item);
+        let vaultFile = new VaultViewFile(item, tmpKey, decName);
+        currentFiles[item.refID] = vaultFile;
+        let row = await generateFileRow(vaultFile);
         tableBody.innerHTML += row;
     }
 
     for (let i = 0; i < gapFill - (folders.length + items.length); i++) {
         tableBody.innerHTML += emptyRow;
     }
+
+    setTableLoading(false);
 }
 
-const addTableRow = row => {
+/**
+ * Prepends an HTML string `tr` element to the vault table body. Note that this
+ * should only be used for folders, since new ones should always be at the top.
+ * @param row {string}
+ */
+const addTableRow = (row: string) => {
     let tableBody = document.getElementById("table-body");
     tableBody.innerHTML = row + tableBody.innerHTML;
 }
 
+/**
+ * Inserts an HTML string `tr` element into the vault table element below all
+ * folders but above any existing files.
+ * @param row {string}
+ */
+const insertFileRow = (row: string) => {
+    let tableBody = document.getElementById("table-body");
+    let rows = tableBody.getElementsByTagName("tr");
+
+    let tempContainer = document.createElement("tbody");
+    tempContainer.innerHTML = row;
+    let rowNode = tempContainer.firstElementChild;
+
+    if (rows.length === 0) {
+        tableBody.innerHTML = row;
+        return;
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+        if (!rows[i].id.endsWith(fileRowSuffix) && rows[i].className !== "blank-row") {
+            continue;
+        }
+
+        tableBody.insertBefore(rowNode, rows[i]);
+        return;
+    }
+
+    tableBody.innerHTML += row;
+}
+
+/**
+ * Sets up event listeners for the new folder dialog.
+ */
 const setupFolderDialog = () => {
     let cancelUploadBtn = document.getElementById("cancel-folder");
     cancelUploadBtn.addEventListener("click", () => dialogs.closeDialog(folderDialog));
@@ -467,35 +674,57 @@ const setupFolderDialog = () => {
     });
 }
 
-const generateFolderRow = async (item) => {
-    let classes = item.sharedBy.length > 0 ? "shared-link" : "folder-link";
-    let link = `<a id="${folderIDPrefix}-${item.refID}" class="${classes}" href="#">${item.name}/</a>`
+/**
+ * Creates an HTML `tr` element string using properties of the provided
+ * VaultViewFolder element.
+ * @param folder {VaultViewFolder}
+ */
+const generateFolderRow = async (folder: VaultViewFolder) => {
+    let classes = folder.sharedBy.length > 0 ? "shared-link" : "folder-link";
+    let link = `<a id="${folderIDPrefix}-${folder.refID}" class="${classes}" href="#">${folder.decName}/</a>`
     return generateRow(
         link,
-        item.name,
+        folder.decName,
         "",
-        formatDate(item.modified),
-        item.refID,
+        formatDate(folder.modified),
+        folder.refID,
         true,
-        item.sharedWith,
-        item.sharedBy);
+        folder.sharedWith,
+        folder.sharedBy);
 }
 
-const generateItemRow = async (item) => {
-    let classes = item.sharedBy.length > 0 ? "shared-link" : "file-link";
-    let id = `${itemIDPrefix}-${item.refID}`;
-    let link = `<a data-testid="${id}" id="${id}" class="${classes}" href="#">${item.name}</a>`
+/**
+ * Creates an HTML `tr` element string using properties of the provided
+ * VaultViewFile element.
+ * @param file {VaultViewFile}
+ */
+const generateFileRow = async (file: VaultViewFile) => {
+    let classes = file.sharedBy.length > 0 ? "shared-link" : "file-link";
+    let id = `${itemIDPrefix}-${file.refID}`;
+    let link = `<a data-testid="${id}" id="${id}" class="${classes}" href="#">${file.decName}</a>`
     return generateRow(
         link,
-        item.name,
-        calcFileSize(item.size - constants.TotalOverhead),
-        formatDate(item.modified),
-        item.refID,
+        file.decName,
+        calcFileSize(file.size - constants.TotalOverhead),
+        formatDate(file.modified),
+        file.refID,
         false,
-        item.sharedWith,
-        item.sharedBy);
+        file.sharedWith,
+        file.sharedBy);
 }
 
+/**
+ * Generates an HTML string `tr` element for either a file or folder, using
+ * the provided values that are needed for the view.
+ * @param link {string} - The `a` tag for the vault item
+ * @param name {string} - The decrypted name of the vault item
+ * @param size {string} - The file size string
+ * @param modified {string} - The formatted date string
+ * @param id {string} - The file/folder ID
+ * @param isFolder {boolean} - True if folder, otherwise false
+ * @param sharedWith {number} - The number of people the file/folder is shared with
+ * @param sharedBy {string} - The user who shared the content with the current user
+ */
 const generateRow = (link, name, size, modified, id, isFolder, sharedWith, sharedBy) => {
     let iconClasses = sharedBy ? "small-icon shared-icon" : "small-icon";
     let icon = `<img class="${iconClasses}" src="/static/icons/file.svg">`
@@ -508,7 +737,7 @@ const generateRow = (link, name, size, modified, id, isFolder, sharedWith, share
     let sharedByIndicator = sharedBy ? `<br><img class="small-icon shared-icon" src="/static/icons/owner.svg">&nbsp;${sharedBy}` : ""
 
     let idStr = `${actionIDPrefix}-${id}`
-    return `<tr id="${id}-row">
+    return `<tr id="${id}-${isFolder ? folderRowSuffix : fileRowSuffix}">
         <td>${icon} ${link} ${sharedIcon} ${sharedByIndicator}</td>
         <td>${size}</td>
         <td id="${id}-modified">${modified}</td>
@@ -516,7 +745,13 @@ const generateRow = (link, name, size, modified, id, isFolder, sharedWith, share
     </tr>`
 }
 
-const generateSharedWithIcon = (id, sharedWithCount) => {
+/**
+ * Generates an icon indicating the number of users a file/folder has been
+ * shared with.
+ * @param id {string}
+ * @param sharedWithCount {number}
+ */
+const generateSharedWithIcon = (id: string, sharedWithCount: number) => {
     let div = `<div class="shared-with-div" id="${id}-${sharedWithSuffix}">`
     if (sharedWithCount === 0) {
         return div + "</div>";
@@ -525,7 +760,95 @@ const generateSharedWithIcon = (id, sharedWithCount) => {
     return `${div}<img class="small-icon" src="/static/icons/share.svg"> (${sharedWithCount})</div>`
 }
 
-const updateRow = (id, isFolder, name) => {
+/**
+ * Generates a view of the selected VaultViewFile, displaying the contents in
+ * a temporary div. Provides three callbacks for the caller:
+ * - header: The header content to display above the file
+ * - html: The HTML representation of the file (if applicable)
+ * - text: The plaintext representation of the file (if applicable)
+ *
+ * The `html` callback is used if the file is an image, audio file, pdf, etc.
+ * Otherwise the `text` callback is used.
+ * @param file {VaultViewFile}
+ * @param header {callback(string)}
+ * @param html {callback(string)}
+ * @param text {callback(string)}
+ */
+const generateItemView = (
+    file: VaultViewFile,
+    header: (string) => void,
+    html: (string) => void,
+    text: (string) => void,
+) => {
+    let name = file.decName;
+    let date = formatDate(file.modified);
+    let size = calcFileSize(file.size - constants.TotalOverhead);
+    let htmlHead = `<p class="no-top-margin">${name} | ${size} | ${date}</p><hr>`;
+    header(htmlHead+fragments.LoadingSpinner("sub"));
+
+    let url = Endpoints.format(Endpoints.DownloadVaultFileMetadata, file.refID);
+    fetch(url).then(response => {
+        header(htmlHead);
+        if (!response.ok) {
+            text("Failed to fetch file");
+            return;
+        }
+
+        response.json().then(json => {
+            let metadata = new interfaces.VaultDownloadResponse(json);
+            if (metadata.chunks > 5) {
+                text("File too large to preview");
+                return;
+            }
+
+            let bytes;
+            const fetchChunk = (chunkNum: number) => {
+                let endpoint = Endpoints.DownloadVaultFileData;
+                let chunkURL = Endpoints.format(endpoint, metadata.id, `${chunkNum}`);
+                transfer.fetchSingleChunk(chunkURL, file.key, chunk => {
+                    if (!bytes) {
+                        bytes = chunk;
+                    } else {
+                        let combinedBuffer = new ArrayBuffer(chunk.byteLength + bytes.byteLength);
+                        let combinedArray = new Uint8Array(combinedBuffer);
+
+                        combinedArray.set(new Uint8Array(bytes), 0);
+                        combinedArray.set(new Uint8Array(chunk), bytes.byteLength);
+                        bytes = combinedArray;
+                    }
+
+                    if (chunkNum === metadata.chunks) {
+                        if (render.isNonTextFileType(file.decName)) {
+                            render.renderFileHTML(file.decName, bytes, (tag, url) => {
+                                html(tag);
+                                let popOut = `<a target="_blank" href="${url}">Pop Out</a>`;
+                                let download = `<a href="${url}" download="${name}">Download</a>`;
+                                setStatus(`${closeFile} | ${popOut} | ${download}`);
+                            });
+                        } else {
+                            let textContent = new TextDecoder().decode(bytes);
+                            text(textContent);
+                        }
+                    } else {
+                        fetchChunk(chunkNum + 1);
+                    }
+                }, () => {
+                    text("Error downloading file content");
+                });
+            }
+
+            fetchChunk(1);
+        })
+    });
+}
+
+/**
+ * Updates the name of a file/folder
+ * @param id {string} - The ID of the modified content
+ * @param isFolder {boolean} - True if a folder, else false
+ * @param name {string} - The new (unencrypted) name
+ */
+const updateRow = (id: string, isFolder: boolean, name: string) => {
     let prefix = isFolder ? folderIDPrefix : itemIDPrefix;
     let nameID = `${prefix}-${id}`;
     let modifiedID = `${id}-modified`;
@@ -533,24 +856,50 @@ const updateRow = (id, isFolder, name) => {
     document.getElementById(modifiedID).innerText = formatDate(Date());
 }
 
-const removeRow = (id) => {
-    let rowID = `${id}-row`;
+/**
+ * Removes a file or folder row from the vault view table.
+ * @param id {string} - The file/folder ID
+ * @param isFolder {boolean} - True if a folder, else false
+ */
+const removeRow = (id: string, isFolder: boolean) => {
+    let rowID = `${id}-${isFolder ? folderRowSuffix : fileRowSuffix}`;
     document.getElementById(rowID).remove();
 }
 
-const showActionsDialog = (id) => {
+/**
+ * Removes a file or folder from the local folder cache.
+ * @param id {string}
+ * @param isFolder {boolean}
+ */
+const removeFromCache = (id: string, isFolder: boolean) => {
+    if (isFolder) {
+        cache[folderID].folders = cache[folderID].folders.filter(obj => {
+            return obj.id !== id;
+        });
+    } else {
+        cache[folderID].items = cache[folderID].items.filter(obj => {
+            return obj.id !== id;
+        });
+    }
+}
+
+/**
+ * Displays the actions dialog for a file or folder
+ * @param id {string}
+ */
+const showActionsDialog = (id: string) => {
     let isFolder = false;
     let actionsDialog = document.getElementById("actions-dialog") as HTMLDialogElement;
     let title = document.getElementById("actions-dialog-title") as HTMLHeadingElement;
     let item;
 
-    if (vaultFolders[id]) {
-        item = vaultFolders[id];
-        title.innerText = "Folder: " + item.name;
+    if (currentFolders[id]) {
+        item = currentFolders[id];
+        title.innerText = "Folder: " + item.decName;
         isFolder = true;
-    } else if (vaultItems[id]) {
-        item = vaultItems[id];
-        title.innerText = "File: " + item.name;
+    } else if (currentFiles[id]) {
+        item = currentFiles[id];
+        title.innerText = "File: " + item.decName;
     }
 
     let actionDownload = document.getElementById("action-download");
@@ -581,7 +930,7 @@ const showActionsDialog = (id) => {
 
     let actionLink = document.getElementById("action-link");
     actionLink.style.display = "none";
-    // if (item.owned) {
+    // if (item.isOwner) {
     //     actionLink.style.display = "flex";
     //     actionLink.addEventListener("click", event => {
     //         event.stopPropagation();
@@ -591,22 +940,24 @@ const showActionsDialog = (id) => {
     // }
 
     let actionShare = document.getElementById("action-share");
-    if (item.owned) {
+    if (item.isOwner) {
         actionShare.style.display = "flex";
         actionShare.addEventListener("click", async event => {
             event.stopPropagation();
-            let itemKey = isFolder ? vaultFolders[id].encKey : vaultItems[id].encKey;
-            let itemKeyRaw = await decryptData(itemKey);
+            let itemKey = isFolder ? currentFolders[id].key : currentFiles[id].key;
+            let itemKeyRaw = await crypto.exportKey(itemKey, "raw");
             await dialogs.showShareDialog(id, itemKeyRaw, isFolder, signal => {
-                if (signal !== dialogs.DialogSignal.Cancel) {
-                    transfer.getSharedUsers(id, isFolder).then(response => {
-                        let icon = generateSharedWithIcon(id,
-                            response ?
-                                (response as Array<JSON>).length :
-                                0);
-                        document.getElementById(`${id}-${sharedWithSuffix}`).innerHTML = icon;
-                    })
+                if (signal === dialogs.DialogSignal.Cancel) {
+                    return;
                 }
+                transfer.getSharedUsers(id, isFolder).then(response => {
+                    let icon = generateSharedWithIcon(id,
+                        response ?
+                            (response as Array<JSON>).length :
+                            0);
+                    document.getElementById(`${id}-${sharedWithSuffix}`).innerHTML = icon;
+                });
+
             });
             dialogs.closeDialog(actionsDialog);
         });
@@ -615,23 +966,25 @@ const showActionsDialog = (id) => {
     }
 
     let actionDelete = document.getElementById("action-delete");
-    if (item.owned) {
+    if (item.isOwner) {
         actionDelete.style.display = "flex";
         actionDelete.addEventListener("click", event => {
             event.stopPropagation();
 
-            if (!isFolder && confirm("Are you sure you want to delete this file?")) {
+            let confirmMsg;
+            if (isFolder) {
+                confirmMsg = "Are you sure you want to delete this folder? " +
+                    "This will delete all files in the folder permanently.";
+            } else {
+                confirmMsg = "Are you sure you want to delete this file?";
+            }
+
+            if (confirm(confirmMsg)) {
                 dialogs.closeDialogs();
-                deleteVaultContent(id, item.name, isFolder, item.refID, async response => {
-                    removeRow(id);
-                    let responseJSON = await response.json();
-                    showStorageBar("", responseJSON.freedSpace * -1);
-                });
-            } else if (isFolder && confirm("Are you sure you want to delete this folder? " +
-                "This will delete all files in the folder permanently.")) {
-                dialogs.closeDialogs();
-                deleteVaultContent(id, item.name, isFolder, "", () => {
-                    location.reload();
+                deleteVaultContent(id, item.decName, isFolder, item.refID, response => {
+                    removeRow(id, isFolder);
+                    removeFromCache(id, isFolder);
+                    showStorageBar("", response.freedSpace * -1);
                 });
             }
         });
@@ -640,14 +993,15 @@ const showActionsDialog = (id) => {
     }
 
     let actionRemove = document.getElementById("action-remove");
-    if (folderID.length === 0 && !item.owned) {
+    if (folderID.length === 0 && !item.isOwner) {
         actionRemove.addEventListener("click", event => {
             event.stopPropagation();
             if (confirm("Are you sure you want to remove this item? " +
                 "The owner will need to re-share this with you if you need access again.")) {
                 dialogs.closeDialogs();
-                deleteVaultContent(id, item.name, isFolder, item.id, () => {
-                    location.reload();
+                deleteVaultContent(id, item.decName, isFolder, item.id, () => {
+                    removeRow(id, isFolder);
+                    removeFromCache(id, isFolder);
                 });
             }
         });
@@ -661,13 +1015,18 @@ const showActionsDialog = (id) => {
     actionsDialog.showModal();
 }
 
-const showRenameDialog = (id, isFolder) => {
+/**
+ * Displays the renaming dialog for a file or folder
+ * @param id {string}
+ * @param isFolder {boolean}
+ */
+const showRenameDialog = (id: string, isFolder: boolean) => {
     let renameDialog = document.getElementById("rename-dialog") as HTMLDialogElement;
     let dialogTitle = document.getElementById("rename-title") as HTMLHeadingElement;
     dialogTitle.innerText = isFolder ? "Rename Folder" : "Rename File";
 
     let newNameInput = document.getElementById("new-name") as HTMLInputElement;
-    newNameInput.value = isFolder ? vaultFolders[id].name : vaultItems[id].name;
+    newNameInput.value = isFolder ? currentFolders[id].decName : currentFiles[id].decName;
 
     let cancelBtn = document.getElementById("cancel-rename");
     cancelBtn.addEventListener("click", () => {
@@ -684,15 +1043,22 @@ const showRenameDialog = (id, isFolder) => {
     renameDialog.showModal();
 }
 
-const renameItem = async (id, isFolder, newName) => {
+/**
+ * Renames a file or folder to the new name
+ * @param id {string}
+ * @param isFolder {boolean}
+ * @param newName {string}
+ */
+const renameItem = async (id: string, isFolder: boolean, newName: string) => {
     let key;
     if (isFolder) {
-        key = vaultFolders[id].key;
+        key = currentFolders[id].key;
     } else {
-        key = vaultItems[id].key;
+        key = currentFiles[id].key;
     }
 
     let newNameEncrypted = await crypto.encryptString(key, newName);
+    let hexName = toHexString(newNameEncrypted);
     let endpoint = isFolder ?
         Endpoints.format(Endpoints.VaultFolder, id) :
         Endpoints.format(Endpoints.VaultFile, id);
@@ -701,15 +1067,17 @@ const renameItem = async (id, isFolder, newName) => {
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name: toHexString(newNameEncrypted) })
+        body: JSON.stringify({ name: hexName })
     }).then(response => {
         if (response.ok) {
             dialogs.closeDialogs();
             if (isFolder) {
-                vaultFolders[id].name = newName;
+                currentFolders[id].name = hexName;
+                currentFolders[id].decName = newName;
                 updateRow(id, isFolder, newName);
             } else {
-                vaultItems[id].name = newName;
+                currentFiles[id].name = hexName;
+                currentFiles[id].decName = newName;
                 updateRow(id, isFolder, newName);
             }
 
@@ -722,7 +1090,21 @@ const renameItem = async (id, isFolder, newName) => {
     });
 }
 
-const deleteVaultContent = (id, name, isFolder, sharedID, callback) => {
+/**
+ * Deletes a file or folder from the user's vault permanently
+ * @param id {string} - The file/folder ID to delete
+ * @param name {string} - The unencrypted name of the content to be deleted
+ * @param isFolder {boolean} - True if a folder, else false
+ * @param sharedID {string} - The reference ID of the file/folder
+ * @param callback {(DeleteResponse)}
+ */
+const deleteVaultContent = (
+    id: string,
+    name: string,
+    isFolder: boolean,
+    sharedID: string,
+    callback: (resp: DeleteResponse) => void,
+) => {
     let modID = sharedID !== id ? sharedID : id;
     let endpoint = isFolder ?
         Endpoints.format(Endpoints.VaultFolder, modID) :
@@ -738,7 +1120,10 @@ const deleteVaultContent = (id, name, isFolder, sharedID, callback) => {
     }).then(response => {
         pauseInteractions = false;
         if (response.ok) {
-            callback(response);
+            response.json().then(json => {
+                let resp = new interfaces.DeleteResponse(json);
+                callback(resp);
+            })
         } else {
             alert("Error deleting item");
             showStorageBar("", 0);
@@ -748,7 +1133,11 @@ const deleteVaultContent = (id, name, isFolder, sharedID, callback) => {
     });
 }
 
-const createNewFolder = async (folderName) => {
+/**
+ * Creates a new folder inside the current vault folder
+ * @param folderName {string}
+ */
+const createNewFolder = async (folderName: string) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", Endpoints.format(Endpoints.VaultFolder, ""), false);
     xhr.setRequestHeader("Content-Type", "application/json");
@@ -762,25 +1151,24 @@ const createNewFolder = async (folderName) => {
     xhr.onreadystatechange = async () => {
         if (xhr.readyState === 4 && xhr.status === 200) {
             let response = new interfaces.NewFolderResponse(xhr.responseText);
-            vaultFolders[response.id] = {
-                name: folderName,
-                encKey: encFolderKey,
-                key: newFolderKey,
-                tag: "",
-                owned: true,
-                canModify: true,
-                refID: response.id,
-            };
+            let vaultFolder = new interfaces.VaultFolder();
+            vaultFolder.id = response.id;
+            vaultFolder.refID = response.id;
+            vaultFolder.name = encNameEncoded;
+            vaultFolder.modified = new Date();
+            vaultFolder.protectedKey = encFolderKey;
+            vaultFolder.isOwner = cache[folderID].folder.isOwner;
+            vaultFolder.canModify = cache[folderID].folder.canModify;
+            vaultFolder.sharedBy = "";
+            vaultFolder.sharedWith = 0;
 
-            let row = await generateFolderRow({
-                id: response.id,
-                refID: response.id,
-                name: folderName,
-                modified: new Date().toLocaleString(),
-                sharedWith: 0,
-                sharedBy: "",
-                linkTag: "",
-            });
+            let vaultViewFolder = new VaultViewFolder(
+                vaultFolder,
+                newFolderKeyImported,
+                folderName);
+            currentFolders[response.id] = vaultViewFolder;
+            let row = await generateFolderRow(vaultViewFolder);
+            cache[folderID].folders.unshift(vaultFolder);
             addTableRow(row);
         } else if (xhr.readyState === 4 && xhr.status !== 200) {
             alert(`Error ${xhr.status}: ${xhr.responseText}`);
@@ -851,12 +1239,16 @@ const showFileIndicator = (msg: string) => {
     }
 }
 
-const setVaultMessage = msg => {
+/**
+ * Updates the vault message below the progress bar
+ * @param msg {string}
+ */
+const setVaultMessage = (msg: string) => {
     let vaultMessage = document.getElementById("vault-message");
     vaultMessage.innerHTML = `<img class="small-icon progress-spinner" src="/static/icons/progress.svg">${msg}`;
 }
 
-if (document.readyState !== 'loading') {
+if (document.readyState !== "loading") {
     init();
 } else {
     document.addEventListener("DOMContentLoaded", () => {

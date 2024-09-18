@@ -120,6 +120,7 @@ func (ctx *VaultContext) CreateFolder(folderName string) error {
 
 	ctx.InsertItem(models.VaultItem{
 		ID:       response.ID,
+		RefID:    response.ID,
 		Name:     folderName,
 		IsFolder: true,
 		Modified: time.Now(),

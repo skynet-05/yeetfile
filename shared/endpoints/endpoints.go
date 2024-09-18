@@ -18,6 +18,7 @@ type HTMLEndpoints struct {
 	ChangePassword string
 	VerifyEmail    string
 	TwoFactor      string
+	VaultFile      string
 }
 
 type BillingEndpoints struct {
@@ -75,6 +76,7 @@ var (
 	HTMLSendDownload   = Endpoint("/send/*")
 	HTMLVault          = Endpoint("/vault")
 	HTMLVaultFolder    = Endpoint("/vault/*")
+	HTMLVaultFile      = Endpoint("/vault/*/file/*")
 	HTMLLogin          = Endpoint("/login")
 	HTMLSignup         = Endpoint("/signup")
 	HTMLForgot         = Endpoint("/forgot")
@@ -125,6 +127,7 @@ var JSVarNameMap = map[Endpoint]string{
 	HTMLSendDownload:   "HTMLSendDownload",
 	HTMLVault:          "HTMLVault",
 	HTMLVaultFolder:    "HTMLVaultFolder",
+	HTMLVaultFile:      "HTMLVaultFile",
 	HTMLLogin:          "HTMLLogin",
 	HTMLSignup:         "HTMLSignup",
 	HTMLChangeEmail:    "HTMLChangeEmail",
@@ -154,6 +157,7 @@ func init() {
 		Account:        string(HTMLAccount),
 		Send:           string(HTMLSend),
 		Vault:          string(HTMLVault),
+		VaultFile:      string(HTMLVaultFile),
 		Login:          string(HTMLLogin),
 		Signup:         string(HTMLSignup),
 		Forgot:         string(HTMLForgot),

@@ -331,40 +331,48 @@ func GetFolderInfo(
 // GetKeySequence starts with a specific folder and recursively climbs up to each
 // parent folder, retrieving the parent's protected key. This is required to decrypt
 // a folder's contents, since a folder's key is always encrypted with its parents key.
-func GetKeySequence(folderID string, ownerID string) ([][]byte, error) {
-	query := `SELECT owner_id, parent_id, protected_key 
-	          FROM folders WHERE ref_id=$1
-	          ORDER BY parent_id`
-	rows, err := db.Query(query, folderID)
+func GetKeySequence(folderID, ownerID string) ([][]byte, error) {
+	s := `WITH RECURSIVE parent_hierarchy AS (
+	         SELECT ref_id, owner_id, parent_id, protected_key, 1 as depth
+	         FROM folders
+	         WHERE ref_id=$1
+	
+	         UNION ALL
+	
+	         SELECT f.ref_id, f.owner_id, f.parent_id, f.protected_key, ph.depth + 1
+	         FROM folders f
+	         INNER JOIN parent_hierarchy ph ON f.ref_id = ph.parent_id
+	     ),
+	     hierarchy_with_depth_count AS (
+	         SELECT ph.*, COUNT(*) OVER (PARTITION BY depth) AS depth_count
+	         FROM parent_hierarchy ph
+	     )
+	     SELECT protected_key
+	     FROM hierarchy_with_depth_count
+	     WHERE (depth_count = 1)
+	        OR (depth_count > 1 AND owner_id=$2)
+	     ORDER BY depth DESC;`
+
+	rows, err := db.Query(s, folderID, ownerID)
 	if err != nil {
 		return nil, err
 	}
 
+	var keySequence [][]byte
 	defer rows.Close()
 	for rows.Next() {
-		var folderOwnerID string
-		var parentID string
 		var protectedKey []byte
-		err = rows.Scan(&folderOwnerID, &parentID, &protectedKey)
+		err = rows.Scan(&protectedKey)
 		if err != nil {
 			return nil, err
 		}
 
-		// Found root level folder, which can be decrypted with the user's
-		// private key
-		if len(parentID) == 0 && folderOwnerID == ownerID {
-			return [][]byte{}, nil
-		} else if len(parentID) == 0 {
-			continue // Should check other rows for owner ID match
-		}
-
-		parentKey, err := GetKeySequence(parentID, ownerID)
-		if parentKey != nil {
-			return append(parentKey, protectedKey), err
-		}
+		keySequence = append(keySequence, protectedKey)
 	}
 
-	return nil, errors.New("failed to determine key sequence")
+	// First key is excluded since it is always returned in the folder
+	// response body
+	return keySequence[1:], nil
 }
 
 // ShareFolder shares a user's folder with another user via the recipient's user

@@ -249,6 +249,37 @@ const downloadFile = (
 }
 
 /**
+ * Fetches a single file chunk from the given URL
+ * @param url
+ * @param key
+ * @param successCallback
+ * @param errorCallback
+ */
+export const fetchSingleChunk = (
+    url: string,
+    key: CryptoKey,
+    successCallback: (Uint8Array) => void,
+    errorCallback: () => void,
+) => {
+    fetch(url).then(response => {
+        if (!response.ok) {
+            errorCallback();
+            return;
+        }
+
+        response.arrayBuffer().then(buf => {
+            let data = new Uint8Array(buf);
+            crypto.decryptChunk(key, data).then(decryptedChunk => {
+                successCallback(decryptedChunk);
+            }).catch(err => {
+                console.error(err);
+                errorCallback();
+            });
+        })
+    })
+}
+
+/**
  * @param id {string} - The shared item ID
  * @param shareID {string} - The ID of the sharing transaction
  * @param canModify {boolean} - Whether the item can be modified

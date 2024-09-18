@@ -377,6 +377,32 @@ func GetFileFolderID(fileID, ownerID string) (string, error) {
 	return "", errors.New("folder ID not found for file")
 }
 
+// RetrieveFullItemInfo returns all metadata necessary to interact with a file
+// in an isolated (non-folder) environment.
+func RetrieveFullItemInfo(id, ownerID string) (shared.VaultItemInfo, error) {
+	metadata, err := RetrieveVaultMetadata(id, ownerID)
+	if err != nil {
+		return shared.VaultItemInfo{}, err
+	}
+
+	keySequence, err := GetKeySequence(metadata.FolderID, ownerID)
+	if err != nil {
+		return shared.VaultItemInfo{}, err
+	}
+
+	return shared.VaultItemInfo{
+		ID:           id,
+		Name:         metadata.Name,
+		Size:         metadata.Length,
+		Modified:     time.Time{},
+		ProtectedKey: metadata.ProtectedKey,
+		CanModify:    false,
+		IsOwner:      false,
+		RefID:        "",
+		KeySequence:  keySequence,
+	}, nil
+}
+
 // RetrieveVaultMetadata returns a FileMetadata struct containing a specific
 // file's metadata
 func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
@@ -424,7 +450,9 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 		var length int
 		var chunks int
 		var protectedKey []byte
-		err = rows.Scan(&itemID, &b2ID, &refID, &name, &length, &chunks, &protectedKey)
+		err = rows.Scan(
+			&itemID, &b2ID, &refID, &name,
+			&length, &chunks, &protectedKey)
 		if err != nil {
 			log.Printf("Error scanning rows: %v\n", err)
 			return FileMetadata{}, err
@@ -437,6 +465,7 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 			Name:         name,
 			Length:       length,
 			Chunks:       chunks,
+			FolderID:     folderID,
 			ProtectedKey: protectedKey,
 		}, nil
 	}

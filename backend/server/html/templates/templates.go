@@ -33,16 +33,14 @@ var HTML embed.FS
 var templates *template.Template
 
 type BaseTemplate struct {
-	LoggedIn       bool
-	Title          string
-	Page           string
-	SuccessMessage string
-	ErrorMessage   string
-	Javascript     []string
-	CSS            []string
-	Version        string
-	Config         config.TemplateConfig
-	Endpoints      endpoints.HTMLEndpoints
+	LoggedIn   bool
+	Title      string
+	Page       string
+	Javascript []string
+	CSS        []string
+	Version    string
+	Config     config.TemplateConfig
+	Endpoints  endpoints.HTMLEndpoints
 }
 
 type Template struct {
@@ -84,6 +82,8 @@ type AccountTemplate struct {
 	BillingConfigured    bool
 	HasPasswordHint      bool
 	Has2FA               bool
+	ErrorMessage         string
+	SuccessMessage       string
 	BillingEndpoints     endpoints.BillingEndpoints
 	SubscriptionTemplate subscriptions.SubscriptionTemplateValues
 }

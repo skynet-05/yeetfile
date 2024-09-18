@@ -22,6 +22,8 @@ import (
 func FileHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	var fn session.HandlerFunc
 	switch req.Method {
+	case http.MethodGet:
+		fn = GetFileHandler
 	case http.MethodPut, http.MethodDelete:
 		fn = ModifyFileHandler
 	}
@@ -72,9 +74,26 @@ func FolderViewHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		return
 	}
 
-	folder, _ := db.GetFolderInfo(folderID, userID, ownership, false)
-	folders, _ := db.GetSubfolders(folderID, userID, ownership)
-	keySequence, _ := db.GetKeySequence(folderID, userID)
+	folder, err := db.GetFolderInfo(folderID, userID, ownership, false)
+	if err != nil {
+		log.Printf("Error fetching folder info: %v\n", err)
+		http.Error(w, "Error fetching folder info", http.StatusInternalServerError)
+		return
+	}
+
+	folders, err := db.GetSubfolders(folderID, userID, ownership)
+	if err != nil {
+		log.Printf("Error fetching subfolders: %v\n", err)
+		http.Error(w, "Error fetching subfolders", http.StatusInternalServerError)
+		return
+	}
+
+	keySequence, err := db.GetKeySequence(folderID, userID)
+	if err != nil {
+		log.Printf("Error fetching key sequence: %v\n", err)
+		http.Error(w, "Error fetching key sequence", http.StatusInternalServerError)
+		return
+	}
 
 	_ = json.NewEncoder(w).Encode(shared.VaultFolderResponse{
 		Items:         items,
@@ -127,12 +146,43 @@ func ModifyFolderHandler(w http.ResponseWriter, req *http.Request, userID string
 		modErr = updateVaultFolder(id, userID, folderMod)
 		break
 	case http.MethodDelete:
-		modErr = DeleteVaultFolder(id, userID, isShared)
+		freed, err := DeleteVaultFolder(id, userID, isShared)
+		if err != nil {
+			log.Printf("Error deleting folder: %v\n", err)
+			http.Error(w, "Error deleting folder", http.StatusInternalServerError)
+			return
+		}
+
+		resp := shared.DeleteResponse{FreedSpace: freed}
+		err = json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			http.Error(w, "Error sending response", http.StatusInternalServerError)
+		}
 		break
 	}
 
 	if modErr != nil {
 		http.Error(w, "Error modifying folder", http.StatusBadRequest)
+	}
+}
+
+// GetFileHandler handlers requests for information related to a vault file
+func GetFileHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	segments := strings.Split(req.URL.Path, "/")
+	idPart := strings.Split(segments[len(segments)-1], "?")
+	id := idPart[0]
+
+	info, err := db.RetrieveFullItemInfo(id, userID)
+	if err != nil {
+		log.Printf("Error retrieving file info: %v\n", err)
+		http.Error(w, "Error retrieving file info", http.StatusBadRequest)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(info)
+	if err != nil {
+		http.Error(w, "Error sending response", http.StatusInternalServerError)
+		return
 	}
 }
 

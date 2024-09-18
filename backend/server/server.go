@@ -52,7 +52,7 @@ func Run(addr string) {
 
 		// YeetFile Vault
 		{ALL, endpoints.VaultFolder, AuthMiddleware(vault.FolderHandler)},
-		{PUT | DELETE, endpoints.VaultFile, AuthMiddleware(vault.FileHandler)},
+		{GET | PUT | DELETE, endpoints.VaultFile, AuthMiddleware(vault.FileHandler)},
 		{POST, endpoints.UploadVaultFileMetadata, AuthMiddleware(vault.UploadMetadataHandler)},
 		{POST, endpoints.UploadVaultFileData, AuthMiddleware(vault.UploadDataHandler)},
 		{GET, endpoints.DownloadVaultFileMetadata, AuthLimiterMiddleware(vault.DownloadHandler)},
@@ -89,6 +89,7 @@ func Run(addr string) {
 		{GET, endpoints.HTMLSend, html.SendPageHandler},
 		{GET, endpoints.HTMLVault, AuthMiddleware(html.VaultPageHandler)},
 		{GET, endpoints.HTMLVaultFolder, AuthMiddleware(html.VaultPageHandler)},
+		{GET, endpoints.HTMLVaultFile, AuthMiddleware(html.VaultPageHandler)},
 		{GET, endpoints.HTMLSendDownload, html.DownloadPageHandler},
 		{GET, endpoints.HTMLSignup, NoAuthMiddleware(html.SignupPageHandler)},
 		{GET, endpoints.HTMLLogin, NoAuthMiddleware(html.LoginPageHandler)},

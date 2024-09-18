@@ -55,6 +55,7 @@ func main() {
 		Add(shared.MetadataUploadResponse{}).
 		Add(shared.NewFolderResponse{}).
 		Add(shared.VaultItem{}).
+		Add(shared.VaultItemInfo{}).
 		Add(shared.NewVaultFolder{}).
 		Add(shared.NewPublicVaultFolder{}).
 		Add(shared.VaultFolder{}).

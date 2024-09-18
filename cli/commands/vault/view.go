@@ -8,6 +8,7 @@ import (
 	"yeetfile/cli/commands/vault/internal"
 	"yeetfile/cli/commands/vault/rename"
 	"yeetfile/cli/commands/vault/share"
+	"yeetfile/cli/commands/vault/viewer"
 	"yeetfile/cli/utils"
 )
 
@@ -38,6 +39,10 @@ func ShowVaultModel() {
 				nil,
 				m.Context.Crypto.DecryptFunc,
 				m.Context.Crypto.DecryptionKey)
+		case internal.FileViewerView:
+			event, subviewErr = viewer.RunViewerModel(
+				m.ViewRequest.Item,
+				m.ViewRequest.CryptoCtx)
 		case internal.FilesView:
 			m, err = files.RunFilesModel(m, m.IncomingEvent)
 			continue

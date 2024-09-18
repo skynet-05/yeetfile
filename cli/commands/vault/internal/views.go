@@ -1,6 +1,9 @@
 package internal
 
-import "yeetfile/cli/models"
+import (
+	"yeetfile/cli/crypto"
+	"yeetfile/cli/models"
+)
 
 type View int
 
@@ -8,6 +11,7 @@ const (
 	NullView View = iota
 	FilesView
 	FilePickerView
+	FileViewerView
 	ConfirmationView
 	NewFolderView
 	RenameView
@@ -20,6 +24,7 @@ const (
 	InvalidRequest RequestType = iota
 	UploadFileRequest
 	DeleteFileRequest
+	ViewFileRequest
 	NewFolderRequest
 	RenameRequest
 	ShareRequest
@@ -35,7 +40,8 @@ const (
 //}
 
 type ViewRequest struct {
-	View View
-	Type RequestType
-	Item models.VaultItem
+	View      View
+	Type      RequestType
+	Item      models.VaultItem
+	CryptoCtx crypto.CryptoCtx
 }

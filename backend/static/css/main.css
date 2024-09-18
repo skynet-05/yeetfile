@@ -163,6 +163,7 @@ progress {
 .small-icon {
     cursor: pointer;
     height: 23px;
+    z-index: -10;
 }
 
 #center-div, #nojs-div {
@@ -266,7 +267,15 @@ div {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
+}
+
+.no-top-margin {
+    margin-top: 0;
+}
+
+.visible {
+    display: revert !important;
 }
 
 .vert-align-sub {

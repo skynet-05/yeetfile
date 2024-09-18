@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"os"
 	"strings"
+	"unicode"
 	"yeetfile/cli/commands/vault/internal"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
@@ -24,11 +25,15 @@ type Model struct {
 	ViewRequest   internal.ViewRequest
 	Context       *VaultContext
 
-	init     bool
-	quitting bool
-	table    table.Model
-	spinner  spinner.Model
-	progress progress.Model
+	filteredItems []models.VaultItem
+
+	filtering bool
+	filterStr string
+	init      bool
+	quitting  bool
+	table     table.Model
+	spinner   spinner.Model
+	progress  progress.Model
 }
 
 type Status struct {
@@ -46,10 +51,13 @@ const Help = `
 Enter -> select/open | x -----> delete | s --> share | u ---> upload |
 Backspace ----> back | n -> new folder | r -> rename | d -> download |`
 
-var rows []table.Row
-var items []models.VaultItem
+const FilterHelp = `
+Enter -> select/open | escape -> exit filter`
+
 var status Status
 
+var rows []table.Row
+var items []models.VaultItem
 var folderViews = []string{""}
 var folderPath = "/"
 
@@ -90,7 +98,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		status.Err = nil
 		status.Success = ""
+		if m.filtering {
+			return m.filterItems(msg.String())
+		}
+
 		switch msg.String() {
+		case "/":
+			m.filtering = true
+			return m, nil
 		case "backspace":
 			if len(folderViews) > 1 {
 				status.Loading = true
@@ -110,12 +125,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newModel, nil
 			}
 		case "enter":
-			if len(items) == 0 {
-				return m, nil
-			}
-
 			item := items[m.table.Cursor()]
-			// Open folder or prompt for download
+			// Open folder or view file
 			if item.IsFolder {
 				status.Loading = true
 				newModel, err := NewModel(item.RefID)
@@ -126,8 +137,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				status.Loading = false
 
 				return newModel, nil
+			} else {
+				// Enter file view
+				return m.NewFileViewRequest(item)
 			}
-		case "q", "ctrl+c": // Exit
+		case "q", "ctrl+c", "esc": // Exit
 			m.quitting = true
 			return m, tea.Quit
 		case "n": // New folder
@@ -172,11 +186,100 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if !status.Processing && !status.NewFolder {
+	if !status.Processing {
 		m.table, cmd = m.table.Update(msg)
 	}
+
+	if m.table.Cursor() < 0 {
+		m.table.SetCursor(0)
+	}
+
 	cmds = append(cmds, cmd)
 	return m, tea.Batch(cmds...)
+}
+
+func (m Model) filterItems(c string) (tea.Model, tea.Cmd) {
+	needsFilter := false
+	switch c {
+	case "backspace":
+		if len(m.filterStr) > 0 {
+			m.filterStr = m.filterStr[:len(m.filterStr)-1]
+			needsFilter = true
+		} else {
+			m.filtering = false
+		}
+	case "ctrl+c", "esc":
+		rows = CreateItemRows(items)
+		m.filtering = false
+	case "enter":
+		cursor := m.table.Cursor()
+		validCursor := cursor >= 0 && cursor < len(m.filteredItems)
+		if len(m.filteredItems) == 0 || !validCursor {
+			break
+		}
+
+		item := m.filteredItems[cursor]
+		if item.IsFolder {
+			m.filtering = false
+			m.filterStr = ""
+			status.Loading = true
+			newModel, err := NewModel(item.RefID)
+			if err == nil {
+				folderViews = append(folderViews, item.RefID)
+				folderPath += item.Name + "/"
+			}
+			status.Loading = false
+			return newModel, nil
+		}
+
+		return m.NewFileViewRequest(item)
+	case "tab", "left", "right":
+		// Ignore
+	case "up", "down":
+		cursor := m.table.Cursor()
+		if c == "up" {
+			m.table.SetCursor(cursor - 1)
+		} else {
+			m.table.SetCursor(cursor + 1)
+		}
+	default:
+		if len(m.filterStr) > 0 && len(m.filteredItems) == 0 {
+			// Don't continue filtering if there's nothing to filter
+			break
+		}
+		m.filterStr += c
+		needsFilter = true
+	}
+
+	if needsFilter {
+		hasUpper := false
+		for _, c := range m.filterStr {
+			if unicode.IsUpper(c) {
+				hasUpper = true
+				break
+			}
+		}
+
+		var filteredItems []models.VaultItem
+		for _, item := range items {
+			var name string
+			if hasUpper {
+				name = item.Name
+			} else {
+				name = strings.ToLower(item.Name)
+			}
+
+			if strings.Contains(name, m.filterStr) {
+				filteredItems = append(filteredItems, item)
+			}
+		}
+
+		rows = CreateItemRows(filteredItems)
+		m.filteredItems = filteredItems
+		m.table.SetCursor(0)
+	}
+
+	return m.Update(nil)
 }
 
 func (m Model) View() string {
@@ -184,11 +287,17 @@ func (m Model) View() string {
 		return ""
 	}
 
+	return m.tableViewer()
+}
+
+func (m Model) tableViewer() string {
 	vaultView := styles.BaseStyle.Render(m.table.View())
 
 	if status.Err != nil {
 		errMsg := status.Err.Error()
 		vaultView += "\n✗ Error: " + errMsg
+	} else if m.filtering {
+		vaultView += "\nFilter: " + m.filterStr
 	} else if len(status.Success) > 0 {
 		vaultView += "\n" + status.Success
 	} else if status.Loading {
@@ -206,9 +315,16 @@ func (m Model) View() string {
 		vaultView += progressStr
 	}
 
-	return styles.BoldStyle.Render("YeetFile Vault > home"+folderPath) + "\n" +
+	var helpStr string
+	if m.filtering {
+		helpStr = FilterHelp
+	} else {
+		helpStr = Help
+	}
+
+	return utils.GenerateTitle("Vault > home"+folderPath) + "\n" +
 		vaultView + "\n" +
-		styles.HelpStyle.Render(Help)
+		styles.HelpStyle.Render(helpStr)
 }
 
 func (m Model) upload(event internal.Event) {
@@ -300,6 +416,17 @@ func (m Model) finishUpdates(err error, updateItems bool) {
 		items = m.Context.Content
 		rows = CreateItemRows(items)
 	}
+}
+
+func (m Model) NewFileViewRequest(item models.VaultItem) (tea.Model, tea.Cmd) {
+	m.ViewRequest = internal.ViewRequest{
+		View:      internal.FileViewerView,
+		Type:      internal.ViewFileRequest,
+		Item:      item,
+		CryptoCtx: m.Context.Crypto,
+	}
+
+	return m, tea.Quit
 }
 
 func (m Model) NewDeleteRequest(item models.VaultItem) (tea.Model, tea.Cmd) {

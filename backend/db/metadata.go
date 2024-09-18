@@ -17,6 +17,7 @@ type FileMetadata struct {
 	Name         string
 	B2ID         string
 	Length       int
+	FolderID     string
 	ProtectedKey []byte
 }
 

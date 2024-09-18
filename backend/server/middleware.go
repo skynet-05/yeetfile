@@ -25,8 +25,8 @@ var mu sync.Mutex
 
 const csp = "" +
 	"default-src 'self';" +
-	"img-src 'self' https://docs.yeetfile.com data:;" +
-	"media-src 'self' data:;" +
+	"img-src 'self' https://docs.yeetfile.com blob: data:;" +
+	"media-src 'self' blob: data:;" +
 	"script-src 'self' 'wasm-unsafe-eval';" +
 	"style-src 'self' 'unsafe-inline';"
 

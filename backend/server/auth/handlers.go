@@ -152,7 +152,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			return
 		}
 
-		err = vault.DeleteVaultFolder(id, id, false)
+		_, err = vault.DeleteVaultFolder(id, id, false)
 		if err != nil {
 			log.Printf("Error deleting user root folder: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)

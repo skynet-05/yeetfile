@@ -12,7 +12,7 @@ account_id: str = ""
 @pytest.fixture(scope="session")
 def browser_context() -> BrowserContext:
     with sync_playwright() as p:
-        browser: Browser = p.chromium.launch(slow_mo=100)
+        browser: Browser = p.chromium.launch(slow_mo=200)
         context: BrowserContext = browser.new_context()
         yield context
         browser.close()
@@ -202,8 +202,11 @@ def test_vault(browser_context: BrowserContext):
         assert len(folder_json["items"]) == 1
         file_id = folder_json["items"][0]["id"]
 
+        page.get_by_test_id(f"action-{file_id}").click()
+        expect(page.get_by_test_id("actions-dialog")).to_be_visible()
+
         with page.expect_download() as download_info:
-            page.get_by_role("link", name=demo_file).click()
+            page.get_by_test_id("action-download").click()
 
         download = download_info.value
         browser_name = browser_context.browser.browser_type.name
@@ -226,6 +229,39 @@ def test_vault(browser_context: BrowserContext):
     _upload_file("")
     new_folder_id = _create_folder("")
     _upload_file(new_folder_id)
+
+
+def test_vault_password(browser_context: BrowserContext):
+    """Tests setting a unique session-specific vault password"""
+    global account_id
+    page: Page = browser_context.new_page()
+    page.goto(f"{base_page}/account")
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.get_by_test_id("logout-btn").click()
+    expect(page).to_have_title("YeetFile - Send")
+
+    page.goto(f"{base_page}/login")
+    page.get_by_test_id("identifier").fill(account_id)
+    page.get_by_test_id("password").fill(user_password)
+    page.get_by_test_id("advanced-login-options").click()
+    page.get_by_test_id("vault-pass-cb").click()
+    page.get_by_test_id("login-btn").click()
+
+    vault_password = "my_vault_password"
+    expect(page.get_by_test_id("vault-pass-dialog")).to_be_visible()
+    page.get_by_test_id("vault-pass").fill(vault_password)
+    page.get_by_test_id("submit-pass").click()
+    expect(page).to_have_title("YeetFile - My Account")
+
+    page.goto(f"{base_page}/vault")
+    expect(page.get_by_test_id("table-body")).to_be_empty()
+    expect(page.get_by_test_id("vault-pass-dialog")).to_be_visible()
+    page.get_by_test_id("vault-pass").fill("WRONG")
+    page.get_by_test_id("submit-pass").click()
+    expect(page.get_by_test_id("vault-pass-dialog")).to_be_visible()
+    page.get_by_test_id("vault-pass").fill(vault_password)
+    page.get_by_test_id("submit-pass").click()
+    expect(page.get_by_test_id("vault-pass-dialog")).to_be_hidden()
 
 
 def test_delete_account(browser_context: BrowserContext):

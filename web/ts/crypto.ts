@@ -325,22 +325,46 @@ export const ingestProtectedKey = (
 export const generateKeyPair = async (): Promise<CryptoKeyPair> => {
     return await webcrypto.subtle.generateKey(
         {
-            name: 'RSA-OAEP',
+            name: "RSA-OAEP",
             modulusLength: 2048,
             publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
-            hash: { name: 'SHA-256' }
-        }, true, ['encrypt', 'decrypt']
+            hash: { name: "SHA-256" }
+        }, true, ["encrypt", "decrypt"]
     );
 }
 
-if (typeof window !== 'undefined') {
+/**
+ * unwindKeys unwinds an ordered key sequence for a file or folder. The sequence
+ * contains every parent folder's protected key, which is used to decrypt each
+ * child's key.
+ * @param privateKey {CryptoKey}
+ * @param keySequence {Uint8Array[]}
+ */
+export const unwindKeys = async (privateKey: CryptoKey, keySequence: Uint8Array[]) => {
+    let parentKey;
+    for (let i = 0; i < keySequence.length; i++) {
+        if (!parentKey) {
+            let protectedKey = keySequence[i];
+            parentKey = await decryptRSA(privateKey, protectedKey);
+            continue;
+        }
+
+        let parentKeyImport = await importKey(parentKey);
+        let protectedKey = keySequence[i];
+        parentKey = await decryptChunk(parentKeyImport, protectedKey);
+    }
+
+    return await importKey(parentKey);
+}
+
+if (typeof window !== "undefined") {
     // Enforce browser variables
     webcrypto = window.crypto;
     // @ts-ignore
     indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB
 } else {
     // @ts-ignore
-    webcrypto = await import('crypto');
+    webcrypto = await import("crypto");
     // @ts-ignore
-    argon2kdf = await import('argon2-browser');
+    argon2kdf = await import("argon2-browser");
 }

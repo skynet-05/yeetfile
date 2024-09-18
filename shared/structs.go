@@ -56,6 +56,18 @@ type VaultItem struct {
 	RefID        string    `json:"refID"`
 }
 
+type VaultItemInfo struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Size         int       `json:"size"`
+	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
+	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	CanModify    bool      `json:"canModify"`
+	IsOwner      bool      `json:"isOwner"`
+	RefID        string    `json:"refID"`
+	KeySequence  [][]byte  `json:"keySequence" ts_type:"Uint8Array[]" ts_transform:"__VALUE__.map(base64ToArray)"`
+}
+
 type NewVaultFolder struct {
 	Name         string `json:"name"`
 	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`

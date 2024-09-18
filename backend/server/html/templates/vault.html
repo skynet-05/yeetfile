@@ -8,10 +8,18 @@
     <input data-testid="file-input" id="file-input" type="file" class="hidden" multiple>
     <button class="accent-btn" id="vault-upload">Upload</button>
     <button data-testid="new-vault-folder" id="new-vault-folder">Create Folder</button>
-    <p id="vault-status"></p>
-    <div id="vault-items-div">
+    <p id="vault-status">Home</p>
+    <div class="visible" id="vault-items-div">
         <table id="vault-table">
-            <thead>
+            <thead class="visible" id="loading-header">
+            <tr>
+                <th>Loading...</th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+            </thead>
+            <thead class="hidden" id="table-header">
                 <tr>
                     <th>Name</th>
                     <th>Size</th>
@@ -22,6 +30,11 @@
             <tbody data-testid="table-body" id="table-body">
             </tbody>
         </table>
+    </div>
+    <div class="hidden" id="vault-file-div">
+        <div id="vault-file-header"></div>
+        <div id="vault-file-content"></div>
+        <pre id="vault-text-wrapper"><code id="vault-text-content"></code></pre>
     </div>
     <hr>
     <progress max="{{ .StorageAvailable }}" value="{{ .StorageUsed }}" id="storage-bar"></progress>
@@ -45,7 +58,7 @@
 <dialog data-dynamic="true" data-testid="actions-dialog" id="actions-dialog">
     <h3 id="actions-dialog-title"></h3>
     <hr>
-    <div id="action-download" class="edit-row">
+    <div data-testid="action-download" id="action-download" class="edit-row">
         <img class="flipped-icon" src="/static/icons/{{ .Base.Config.Version }}/download.svg">
         <span>Download</span>
     </div>
