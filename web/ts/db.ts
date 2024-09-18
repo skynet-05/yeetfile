@@ -1,4 +1,5 @@
 import * as crypto from "./crypto.js";
+import {JSSessionKey} from "./constants.js";
 
 export class YeetFileDB {
     private readonly dbName: string;
@@ -57,14 +58,12 @@ export class YeetFileDB {
 
             let encKey;
             if (password.length > 0) {
-                encKey = await crypto.generateArgon2Key(
-                    password,
-                    "YEETFILE_RANDOM_SESSION_KEY");
+                encKey = await crypto.generateArgon2Key(password, JSSessionKey);
             } else {
-                encKey = await crypto.importKey(hexToBytes("YEETFILE_RANDOM_SESSION_KEY"))
+                encKey = await crypto.importKey(hexToBytes(JSSessionKey))
             }
 
-            // Replaced w/ random value on each request (should be cached by browser)
+            // Replaced w/ random value on each request (needs to be cached by browser)
             let encPrivKey = await crypto.encryptChunk(encKey, privateKey);
 
             let request = indexedDB.open(this.dbName, this.dbVersion);
@@ -181,11 +180,9 @@ export class YeetFileDB {
 
                 let decKey;
                 if (password.length > 0) {
-                    decKey = await crypto.generateArgon2Key(
-                        password,
-                        "YEETFILE_RANDOM_SESSION_KEY");
+                    decKey = await crypto.generateArgon2Key(password, JSSessionKey);
                 } else {
-                    decKey = await crypto.importKey(hexToBytes("YEETFILE_RANDOM_SESSION_KEY"))
+                    decKey = await crypto.importKey(hexToBytes(JSSessionKey));
                 }
 
                 let transaction = db.transaction([this.keysObjectStore], "readonly");

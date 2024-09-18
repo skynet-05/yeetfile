@@ -44,7 +44,7 @@ func FileHandler(strip string, prepend string, files embed.FS) http.HandlerFunc 
 				}
 				minFile = []byte(strings.ReplaceAll(
 					string(minFile),
-					constants.JSRandomSessionKey,
+					constants.JSSessionKey,
 					hex.EncodeToString(defaultPassBytes)))
 			}
 

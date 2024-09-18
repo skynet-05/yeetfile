@@ -51,9 +51,9 @@ func Run(addr string) {
 		{GET, endpoints.DownloadSendFileData, send.DownloadChunkHandler},
 
 		// YeetFile Vault
-		{ALL, endpoints.VaultFolder, AuthMiddleware(vault.FolderHandler)},
+		{ALL, endpoints.VaultFolder, AuthLimiterMiddleware(vault.FolderHandler)},
 		{GET | PUT | DELETE, endpoints.VaultFile, AuthMiddleware(vault.FileHandler)},
-		{POST, endpoints.UploadVaultFileMetadata, AuthMiddleware(vault.UploadMetadataHandler)},
+		{POST, endpoints.UploadVaultFileMetadata, AuthLimiterMiddleware(vault.UploadMetadataHandler)},
 		{POST, endpoints.UploadVaultFileData, AuthMiddleware(vault.UploadDataHandler)},
 		{GET, endpoints.DownloadVaultFileMetadata, AuthLimiterMiddleware(vault.DownloadHandler)},
 		{GET, endpoints.DownloadVaultFileData, AuthMiddleware(vault.DownloadChunkHandler)},

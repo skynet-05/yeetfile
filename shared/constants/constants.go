@@ -2,7 +2,7 @@ package constants
 
 const VERSION = "1.0.0"
 
-const JSRandomSessionKey = "YEETFILE_RANDOM_SESSION_KEY"
+const JSSessionKey = "JS_SESSION_KEY"
 
 const CLIUserAgent = "yeetfile-cli"
 
