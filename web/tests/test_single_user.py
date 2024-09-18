@@ -12,7 +12,7 @@ account_id: str = ""
 @pytest.fixture(scope="session")
 def browser_context() -> BrowserContext:
     with sync_playwright() as p:
-        browser: Browser = p.chromium.launch(slow_mo=200)
+        browser: Browser = p.chromium.launch(slow_mo=250)
         context: BrowserContext = browser.new_context()
         yield context
         browser.close()
@@ -167,68 +167,88 @@ def test_file_send(browser_context: BrowserContext):
         assert f.readline() == file_content
 
 
-def test_vault(browser_context: BrowserContext):
+def test_vault_file_upload(browser_context: BrowserContext):
     """Test uploading a file to YeetFile Vault"""
     page: Page = browser_context.new_page()
 
-    def _create_folder(folder_id: str) -> str:
-        folder_name: str = "My Folder"
-        page.goto(f"{base_page}/vault/{folder_id}")
+    file_content: str = "testing file vault"
+    with open(demo_file, "w") as f:
+        f.write(file_content)
 
-        page.get_by_test_id("new-vault-folder").click()
-        expect(page.get_by_test_id("folder-dialog")).to_be_visible()
+    page.goto(f"{base_page}/vault")
 
-        page.get_by_test_id("folder-name").fill(folder_name)
-        page.get_by_test_id("submit-folder").click()
+    page.get_by_test_id("file-input").set_input_files(demo_file)
+    result_div = page.get_by_role("link", name=demo_file)
+    result_div.wait_for()
 
-        expect(page.get_by_role("link", name=folder_name)).to_be_visible()
+    folder_json = fetch_folder_json(page, "")
+    assert len(folder_json["items"]) == 1
+    file_id = folder_json["items"][0]["id"]
 
-        folder_json = fetch_folder_json(page, folder_id)
-        assert len(folder_json["folders"]) == 1
-        return folder_json["folders"][0]["id"]
+    page.get_by_test_id(f"action-{file_id}").click()
+    expect(page.get_by_test_id("actions-dialog")).to_be_visible()
 
-    def _upload_file(folder_id: str):
-        file_content: str = "testing file vault"
-        with open(demo_file, "w") as f:
-            f.write(file_content)
+    with page.expect_download() as download_info:
+        page.get_by_test_id("action-download").click()
 
-        page.goto(f"{base_page}/vault/{folder_id}")
+    download = download_info.value
+    browser_name = browser_context.browser.browser_type.name
+    new_filename = f"./test_vault_{browser_name}.txt"
+    download.save_as(new_filename)
 
-        page.get_by_test_id("file-input").set_input_files(demo_file)
-        result_div = page.get_by_role("link", name=demo_file)
-        result_div.wait_for()
+    with open(new_filename) as new_f:
+        assert new_f.readline() == file_content
 
-        folder_json = fetch_folder_json(page, folder_id)
-        assert len(folder_json["items"]) == 1
-        file_id = folder_json["items"][0]["id"]
+    page.get_by_test_id(f"action-{file_id}").click()
+    expect(page.get_by_test_id("actions-dialog")).to_be_visible()
 
-        page.get_by_test_id(f"action-{file_id}").click()
-        expect(page.get_by_test_id("actions-dialog")).to_be_visible()
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.get_by_test_id("action-delete").click()
+    expect(page.get_by_test_id("table-body")).to_be_empty()
 
-        with page.expect_download() as download_info:
-            page.get_by_test_id("action-download").click()
+    new_folder_json = fetch_folder_json(page, "")
+    assert len(new_folder_json["items"]) == 0
 
-        download = download_info.value
-        browser_name = browser_context.browser.browser_type.name
-        new_filename = f"./test_vault_{browser_name}.txt"
-        download.save_as(new_filename)
 
-        with open(new_filename) as new_f:
-            assert new_f.readline() == file_content
+def test_vault_folder_creation(browser_context: BrowserContext):
+    """Tests creating a folder and uploading a file to the new folder"""
+    page: Page = browser_context.new_page()
 
-        page.get_by_test_id(f"action-{file_id}").click()
-        expect(page.get_by_test_id("actions-dialog")).to_be_visible()
+    folder_name: str = "My Folder"
+    page.goto(f"{base_page}/vault")
 
-        page.on("dialog", lambda dialog: dialog.accept())
-        page.get_by_test_id("action-delete").click()
-        expect(page.get_by_test_id("table-body")).to_be_empty()
+    page.get_by_test_id("new-vault-folder").click()
+    expect(page.get_by_test_id("folder-dialog")).to_be_visible()
 
-        new_folder_json = fetch_folder_json(page, folder_id)
-        assert len(new_folder_json["items"]) == 0
+    page.get_by_test_id("folder-name").fill(folder_name)
+    page.get_by_test_id("submit-folder").click()
 
-    _upload_file("")
-    new_folder_id = _create_folder("")
-    _upload_file(new_folder_id)
+    expect(page.get_by_role("link", name=folder_name)).to_be_visible()
+
+    folder_json = fetch_folder_json(page, "")
+    assert len(folder_json["folders"]) == 1
+    folder_id = folder_json["folders"][0]["id"]
+
+    page.goto(f"{base_page}/vault/{folder_id}")
+
+    file_content: str = "testing vault folder"
+    with open(demo_file, "w") as f:
+        f.write(file_content)
+
+    page.get_by_test_id("file-input").set_input_files(demo_file)
+    result_div = page.get_by_role("link", name=demo_file)
+    result_div.wait_for()
+
+    folder_json = fetch_folder_json(page, folder_id)
+    assert len(folder_json["items"]) == 1
+    file_id = folder_json["items"][0]["id"]
+
+    page.get_by_test_id(f"action-{file_id}").click()
+    expect(page.get_by_test_id("actions-dialog")).to_be_visible()
+
+    page.on("dialog", lambda dialog: dialog.accept())
+    page.get_by_test_id("action-delete").click()
+    expect(page.get_by_test_id("table-body")).to_be_empty()
 
 
 def test_vault_password(browser_context: BrowserContext):

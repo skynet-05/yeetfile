@@ -169,8 +169,6 @@ const uploadUserSelectedFiles = async () => {
             totalFiles,
             async (success, file, view ) => {
                 if (success) {
-                    console.log(file);
-                    console.log(view);
                     let row = await generateFileRow(view);
                     currentFiles[file.id] = view;
                     cache[folderID].items.unshift(file);
@@ -301,7 +299,7 @@ const uploadFile = async (
                 item.id = id;
                 item.refID = id;
                 item.name = hexName;
-                item.size = file.size;
+                item.size = file.size + constants.TotalOverhead;
                 item.modified = new Date();
                 item.protectedKey = protectedKey;
                 item.sharedBy = "";
