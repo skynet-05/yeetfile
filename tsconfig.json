@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
+        "module": "es2020",
         "outDir": "./backend/static/js",
-        "target": "es2017",
+        "target": "es2020",
         "lib": [
-            "es2017",
+            "es2020",
             "dom"
         ]
     },

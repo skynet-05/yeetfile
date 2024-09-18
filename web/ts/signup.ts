@@ -1,7 +1,6 @@
 import {MaxHintLen} from "./constants.js";
 import * as crypto from "./crypto.js";
 import {Endpoints} from "./endpoints.js";
-import {YeetFileDB} from "./db.js";
 import * as interfaces from "./interfaces.js";
 
 let emailToggle;
@@ -104,7 +103,14 @@ const emailSignup = async (btn: HTMLButtonElement) => {
     if (emailInput.value && passwordIsValid(passwordInput.value, confirmPasswordInput.value)) {
         let userKeys = await generateKeys(emailInput.value, passwordInput.value);
 
-        await new YeetFileDB().insertVaultKeyPair(userKeys["privateKey"], userKeys["publicKey"], "", success => {
+        const dbModule = await import('./db.js');
+        let db = new dbModule.YeetFileDB();
+
+        await db.insertVaultKeyPair(
+            userKeys["privateKey"],
+            userKeys["publicKey"],
+            "",
+            success => {
             if (success) {
                 submitSignupForm(btn, emailInput.value, userKeys);
             } else {
@@ -221,30 +227,35 @@ const verifyAccountID = async id => {
     button.disabled = true;
 
     let userKeys = await generateKeys(id, password);
-    await new YeetFileDB().insertVaultKeyPair(userKeys["privateKey"], userKeys["publicKey"], "", success => {
-        if (success) {
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", Endpoints.VerifyAccount.path, false);
-            xhr.setRequestHeader("Content-Type", "application/json");
+    let body = new interfaces.VerifyAccount();
+    body.id = id;
+    body.code = codeInput.value;
+    body.publicKey = userKeys["publicKey"];
+    body.protectedKey = userKeys["protectedKey"];
+    body.loginKeyHash = userKeys["loginKeyHash"];
+    body.rootFolderKey = userKeys["rootFolderKey"];
 
-            xhr.onreadystatechange = () => {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    let html = generateSuccessHTML(id);
-                    addVerifyHTML(html);
-                } else if (xhr.readyState === 4 && xhr.status !== 200) {
-                    button.disabled = false;
-                    showMessage("Error " + xhr.status + ": " + xhr.responseText, true);
-                }
-            };
-
-            xhr.send(JSON.stringify({
-                id: id,
-                code: codeInput.value,
-                loginKeyHash: Array.from(userKeys["loginKeyHash"]),
-                protectedKey: Array.from(userKeys["protectedKey"]),
-                publicKey: Array.from(userKeys["publicKey"]),
-                rootFolderKey: Array.from(userKeys["rootFolderKey"])
-            }));
+    fetch(Endpoints.VerifyAccount.path, {
+        method: "POST", body: JSON.stringify(body, jsonReplacer)
+    }).then(async response => {
+        if (response.ok) {
+            const dbModule = await import('./db.js');
+            let db = new dbModule.YeetFileDB();
+            await db.insertVaultKeyPair(
+                userKeys["privateKey"],
+                userKeys["publicKey"],
+                "",
+                success => {
+                    if (success) {
+                        let html = generateSuccessHTML(id);
+                        addVerifyHTML(html);
+                    } else {
+                        alert("Error inserting keys into indexed db!");
+                    }
+                });
+        } else {
+            button.disabled = false;
+            showMessage("Error " + await response.text(), true);
         }
     });
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,6 +44,15 @@ func GenErrMsgs(msg string, err error) (string, string) {
 	}
 
 	return serverMsg, clientMsg
+}
+
+func GetEnvVarBytes(key string, fallback []byte) []byte {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return fallback
+	}
+
+	return []byte(value)
 }
 
 func GetEnvVar(key string, fallback string) string {
@@ -318,4 +328,19 @@ func GetTrailingURLSegments(endpoint endpoints.Endpoint, path string) []string {
 
 	path = strings.TrimPrefix(path, "/")
 	return strings.Split(path, "/")
+}
+
+func GetReqSource(req *http.Request) (string, error) {
+	ip := req.Header.Get("X-Forwarded-For")
+
+	if len(ip) == 0 {
+		fallbackIP, _, err := net.SplitHostPort(req.RemoteAddr)
+		if err != nil {
+			return "", err
+		}
+
+		ip = fallbackIP
+	}
+
+	return ip, nil
 }

@@ -1,4 +1,5 @@
 import {Endpoints} from "./endpoints.js";
+import {YeetFileDB} from "./db.js";
 import * as constants from "./constants.js";
 import * as interfaces from "./interfaces.js";
 
@@ -30,8 +31,9 @@ const submitVerificationCode = () => {
     fetch(Endpoints.VerifyEmail.path, {
         method: "POST",
         body: JSON.stringify(emailVerify, jsonReplacer)
-    }).then(response => {
+    }).then(async response => {
         if (response.ok) {
+            await resetKeys();
             showMessage("Your email has been verified! Redirecting...", false);
             setTimeout(() => {
                 window.location.assign(Endpoints.HTMLAccount.path)
@@ -41,6 +43,30 @@ const submitVerificationCode = () => {
 
         }
     })
+}
+
+const resetKeys = async () => {
+    let db = new YeetFileDB();
+    await db.getVaultKeyPair("", true, async (privKey: Uint8Array, pubKey: Uint8Array) => {
+        await db.removeKeys(async success => {
+            if (!success) {
+                alert("Error resetting vault keys!");
+                return;
+            }
+
+            // Re-insert with new auth-based db file
+            const dbModule = await import("./db.js?_=" + Date.now());
+            let db = new dbModule.YeetFileDB();
+            await db.insertVaultKeyPair(privKey, pubKey, "", success => {
+                if (!success) {
+                    alert("Error setting vault keys!");
+                    return;
+                }
+            });
+        })
+    }, () => {
+        alert("Error retrieving vault key pair!");
+    });
 }
 
 if (document.readyState !== "loading") {

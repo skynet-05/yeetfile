@@ -11,7 +11,7 @@ const DBFilename = "db.js"
 const constsJS = `
 // Auto-generated from shared/js.go. Don't edit this manually.
 
-export const %s = "%s";
+export const JSSessionKey = "%s";
 export const IVSize = %d;
 export const KeySize = %d;
 export const ChunkSize = %d;
@@ -51,7 +51,7 @@ const endpointEntry = `
 
 func GenerateSharedJS() (string, string) {
 	jsConsts := fmt.Sprintf(constsJS,
-		constants.JSSessionKey, constants.JSSessionKey,
+		constants.JSSessionKey,
 		constants.IVSize,
 		constants.KeySize,
 		constants.ChunkSize,

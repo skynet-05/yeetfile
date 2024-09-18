@@ -1,5 +1,4 @@
 import * as crypto from "./crypto.js";
-import {JS_SESSION_KEY} from "./constants.js";
 
 export class YeetFileDB {
     private readonly dbName: string;
@@ -18,7 +17,8 @@ export class YeetFileDB {
     ) => void;
     getVaultKeyPair: (
         password: string,
-        callback: (privKey: CryptoKey, pubKey: CryptoKey) => void,
+        rawExport: boolean,
+        callback: (privKey: CryptoKey|Uint8Array, pubKey: CryptoKey|Uint8Array) => void,
         errorCallback: () => void,
     ) => void;
     removeKeys: (callback: (success: boolean) => void) => void;
@@ -58,9 +58,9 @@ export class YeetFileDB {
 
             let encKey;
             if (password.length > 0) {
-                encKey = await crypto.generateArgon2Key(password, JS_SESSION_KEY);
+                encKey = await crypto.generateArgon2Key(password, "JS_SESSION_KEY");
             } else {
-                encKey = await crypto.importKey(hexToBytes(JS_SESSION_KEY))
+                encKey = await crypto.importKey(hexToBytes("JS_SESSION_KEY"));
             }
 
             // Replaced w/ random value on each request (needs to be cached by browser)
@@ -165,10 +165,11 @@ export class YeetFileDB {
         /**
          * getVaultKey returns the vault key from the indexeddb, if it's available
          * @param password {string}
-         * @param callback {function(CryptoKey, CryptoKey)}
+         * @param rawExport {boolean}
+         * @param callback {function(CryptoKey|Uint8Array, CryptoKey|Uint8Array)}
          * @param errorCallback {function()}
          */
-        this.getVaultKeyPair = (password, callback, errorCallback) => {
+        this.getVaultKeyPair = (password, rawExport, callback, errorCallback) => {
             let request = indexedDB.open(this.dbName, this.dbVersion);
 
             request.onsuccess = async (event) => {
@@ -180,9 +181,9 @@ export class YeetFileDB {
 
                 let decKey;
                 if (password.length > 0) {
-                    decKey = await crypto.generateArgon2Key(password, JS_SESSION_KEY);
+                    decKey = await crypto.generateArgon2Key(password, "JS_SESSION_KEY");
                 } else {
-                    decKey = await crypto.importKey(hexToBytes(JS_SESSION_KEY));
+                    decKey = await crypto.importKey(hexToBytes("JS_SESSION_KEY"));
                 }
 
                 let transaction = db.transaction([this.keysObjectStore], "readonly");
@@ -201,12 +202,16 @@ export class YeetFileDB {
                         return;
                     }
 
-                    crypto.ingestProtectedKey(privateKeyBytes, privateKey => {
-                        let publicKey = publicKeyRequest.result.key;
-                        crypto.ingestPublicKey(publicKey, async publicKey => {
-                            callback(privateKey, publicKey);
+                    if (rawExport) {
+                        callback(privateKeyBytes, publicKeyRequest.result.key);
+                    } else {
+                        crypto.ingestProtectedKey(privateKeyBytes, privateKey => {
+                            let publicKey = publicKeyRequest.result.key;
+                            crypto.ingestPublicKey(publicKey, async publicKey => {
+                                callback(privateKey, publicKey);
+                            });
                         });
-                    });
+                    }
                 }
 
                 transaction.onerror = (event) => {

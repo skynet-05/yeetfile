@@ -1,15 +1,17 @@
 package misc
 
 import (
-	"crypto/rand"
 	"embed"
 	"encoding/hex"
 	"fmt"
+	"golang.org/x/crypto/blake2b"
 	"net/http"
 	"strings"
 	"time"
 	"yeetfile/backend/config"
+	"yeetfile/backend/server/session"
 	"yeetfile/backend/static"
+	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
@@ -30,22 +32,30 @@ func FileHandler(strip string, prepend string, files embed.FS) http.HandlerFunc 
 		path := strings.Split(req.URL.Path, "/")
 		name := path[len(path)-1]
 
+		queryIdx := strings.Index(name, "?")
+		if queryIdx > 0 {
+			name = name[:queryIdx]
+		}
+
 		w.Header().Set("Cache-Control", "private, max-age=604800")
 		w.Header().Set("Expires", time.Now().Add(time.Hour*24*7).Format(http.TimeFormat))
 
 		minFile, ok := static.MinifiedFiles[name]
 		if ok {
 			if strings.Contains(name, shared.DBFilename) {
-				// New db.js requests should regenerate the
-				// random pass
-				defaultPassBytes := make([]byte, 32)
-				if !config.IsDebugMode {
-					_, _ = rand.Read(defaultPassBytes)
+				dbKey, canCache := generateJSDBKey(req)
+				if !canCache {
+					// Prevent caching non-authenticated db.js
+					w.Header().Set("Cache-Control",
+						"no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0")
+					addr, _ := utils.GetReqSource(req)
+					dbKey = blake2b.Sum256([]byte(addr))
 				}
+
 				minFile = []byte(strings.ReplaceAll(
 					string(minFile),
 					constants.JSSessionKey,
-					hex.EncodeToString(defaultPassBytes)))
+					hex.EncodeToString(dbKey[:])))
 			}
 
 			// Found minified file, return this instead
@@ -62,9 +72,28 @@ func FileHandler(strip string, prepend string, files embed.FS) http.HandlerFunc 
 			return
 		}
 
-		http.StripPrefix(
-			strip,
-			http.FileServer(http.FS(files)),
-		).ServeHTTP(w, req)
+		http.StripPrefix(strip, http.FileServer(http.FS(files))).ServeHTTP(w, req)
 	}
+}
+
+// generateJSDBKey creates a deterministic hash using the current session key
+// and session ID. This is used as a salt if the user's vault is password
+// protected, otherwise its used as the key for encrypting the user's key pair.
+// If the user doesn't have a session, the hash is generated from the source of
+// the request and the value of config.YeetFileConfig.WebDBSecret.
+func generateJSDBKey(req *http.Request) ([32]byte, bool) {
+	canCache := false
+	var dbKey [32]byte
+
+	key, id, err := session.GetSessionKeyAndID(req)
+	if err == nil && len(key) > 0 && len(id) > 0 {
+		canCache = true
+		dbKey = blake2b.Sum256([]byte(key + id))
+	} else {
+		// Prevent caching non-authenticated db.js
+		addr, _ := utils.GetReqSource(req)
+		dbKey = blake2b.Sum256(append(config.YeetFileConfig.FallbackWebSecret, []byte(addr)...))
+	}
+
+	return dbKey, canCache
 }

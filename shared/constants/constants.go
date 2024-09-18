@@ -2,6 +2,10 @@ package constants
 
 const VERSION = "1.0.0"
 
+// JSSessionKey determines the hardcoded string that gets replaced in db.ts in
+// order to have a semi-random value used in encrypting the user's key pair in
+// IndexedDB.
+// --- Changes to this value must be reflected in db.ts
 const JSSessionKey = "JS_SESSION_KEY"
 
 const CLIUserAgent = "yeetfile-cli"

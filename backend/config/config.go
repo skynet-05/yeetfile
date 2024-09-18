@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/gorilla/securecookie"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
@@ -28,6 +29,9 @@ var defaultUserSend = utils.GetEnvVarInt(
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
 var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
 var secret = utils.GetEnvVar("YEETFILE_SERVER_SECRET", defaultSecret)
+var fallbackWebSecret = utils.GetEnvVarBytes(
+	"YEETFILE_FALLBACK_WEB_SECRET",
+	securecookie.GenerateRandomKey(32))
 
 var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 
@@ -105,15 +109,6 @@ var stripeBilling = StripeBillingConfig{
 	SubAdvancedMonthlyLink: os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_LINK"),
 	SubAdvancedYearly:      os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY"),
 	SubAdvancedYearlyLink:  os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_LINK"),
-
-	//Add50GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_50GB_SEND"),
-	//Add50GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_50GB_SEND_LINK"),
-	//
-	//Add100GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_100GB_SEND"),
-	//Add100GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_100GB_SEND_LINK"),
-	//
-	//Add250GBSend:     os.Getenv("YEETFILE_STRIPE_ADD_250GB_SEND"),
-	//Add250GBSendLink: os.Getenv("YEETFILE_STRIPE_ADD_250GB_SEND_LINK"),
 }
 
 // =============================================================================
@@ -167,6 +162,7 @@ type ServerConfig struct {
 	Version            string
 	PasswordHash       []byte
 	ServerSecret       []byte
+	FallbackWebSecret  []byte
 }
 
 type TemplateConfig struct {
@@ -222,6 +218,7 @@ func init() {
 		Version:            constants.VERSION,
 		PasswordHash:       passwordHash,
 		ServerSecret:       []byte(secret),
+		FallbackWebSecret:  fallbackWebSecret,
 	}
 
 	// Subset of main server config to use in HTML templating

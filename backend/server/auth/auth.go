@@ -59,7 +59,7 @@ func ValidateCredentials(
 	return userID, nil
 }
 
-func createNewUser(values db.VerifiedAccountValues) error {
+func createNewUser(values db.VerifiedAccountValues) (string, error) {
 	// Create new user
 	id, err := db.NewUser(db.User{
 		Email:        values.Email,
@@ -71,16 +71,16 @@ func createNewUser(values db.VerifiedAccountValues) error {
 
 	if err != nil {
 		log.Printf("Error initializing new account: %v\n", err)
-		return err
+		return "", err
 	}
 
 	err = db.NewRootFolder(id, values.RootFolderKey)
 	if err != nil {
 		log.Printf("Error initializing user vault: %v\n", err)
-		return err
+		return "", err
 	}
 
-	return nil
+	return id, nil
 }
 
 func updateUser(values db.VerifiedAccountValues) error {

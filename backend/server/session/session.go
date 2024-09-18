@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"log"
 	"net/http"
@@ -14,14 +15,15 @@ import (
 type HandlerFunc func(w http.ResponseWriter, req *http.Request, userID string)
 
 var (
-	key = utils.GetEnvVar(
+	key = utils.GetEnvVarBytes(
 		"YEETFILE_SESSION_KEY",
-		shared.GenRandomString(16))
-	store = sessions.NewFilesystemStore("", []byte(key))
+		securecookie.GenerateRandomKey(32))
+	store = sessions.NewCookieStore(key)
 )
 
 const UserIDKey = "user"
 const UserSessionKey = "session"
+const UserSessionIDKey = "session_id"
 
 func GetSession(req *http.Request) (*sessions.Session, error) {
 	return store.Get(req, constants.AuthSessionStore)
@@ -41,8 +43,9 @@ func SetSession(id string, w http.ResponseWriter, req *http.Request) error {
 		}
 	}
 
-	session.Values[UserSessionKey] = sessionKey
 	session.Values[UserIDKey] = id
+	session.Values[UserSessionKey] = sessionKey
+	session.Values[UserSessionIDKey] = shared.GenRandomNumbers(32)
 	session.Options.SameSite = http.SameSiteStrictMode
 	return session.Save(req, w)
 }
@@ -59,6 +62,25 @@ func HasSession(req *http.Request) bool {
 	}
 
 	return true
+}
+
+func GetSessionKeyAndID(req *http.Request) (string, string, error) {
+	session, err := GetSession(req)
+	if err != nil {
+		return "", "", err
+	}
+
+	sessionKey, found := session.Values[UserSessionKey].(string)
+	if !found {
+		return "", "", errors.New("session key not found")
+	}
+
+	sessionID, found := session.Values[UserSessionIDKey].(string)
+	if !found {
+		return "", "", errors.New("session id not found")
+	}
+
+	return sessionKey, sessionID, nil
 }
 
 func IsValidSession(req *http.Request) bool {

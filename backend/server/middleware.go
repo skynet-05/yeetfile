@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/time/rate"
-	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/server/session"
+	"yeetfile/backend/utils"
 	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
@@ -54,16 +54,10 @@ func getVisitor(identifier string, path string) *rate.Limiter {
 // of a handler function.
 func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		ip := req.Header.Get("X-Forwarded-For")
-
-		if len(ip) == 0 {
-			fallbackIP, _, err := net.SplitHostPort(req.RemoteAddr)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
-			ip = fallbackIP
+		ip, err := utils.GetReqSource(req)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		limiter := getVisitor(ip, req.URL.Path)

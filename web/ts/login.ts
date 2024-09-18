@@ -1,6 +1,5 @@
 import * as crypto from "./crypto.js";
 import { Endpoints } from "./endpoints.js";
-import { YeetFileDB } from "./db.js";
 import { Login, LoginResponse } from "./interfaces.js";
 
 const useVaultPasswordKey = "UseVaultPassword";
@@ -114,7 +113,8 @@ const login = async (twoFactorCode: string) => {
                 showVaultPassDialog(privKey, pubKey);
             } else {
                 localStorage.setItem(useVaultPasswordKey, "");
-                let db = new YeetFileDB();
+                const dbModule = await import('./db.js');
+                let db = new dbModule.YeetFileDB();
                 db.insertVaultKeyPair(privKey, pubKey, "", success => {
                     if (success) {
                         window.location.assign(next);
@@ -167,11 +167,17 @@ const showTwoFactorDialog = () => {
     dialog.showModal();
 }
 
-const showVaultPassDialog = (privKeyBytes, pubKeyBytes) => {
+const showVaultPassDialog = async (
+    privKeyBytes: Uint8Array,
+    pubKeyBytes: Uint8Array,
+) => {
+    const dbModule = await import('./db.js');
+    let db = new dbModule.YeetFileDB();
+
     let cancel = document.getElementById("cancel-pass")
-    cancel.addEventListener("click", () => {
+    cancel.addEventListener("click", async () => {
         resetLoginButton();
-        new YeetFileDB().removeKeys(success => {
+        await db.removeKeys(success => {
             if (success) {
                 fetch(Endpoints.Logout.path).catch(() => {
                     console.warn("error logging user out");
@@ -188,7 +194,7 @@ const showVaultPassDialog = (privKeyBytes, pubKeyBytes) => {
         localStorage.setItem(useVaultPasswordKey, useVaultPasswordValue);
         let passwordInput = document.getElementById("vault-pass") as HTMLInputElement;
         let password = passwordInput.value;
-        await new YeetFileDB().insertVaultKeyPair(
+        await db.insertVaultKeyPair(
             privKeyBytes,
             pubKeyBytes,
             password,

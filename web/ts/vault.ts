@@ -67,10 +67,10 @@ enum View {
 let cache: FolderCache = {};
 let folderStatus: string = "";
 
-let folderDialog;
-let subfolderParentID;
-let privateKey;
-let publicKey;
+let folderDialog: HTMLDialogElement;
+let subfolderParentID: string;
+let privateKey: CryptoKey;
+let publicKey: CryptoKey;
 let folderID = "";
 let folderKey;
 
@@ -91,7 +91,7 @@ const init = () => {
         if (isProtected) {
             showVaultPassDialog(yeetfileDB);
         } else {
-            yeetfileDB.getVaultKeyPair("", (privKey, pubKey) => {
+            yeetfileDB.getVaultKeyPair("", false, (privKey: CryptoKey, pubKey: CryptoKey) => {
                 privateKey = privKey;
                 publicKey = pubKey;
 
@@ -114,7 +114,7 @@ const init = () => {
     });
 
     let newFolderBtn = document.getElementById("new-vault-folder") as HTMLButtonElement;
-    folderDialog = document.getElementById("folder-dialog");
+    folderDialog = document.getElementById("folder-dialog") as HTMLDialogElement;
     newFolderBtn.addEventListener("click", () => {
         let name = document.getElementById("folder-name") as HTMLInputElement;
         name.value = "";
@@ -202,7 +202,7 @@ const showVaultPassDialog = (yeetfileDB: YeetFileDB) => {
         let passwordInput = document.getElementById(
             "vault-pass") as HTMLInputElement;
         let password = passwordInput.value;
-        yeetfileDB.getVaultKeyPair(password, (privKey, pubKey) => {
+        yeetfileDB.getVaultKeyPair(password, false, (privKey: CryptoKey, pubKey: CryptoKey) => {
             vaultPasswordDialog.close();
             privateKey = privKey;
             publicKey = pubKey;

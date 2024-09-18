@@ -217,7 +217,7 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 
 	var id string
 	if len(accountValues.AccountID) == 0 {
-		err = createNewUser(accountValues)
+		id, err = createNewUser(accountValues)
 		if err != nil {
 			http.Error(w, "Error creating account", http.StatusInternalServerError)
 			return
@@ -250,7 +250,6 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	// Remove verification entry
 	_ = db.DeleteVerification(verifyEmail.Email)
 	_ = session.SetSession(id, w, req)
-	http.Redirect(w, req, "/account", http.StatusMovedPermanently)
 }
 
 // VerifyAccountHandler handles account verification using the CAPTCHA displayed
