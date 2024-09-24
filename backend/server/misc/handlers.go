@@ -3,6 +3,7 @@ package misc
 import (
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"golang.org/x/crypto/blake2b"
 	"net/http"
@@ -19,6 +20,11 @@ import (
 // UpHandler is used as the health check endpoint for load balancing, docker, etc.
 func UpHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+// InfoHandler returns information about the current instance
+func InfoHandler(w http.ResponseWriter, _ *http.Request) {
+	_ = json.NewEncoder(w).Encode(config.GetServerInfoStruct())
 }
 
 // FileHandler uses the embedded files from staticFiles to return a file

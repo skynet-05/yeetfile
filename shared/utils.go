@@ -17,6 +17,10 @@ var Characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var Numbers = []rune("1234567890")
 
 func ReadableFileSize(b int) string {
+	if b < 0 {
+		return "Unlimited"
+	}
+
 	const unit = 1000
 	if b < unit {
 		return fmt.Sprintf("%d B", b)

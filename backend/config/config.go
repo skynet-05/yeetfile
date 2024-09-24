@@ -5,8 +5,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 	"yeetfile/backend/utils"
+	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
 
@@ -16,20 +18,16 @@ import (
 
 const LocalStorage = "local"
 const B2Storage = "b2"
-const defaultSecret = "yeetfile-secret-key"
 
-var storageType = utils.GetEnvVar("YEETFILE_STORAGE", B2Storage)
+var defaultSecret = []byte("yeetfile-debug-secret-key-123456")
+var storageType = utils.GetEnvVar("YEETFILE_STORAGE", LocalStorage)
 var domain = os.Getenv("YEETFILE_DOMAIN")
-var defaultUserStorage = utils.GetEnvVarInt(
-	"YEETFILE_DEFAULT_USER_STORAGE",
-	15000000) // 15MB
-var defaultUserSend = utils.GetEnvVarInt(
-	"YEETFILE_DEFAULT_USER_SEND",
-	5000000) // 5MB
+var defaultUserStorage = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_STORAGE", -1)
+var defaultUserSend = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_SEND", -1)
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
 var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
-var secret = utils.GetEnvVar("YEETFILE_SERVER_SECRET", defaultSecret)
-var fallbackWebSecret = utils.GetEnvVarBytes(
+var secret = utils.GetEnvVarBytesB64("YEETFILE_SERVER_SECRET", defaultSecret)
+var fallbackWebSecret = utils.GetEnvVarBytesB64(
 	"YEETFILE_FALLBACK_WEB_SECRET",
 	securecookie.GenerateRandomKey(32))
 
@@ -166,13 +164,13 @@ type ServerConfig struct {
 }
 
 type TemplateConfig struct {
-	Version          *string
-	CurrentUserCount *int
-	MaxUserCount     *int
-	EmailEnabled     *bool
-	BillingEnabled   *bool
-	StripeEnabled    *bool
-	BTCPayEnabled    *bool
+	Version          string
+	CurrentUserCount int
+	MaxUserCount     int
+	EmailEnabled     bool
+	BillingEnabled   bool
+	StripeEnabled    bool
+	BTCPayEnabled    bool
 }
 
 var YeetFileConfig ServerConfig
@@ -194,12 +192,11 @@ func init() {
 		}
 	}
 
-	if secret == defaultSecret {
+	if slices.Equal(secret, defaultSecret) {
 		logWarning(
 			"Server secret is set to the default value.",
 			"YEETFILE_SERVER_SECRET should be set to a ",
-			"unique, random value in production.")
-		secret += strings.Repeat("0", constants.KeySize-len(secret))
+			"unique, 32-byte base-64 encoded value in production.")
 	} else if len(secret) != constants.KeySize {
 		log.Fatalf("ERROR: YEETFILE_SERVER_SECRET is %d bytes, but %d "+
 			"bytes are required.", len(secret), constants.KeySize)
@@ -217,18 +214,18 @@ func init() {
 		BillingEnabled:     stripeBilling.Configured || btcPayBilling.Configured,
 		Version:            constants.VERSION,
 		PasswordHash:       passwordHash,
-		ServerSecret:       []byte(secret),
+		ServerSecret:       secret,
 		FallbackWebSecret:  fallbackWebSecret,
 	}
 
 	// Subset of main server config to use in HTML templating
 	HTMLConfig = TemplateConfig{
-		Version:        &YeetFileConfig.Version,
-		MaxUserCount:   &YeetFileConfig.MaxUserCount,
-		EmailEnabled:   &YeetFileConfig.Email.Configured,
-		BillingEnabled: &YeetFileConfig.BillingEnabled,
-		StripeEnabled:  &YeetFileConfig.StripeBilling.Configured,
-		BTCPayEnabled:  &YeetFileConfig.BTCPayBilling.Configured,
+		Version:        YeetFileConfig.Version,
+		MaxUserCount:   YeetFileConfig.MaxUserCount,
+		EmailEnabled:   YeetFileConfig.Email.Configured,
+		BillingEnabled: YeetFileConfig.BillingEnabled,
+		StripeEnabled:  YeetFileConfig.StripeBilling.Configured,
+		BTCPayEnabled:  YeetFileConfig.BTCPayBilling.Configured,
 	}
 
 	log.Printf("Configuration:\n"+
@@ -253,4 +250,25 @@ func logWarning(warnings ...string) {
 		log.Printf("!!! " + warning + "\n")
 	}
 	log.Println(strings.Repeat("@", 57))
+}
+
+func GetServerInfoStruct() shared.ServerInfo {
+	var storageBackend string
+	if storageType == B2Storage {
+		storageBackend = "Backblaze B2"
+	} else {
+		storageBackend = "Server Storage"
+	}
+
+	return shared.ServerInfo{
+		StorageBackend:     storageBackend,
+		PasswordRestricted: YeetFileConfig.PasswordHash != nil,
+		MaxUserCountSet:    YeetFileConfig.MaxUserCount > 0,
+		EmailConfigured:    YeetFileConfig.Email.Configured,
+		BillingEnabled:     YeetFileConfig.BillingEnabled,
+		StripeEnabled:      YeetFileConfig.BTCPayBilling.Configured,
+		BTCPayEnabled:      YeetFileConfig.StripeBilling.Configured,
+		DefaultStorage:     YeetFileConfig.DefaultUserStorage,
+		DefaultSend:        YeetFileConfig.DefaultUserSend,
+	}
 }

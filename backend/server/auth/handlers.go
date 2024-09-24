@@ -98,6 +98,11 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		// Email signup
+		if !config.YeetFileConfig.Email.Configured {
+			http.Error(w, "Email signup not configured for this instance", http.StatusNotFound)
+			return
+		}
+
 		err := SignupWithEmail(signupData)
 		if err != nil && err != db.VerificationCodeExistsError {
 			log.Printf("Error creating (email) account: %v\n", err)

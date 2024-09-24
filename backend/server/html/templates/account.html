@@ -6,9 +6,10 @@
   <hr class="accent-hr">
   <div>
     <table class="account-table">
+      {{ if .EmailConfigured }}
       <tr>
         <td>
-          <label>Email:</label>
+          <label class="slightly-bold-text">Email:</label>
         </td>
         <td>
           {{ if ne .Email "" }}
@@ -18,9 +19,10 @@
           {{ end }}
         </td>
       </tr>
+      {{ end }}
       <tr>
         <td>
-          <label>Vault:</label>
+          <label class="slightly-bold-text">Vault:</label>
         </td>
         <td>
           <span>{{ .StorageUsed }} / {{ .StorageAvailable }}</span>
@@ -28,7 +30,7 @@
       </tr>
       <tr>
         <td>
-          <label>Send:</label>
+          <label class="slightly-bold-text">Send:</label>
         </td>
         <td>
           <span>{{ .SendUsed }} / {{ .SendAvailable }} / month</span>
@@ -37,7 +39,7 @@
       {{ if .Base.Config.BillingEnabled }}
       <tr>
         <td>
-          <label>Subscription:</label>
+          <label class="slightly-bold-text">Subscription:</label>
         </td>
         <td>
           {{ if .IsActive }}
@@ -51,7 +53,7 @@
       {{ if ne .Email "" }}
       <tr>
         <td>
-          <label>Password Hint:</label>
+          <label class="slightly-bold-text">Password Hint:</label>
         </td>
         <td>
           {{ if .HasPasswordHint }}
@@ -63,7 +65,7 @@
       </tr>
       <tr>
         <td>
-          <label>Two-Factor Auth:</label>
+          <label class="slightly-bold-text">Two-Factor Auth:</label>
         </td>
         <td>
           {{ if .Has2FA }}
@@ -80,7 +82,7 @@
       <summary data-testid="advanced-summary">Advanced</summary>
       <table>
         <tr>
-          <td>Payment ID:</td>
+          <td class="slightly-bold-text">Payment ID:</td>
 <!--          <td>{{ .PaymentID }} — <a id="recycle-payment-id" href="#">Recycle</a></td>-->
           <td>{{ .PaymentID }}</td>
         </tr>

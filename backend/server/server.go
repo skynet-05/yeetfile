@@ -100,6 +100,7 @@ func Run(addr string) {
 		{GET, endpoints.HTMLChangePassword, AuthMiddleware(html.ChangePasswordPageHandler)},
 		{GET, endpoints.HTMLChangeHint, AuthMiddleware(html.ChangeHintPageHandler)},
 		{GET, endpoints.HTMLTwoFactor, AuthMiddleware(html.TwoFactorPageHandler)},
+		{GET, endpoints.HTMLServerInfo, html.ServerInfoPageHandler},
 
 		// Misc
 		{
@@ -108,6 +109,7 @@ func Run(addr string) {
 			misc.FileHandler("/static/", "", static.StaticFiles),
 		},
 		{GET, "/up", misc.UpHandler},
+		{GET, endpoints.ServerInfo, misc.InfoHandler},
 
 		// StreamSaver.js
 		// These routes serve files directly from the stream_saver submodule

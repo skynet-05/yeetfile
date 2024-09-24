@@ -271,3 +271,15 @@ type SetTOTP struct {
 type SetTOTPResponse struct {
 	RecoveryCodes [6]string `json:"recoveryCodes"`
 }
+
+type ServerInfo struct {
+	StorageBackend     string `json:"storageBackend"`
+	PasswordRestricted bool   `json:"passwordRestricted"`
+	MaxUserCountSet    bool   `json:"maxUserCountSet"`
+	EmailConfigured    bool   `json:"emailConfigured"`
+	BillingEnabled     bool   `json:"billingEnabled"`
+	StripeEnabled      bool   `json:"stripeEnabled"`
+	BTCPayEnabled      bool   `json:"btcPayEnabled"`
+	DefaultStorage     int    `json:"defaultStorage"`
+	DefaultSend        int    `json:"defaultSend"`
+}

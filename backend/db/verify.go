@@ -29,6 +29,15 @@ func NewVerification(
 	pwHash []byte,
 	accountID string,
 ) (string, error) {
+	if config.YeetFileConfig.MaxUserCount > 0 {
+		count, err := GetUserCount()
+		if err != nil {
+			return "", err
+		} else if count == config.YeetFileConfig.MaxUserCount {
+			return "", UserLimitReached
+		}
+	}
+
 	r, e := db.Query(`SELECT * FROM users WHERE email = $1 OR id = $1`,
 		signupData.Identifier)
 

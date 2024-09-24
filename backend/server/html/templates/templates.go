@@ -24,6 +24,7 @@ const (
 	ChangePasswordHTML = "change_password.html"
 	ChangeHintHTML     = "change_hint.html"
 	TwoFactorHTML      = "enable_2fa.html"
+	ServerInfoHTML     = "server_info.html"
 )
 
 //go:embed *.html
@@ -50,6 +51,7 @@ type Template struct {
 type SignupTemplate struct {
 	Base                   BaseTemplate
 	ServerPasswordRequired bool
+	EmailConfigured        bool
 }
 
 type LoginTemplate struct {
@@ -64,9 +66,24 @@ type VaultTemplate struct {
 	StorageUsed      int
 }
 
+type InfoTemplate struct {
+	Base               BaseTemplate
+	StorageBackend     string
+	HasRestrictions    bool
+	PasswordRestricted bool
+	MaxUserCountSet    bool
+	EmailConfigured    bool
+	BillingEnabled     bool
+	StripeEnabled      bool
+	BTCPayEnabled      bool
+	DefaultStorage     string
+	DefaultSend        string
+}
+
 type AccountTemplate struct {
 	Base                 BaseTemplate
 	Email                string
+	EmailConfigured      bool
 	Meter                int
 	IsActive             bool
 	PaymentID            string

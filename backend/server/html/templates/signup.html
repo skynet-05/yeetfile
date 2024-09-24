@@ -5,20 +5,32 @@
     <h1>Create Account</h1>
     <hr>
     <fieldset id="signup-fieldset">
-        <input data-testid="email-signup" type="radio" id="email-signup" name="signup" checked>
-        <label for="email-signup">Email Address</label><br>
-        <input data-testid="id-signup" type="radio" id="id-signup" name="signup">
-        <label for="id-signup">Account ID Only</label><br>
-        <hr>
+        {{ if .EmailConfigured }}
+        <div>
+        {{ else }}
+        <div class="hidden">
+        {{ end }}
+            <input data-testid="email-signup" type="radio" id="email-signup" name="signup" checked>
+            <label for="email-signup">Email Address</label><br>
+            <input data-testid="id-signup" type="radio" id="id-signup" name="signup">
+            <label for="id-signup">Account ID Only</label><br>
+            <hr>
+        </div>
         {{ if .ServerPasswordRequired }}
-        <span>This server is password protected. Please enter the server password below
-    to create an account.</span><br>
-        <input type="password" id="server-password" placeholder="Server Password">
+        <div class="padding-left-3">
+            <span class="red-text">This server is password protected!</span><br>
+            <span>Please enter the server password below to create an account.</span>
+        </div>
+        <input class="no-left-margin" type="password" id="server-password" placeholder="Server Password">
         <hr>
         {{ else }}
         <input type="password" id="server-password" placeholder="Server Password" hidden>
         {{ end }}
+        {{ if not .EmailConfigured }}
+        <div data-testid="email-id-div" id="email-div" class="hidden">
+        {{ else }}
         <div data-testid="email-id-div" id="email-div">
+        {{ end }}
             <table>
                 <tr>
                     <td><label for="email">Email:</label></td>
@@ -47,7 +59,11 @@
 
             <input class="signup-btn" type="submit" id="create-email-account" value="Create Account"/>
         </div>
+        {{ if not .EmailConfigured }}
+        <div data-testid="account-id-div" id="account-id-div" class="visible">
+        {{ else }}
         <div data-testid="account-id-div" id="account-id-div">
+        {{ end }}
             <table>
                 <tr>
                     <td><label for="account-password">Password:</label></td>
@@ -58,15 +74,15 @@
                     <td><input data-testid="account-confirm-password" type="password" id="account-confirm-password" placeholder="Confirm Password"></td>
                 </tr>
             </table>
-
-            <span class="small-text">
+            <input data-testid="create-id-only-account" class="signup-btn" type="submit" id="create-id-only-account" value="Create Account ID">
+            <br>
+            <div class="padding-left-3">
+                <span class="small-text">
                 Note: By signing up with an account number only,
                 you will be unable to recover your account if you
                 ever lose your account number or your password.
             </span>
-            <br>
-
-            <input data-testid="create-id-only-account" class="signup-btn" type="submit" id="create-id-only-account" value="Create Account ID">
+            </div>
         </div>
     </fieldset>
 

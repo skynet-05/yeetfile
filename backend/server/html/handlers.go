@@ -1,6 +1,7 @@
 package html
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -104,6 +105,7 @@ func SignupPageHandler(w http.ResponseWriter, _ *http.Request) {
 				Endpoints:  endpoints.HTMLPageEndpoints,
 			},
 			ServerPasswordRequired: config.YeetFileConfig.PasswordHash != nil,
+			EmailConfigured:        config.YeetFileConfig.Email.Configured,
 		},
 	)
 }
@@ -137,7 +139,6 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 	successMsg, errorMsg := generateAccountMessages(req)
 	isYearly := req.URL.Query().Has("yearly")
 	hasHint := user.PasswordHint != nil && len(user.PasswordHint) > 0
-
 	obscuredEmail, _ := utils.ObscureEmail(user.Email)
 
 	_ = templates.ServeTemplate(
@@ -154,6 +155,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 				Endpoints:  endpoints.HTMLPageEndpoints,
 			},
 			Email:                obscuredEmail,
+			EmailConfigured:      config.YeetFileConfig.Email.Configured,
 			PaymentID:            user.PaymentID,
 			ExpString:            user.MemberExp.Format("2 Jan 2006"),
 			IsActive:             time.Now().Before(user.MemberExp),
@@ -278,6 +280,41 @@ func TwoFactorPageHandler(w http.ResponseWriter, _ *http.Request, _ string) {
 				Config:     config.HTMLConfig,
 				Endpoints:  endpoints.HTMLPageEndpoints,
 			},
+		},
+	)
+}
+
+func ServerInfoPageHandler(w http.ResponseWriter, req *http.Request) {
+	serverInfo := config.GetServerInfoStruct()
+	hasRestrictions := serverInfo.PasswordRestricted || serverInfo.MaxUserCountSet
+	storageStr := shared.ReadableFileSize(serverInfo.DefaultStorage)
+	sendStr := fmt.Sprintf("%s / month", shared.ReadableFileSize(serverInfo.DefaultSend))
+	if serverInfo.DefaultSend < 0 {
+		sendStr = "Unlimited"
+	}
+
+	_ = templates.ServeTemplate(
+		w,
+		templates.ServerInfoHTML,
+		templates.InfoTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:   session.IsValidSession(req),
+				Title:      "Server Info",
+				Javascript: nil,
+				CSS:        nil,
+				Config:     config.HTMLConfig,
+				Endpoints:  endpoints.HTMLPageEndpoints,
+			},
+			HasRestrictions:    hasRestrictions,
+			PasswordRestricted: serverInfo.PasswordRestricted,
+			MaxUserCountSet:    serverInfo.MaxUserCountSet,
+			StorageBackend:     serverInfo.StorageBackend,
+			EmailConfigured:    serverInfo.EmailConfigured,
+			BillingEnabled:     serverInfo.BillingEnabled,
+			StripeEnabled:      serverInfo.StripeEnabled,
+			BTCPayEnabled:      serverInfo.BTCPayEnabled,
+			DefaultStorage:     storageStr,
+			DefaultSend:        sendStr,
 		},
 	)
 }

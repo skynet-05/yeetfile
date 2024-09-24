@@ -6,6 +6,8 @@ import (
 	"github.com/gorilla/sessions"
 	"log"
 	"net/http"
+	"strings"
+	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
@@ -15,10 +17,13 @@ import (
 type HandlerFunc func(w http.ResponseWriter, req *http.Request, userID string)
 
 var (
-	key = utils.GetEnvVarBytes(
-		"YEETFILE_SESSION_KEY",
+	authKey = utils.GetEnvVarBytesB64(
+		"YEETFILE_SESSION_AUTH_KEY",
 		securecookie.GenerateRandomKey(32))
-	store = sessions.NewCookieStore(key)
+	encKey = utils.GetEnvVarBytesB64(
+		"YEETFILE_SESSION_ENC_KEY",
+		securecookie.GenerateRandomKey(32))
+	store = sessions.NewCookieStore(authKey, encKey)
 )
 
 const UserIDKey = "user"
@@ -47,6 +52,11 @@ func SetSession(id string, w http.ResponseWriter, req *http.Request) error {
 	session.Values[UserSessionKey] = sessionKey
 	session.Values[UserSessionIDKey] = shared.GenRandomNumbers(32)
 	session.Options.SameSite = http.SameSiteStrictMode
+	session.Options.HttpOnly = true
+	if strings.HasPrefix(config.YeetFileConfig.Domain, "https") {
+		session.Options.Secure = true
+	}
+
 	return session.Save(req, w)
 }
 
@@ -160,4 +170,12 @@ func GetSessionAndUserID(req *http.Request) (string, error) {
 	}
 
 	return id, nil
+}
+
+func init() {
+	store.Options.HttpOnly = true
+	store.Options.SameSite = http.SameSiteStrictMode
+	if strings.HasPrefix(config.YeetFileConfig.Domain, "https") {
+		store.Options.Secure = true
+	}
 }

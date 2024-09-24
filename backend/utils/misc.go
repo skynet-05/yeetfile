@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,13 +47,18 @@ func GenErrMsgs(msg string, err error) (string, string) {
 	return serverMsg, clientMsg
 }
 
-func GetEnvVarBytes(key string, fallback []byte) []byte {
+func GetEnvVarBytesB64(key string, fallback []byte) []byte {
 	value, exists := os.LookupEnv(key)
 	if !exists {
 		return fallback
 	}
 
-	return []byte(value)
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		log.Fatalf("Error decoding %s (this should be a base64 value)", key)
+	}
+
+	return decoded
 }
 
 func GetEnvVar(key string, fallback string) string {

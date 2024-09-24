@@ -1,0 +1,71 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<div id="center-div">
+  <h1>Server Info</h1>
+  <hr>
+  <table>
+    <tr>
+      <td class="slightly-bold-text">Storage Backend:</td>
+      <td>{{ .StorageBackend }}</td>
+    </tr>
+    <tr>
+      <td class="slightly-bold-text">Base Vault Storage:</td>
+      <td>{{ .DefaultStorage }}</td>
+    </tr>
+    <tr>
+      <td class="slightly-bold-text">Base Send:</td>
+      <td>{{ .DefaultSend }}</td>
+    </tr>
+    <tr>
+      <td class="slightly-bold-text">Email Signup:</td>
+      {{ if .EmailConfigured }}
+      <td class="green-text">Enabled</td>
+      {{ else }}
+      <td>Not set up</td>
+      {{ end }}
+    </tr>
+    {{ if .BillingEnabled }}
+    <tr>
+      <td class="slightly-bold-text">Billing:</td>
+      <td class="green-text">Enabled</td>
+    </tr>
+    <tr>
+      <td class="slightly-bold-text"> — Stripe:</td>
+      {{ if .StripeEnabled }}
+      <td class="green-text">Enabled</td>
+      {{ else }}
+      <td>Not set up</td>
+      {{ end }}
+    </tr>
+    <tr>
+      <td class="slightly-bold-text"> — BTCPay:</td>
+      {{ if .BTCPayEnabled }}
+      <td class="green-text">Enabled</td>
+      {{ else }}
+      <td>Not set up</td>
+      {{ end }}
+    </tr>
+    {{ else }}
+    <tr>
+      <td class="slightly-bold-text">Billing:</td>
+      <td>Not set up</td>
+    </tr>
+    {{ end }}
+  </table>
+
+  {{ if .HasRestrictions }}
+    <hr class="half-hr">
+
+    <ul class="padding-left-20">
+      {{ if .PasswordRestricted }}
+      <li class="red-text">Password Restricted Server</li>
+      {{ end }}
+      {{ if .MaxUserCountSet }}
+      <li class="red-text">Max User Account Limited Server</li>
+      {{ end }}
+    </ul>
+  {{ end }}
+</div>
+{{ template "footer.html" . }}
+</body>
