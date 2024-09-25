@@ -25,7 +25,6 @@ def test_signup(browser_context: tuple[BrowserContext, BrowserContext]):
 
     def signup(page: Page) -> str:
         page.goto(f"{base_page}/signup")
-        page.get_by_test_id("id-signup").click()
 
         signup_btn = page.get_by_test_id("create-id-only-account")
         expect(signup_btn).to_be_visible()
