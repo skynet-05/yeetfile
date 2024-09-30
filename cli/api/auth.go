@@ -34,6 +34,26 @@ func (ctx *Context) GetAccountInfo() (shared.AccountResponse, error) {
 	return accountResponse, nil
 }
 
+// GetAccountUsage fetches the current user's used/available storage and
+// used/available send.
+func (ctx *Context) GetAccountUsage() (shared.UsageResponse, error) {
+	url := endpoints.AccountUsage.Format(ctx.Server)
+	resp, err := requests.GetRequest(ctx.Session, url)
+	if err != nil {
+		return shared.UsageResponse{}, err
+	} else if resp.StatusCode != http.StatusOK {
+		return shared.UsageResponse{}, utils.ParseHTTPError(resp)
+	}
+
+	var usageResponse shared.UsageResponse
+	err = json.NewDecoder(resp.Body).Decode(&usageResponse)
+	if err != nil {
+		return shared.UsageResponse{}, err
+	}
+
+	return usageResponse, nil
+}
+
 // Login logs a user into a YeetFile server, returning the server response,
 // the session cookie, and any errors.
 func (ctx *Context) Login(login shared.Login) (shared.LoginResponse, string, error) {

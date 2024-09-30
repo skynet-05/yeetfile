@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"yeetfile/backend/server/subscriptions"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/utils"
@@ -27,7 +28,7 @@ func getSubscriptionString(exp time.Time) string {
 	}
 }
 
-func getStorageString(used, available int, isSend bool) string {
+func getStorageString(used, available int64, isSend bool) string {
 	if available == 0 && used == 0 {
 		return "None (requires subscription)"
 	} else if available == 0 && used > 0 {
@@ -149,4 +150,40 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		twoFactorStr)
 
 	return account, accountDetails
+}
+
+func generateSubDesc(subType string, isYearly bool) string {
+	var duration string
+	var price int
+	if isYearly {
+		duration = "year"
+
+		switch subType {
+		case subscriptions.TypeNovice:
+			price = subscriptions.PriceMapping[subscriptions.YearlyNovice]
+		case subscriptions.TypeRegular:
+			price = subscriptions.PriceMapping[subscriptions.YearlyRegular]
+		case subscriptions.TypeAdvanced:
+			price = subscriptions.PriceMapping[subscriptions.YearlyAdvanced]
+		}
+	} else {
+		duration = "month"
+
+		switch subType {
+		case subscriptions.TypeNovice:
+			price = subscriptions.PriceMapping[subscriptions.MonthlyNovice]
+		case subscriptions.TypeRegular:
+			price = subscriptions.PriceMapping[subscriptions.MonthlyRegular]
+		case subscriptions.TypeAdvanced:
+			price = subscriptions.PriceMapping[subscriptions.MonthlyAdvanced]
+		}
+	}
+
+	storage := shared.ReadableFileSize(subscriptions.StorageAmountMap[subType])
+	send := shared.ReadableFileSize(subscriptions.SendAmountMap[subType])
+
+	return shared.EscapeString(fmt.Sprintf(`- %s Vault Storage
+- Send %s/month
+
+ ** $%d/%s **`, storage, send, price, duration))
 }

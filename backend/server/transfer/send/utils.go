@@ -12,7 +12,7 @@ var OutOfSpaceError = errors.New("not enough space to upload")
 
 // UserCanSend fetches the user ID associated with the request and checks to
 // see if they have enough remaining send space to send a file
-func UserCanSend(size int, req *http.Request) (bool, error) {
+func UserCanSend(size int64, req *http.Request) (bool, error) {
 	// Validate that the user has enough space to upload this file
 	s, err := session.GetSession(req)
 	if err != nil {

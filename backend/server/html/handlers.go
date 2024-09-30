@@ -341,6 +341,39 @@ func ForgotPageHandler(w http.ResponseWriter, req *http.Request) {
 	)
 }
 
+func CheckoutCompleteHandler(w http.ResponseWriter, req *http.Request) {
+	from := req.URL.Query().Get("from")
+
+	var note string
+	title := "Checkout complete!"
+	desc := "If you have an email address associated with your YeetFile " +
+		"account, you should receive confirmation of your order shortly."
+
+	if from == "btcpay" {
+		note = "BTCPay orders can sometimes take 5 minutes or longer " +
+			"to finalize. Your account will be updated once the " +
+			"transaction has been validated. "
+	}
+
+	_ = templates.ServeTemplate(
+		w,
+		templates.CheckoutCompleteHTML,
+		templates.CheckoutCompleteTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:   session.IsValidSession(req),
+				Title:      "Checkout Complete",
+				Javascript: nil,
+				CSS:        nil,
+				Config:     config.HTMLConfig,
+				Endpoints:  endpoints.HTMLPageEndpoints,
+			},
+			Title:       title,
+			Description: desc,
+			Note:        note,
+		},
+	)
+}
+
 // generateAccountMessages takes a request and generates success and error messages from
 // the data contained in the request.
 func generateAccountMessages(req *http.Request) (string, string) {

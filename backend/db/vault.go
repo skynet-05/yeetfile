@@ -102,7 +102,7 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, shared.FolderOw
 	for rows.Next() {
 		var id string
 		var name string
-		var length int
+		var length int64
 		var modified time.Time
 		var protectedKey []byte
 		var sharedBy string
@@ -447,7 +447,7 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 		var b2ID string
 		var refID string
 		var name string
-		var length int
+		var length int64
 		var chunks int
 		var protectedKey []byte
 		err = rows.Scan(

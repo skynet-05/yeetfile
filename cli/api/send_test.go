@@ -23,7 +23,7 @@ func TestSendPastLimit(t *testing.T) {
 	realSize := fakeSize + 1
 
 	filename := []byte("too_big")
-	contents := []byte(strings.Repeat(".", realSize))
+	contents := []byte(strings.Repeat(".", int(realSize)))
 	password := []byte("password")
 
 	key, _, err := crypto.DeriveSendingKey(password, nil)
@@ -87,7 +87,7 @@ func TestSendFile(t *testing.T) {
 	meta, err := UserA.context.InitSendFile(shared.UploadMetadata{
 		Name:       hexName,
 		Chunks:     1,
-		Size:       len(encData),
+		Size:       int64(len(encData)),
 		Downloads:  2,
 		Expiration: "5s", // 5 seconds
 	})

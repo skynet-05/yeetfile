@@ -98,7 +98,7 @@ func Entrypoint(args []string) {
 	var err error
 	var command Command
 	if len(args) < 2 {
-		if isLoggedIn, err = auth.IsUserAuthenticated(); !isLoggedIn || err == nil {
+		if isLoggedIn, err = auth.IsUserAuthenticated(); !isLoggedIn || err != nil {
 			command = Auth
 		} else if len(globals.Config.DefaultView) > 0 {
 			command = Command(globals.Config.DefaultView)

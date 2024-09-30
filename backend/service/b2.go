@@ -9,7 +9,7 @@ import (
 	"yeetfile/backend/utils"
 )
 
-var B2 b2.Service
+var B2 *b2.Service
 var B2BucketID string
 
 const defaultStoragePath = "uploads"
@@ -21,12 +21,12 @@ func init() {
 		log.Println("Setting up local storage...")
 		// Storage will bypass B2 and just store encrypted files on the
 		// machine in the specified path or "uploads/"
-		limit := 0
+		var limit int64
 		limitStr := os.Getenv("YEETFILE_LOCAL_STORAGE_LIMIT")
 		path := utils.GetEnvVar("YEETFILE_LOCAL_STORAGE_PATH", defaultStoragePath)
 
 		if len(limitStr) > 0 {
-			limit, err = strconv.Atoi(limitStr)
+			limit, err = strconv.ParseInt(limitStr, 10, 64)
 			if err != nil {
 				log.Fatalf("Invalid storage limit \"%s\"", limitStr)
 			}

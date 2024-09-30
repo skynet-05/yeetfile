@@ -7,6 +7,7 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"strings"
 	"time"
+	"yeetfile/backend/server/subscriptions"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
@@ -414,8 +415,8 @@ func showSetTwoFactorView() {
 	builder := strings.Builder{}
 	qrterminal.GenerateHalfBlock(newTOTP.URI, qrterminal.L, &builder)
 
+	submitted := true
 	var totpCode string
-	var submitted bool
 	var response shared.SetTOTPResponse
 
 	var show2FASetup func(errMsg string) error
@@ -429,7 +430,7 @@ func showSetTwoFactorView() {
 					"QR above, then input the 6-digit code below").
 				Value(&totpCode).
 				Validate(func(s string) error {
-					if len(s) == 6 {
+					if len(s) == 6 || len(s) == 0 {
 						return nil
 					}
 
@@ -544,16 +545,23 @@ func showDeleteTwoFactorView() {
 func generateSelectOptions(
 	account shared.AccountResponse,
 ) []huh.Option[Action] {
-	emailLabel := "Change Email"
-	emailAction := ChangeEmail
-	if len(account.Email) == 0 {
-		emailLabel = "Set Email"
-		emailAction = SetEmail
-	}
+	var options []huh.Option[Action]
 
-	options := []huh.Option[Action]{
-		huh.NewOption(emailLabel, emailAction),
-		huh.NewOption("Change Password", ChangePassword),
+	changePasswordAction := huh.NewOption("Change Password", ChangePassword)
+	if globals.ServerInfo.EmailConfigured {
+		emailLabel := "Change Email"
+		emailAction := ChangeEmail
+		if len(account.Email) == 0 {
+			emailLabel = "Set Email"
+			emailAction = SetEmail
+		}
+
+		options = []huh.Option[Action]{
+			huh.NewOption(emailLabel, emailAction),
+			changePasswordAction,
+		}
+	} else {
+		options = []huh.Option[Action]{changePasswordAction}
 	}
 
 	if len(account.Email) > 0 {
@@ -584,10 +592,10 @@ func generateSelectOptions(
 		options = append(
 			options,
 			huh.NewOption("Manage Subscription", ManageSubscription))
-	} else {
+	} else if globals.ServerInfo.BillingEnabled {
 		options = append(
 			options,
-			huh.NewOption("Purchase Subscription", PurchaseSubscription))
+			huh.NewOption("Upgrade Account", PurchaseSubscription))
 	}
 
 	options = append(options, huh.NewOption("Delete Account", DeleteAccount))
@@ -595,17 +603,157 @@ func generateSelectOptions(
 	return options
 }
 
+func showSubscriptionView() {
+	const (
+		switchYearlyMonthly int = iota
+		novSub
+		regSub
+		advSub
+		cancel
+	)
+
+	subMap := map[int]string{
+		novSub: subscriptions.TypeNovice,
+		regSub: subscriptions.TypeRegular,
+		advSub: subscriptions.TypeAdvanced,
+	}
+
+	var subscriptionFunc func(bool) (int, bool, error)
+	subscriptionFunc = func(isYearly bool) (int, bool, error) {
+		var switchOption huh.Option[int]
+		var selected int
+		if isYearly {
+			switchOption = huh.NewOption(
+				"Switch to monthly",
+				switchYearlyMonthly)
+		} else {
+			switchOption = huh.NewOption(
+				"Switch to yearly (2 months free)",
+				switchYearlyMonthly)
+		}
+		noviceName := subscriptions.NameMap[subscriptions.TypeNovice]
+		regularName := subscriptions.NameMap[subscriptions.TypeRegular]
+		advancedName := subscriptions.NameMap[subscriptions.TypeAdvanced]
+
+		options := []huh.Option[int]{
+			switchOption,
+			huh.NewOption(noviceName+" ->", novSub),
+			huh.NewOption(regularName+" ->", regSub),
+			huh.NewOption(advancedName+" ->", advSub),
+			huh.NewOption("Cancel", cancel),
+		}
+
+		basicSubStr := generateSubDesc(subscriptions.TypeNovice, isYearly)
+		regSubStr := generateSubDesc(subscriptions.TypeRegular, isYearly)
+		advSubStr := generateSubDesc(subscriptions.TypeAdvanced, isYearly)
+
+		err := huh.NewForm(huh.NewGroup(
+			huh.NewNote().Title(utils.GenerateTitle("Subscriptions")),
+			huh.NewNote().
+				Title(noviceName).
+				Description(utils.GenerateDescription(basicSubStr, 25)),
+			huh.NewNote().
+				Title(regularName).
+				Description(utils.GenerateDescription(regSubStr, 25)),
+			huh.NewNote().
+				Title(advancedName).
+				Description(utils.GenerateDescription(advSubStr, 25)),
+			huh.NewSelect[int]().Options(options...).Value(&selected),
+		)).WithTheme(styles.Theme).Run()
+
+		if err == nil && selected == switchYearlyMonthly {
+			return subscriptionFunc(!isYearly)
+		}
+
+		return selected, isYearly, err
+	}
+
+	selected, isYearly, err := subscriptionFunc(false)
+	if err == huh.ErrUserAborted || selected == cancel {
+		ShowAccountModel()
+	} else {
+		showCheckoutModel(isYearly, subMap[selected])
+	}
+}
+
+func showCheckoutModel(isYearly bool, subType string) {
+	const (
+		stripe int = iota
+		btcpay
+		back
+	)
+
+	var selected int
+	subName := subscriptions.NameMap[subType]
+	if isYearly {
+		subName += " (Yearly)"
+	} else {
+		subName += " (Monthly)"
+	}
+
+	subDesc := generateSubDesc(subType, isYearly)
+	subDesc += "\n\n" + utils.GenerateWrappedText(
+		"Select a checkout option below. This will provide a link "+
+			"to complete your purchase on the web.") + "\n\n" +
+		utils.GenerateWrappedText("You do not need to log "+
+			"into your YeetFile account on the web to complete the transaction.")
+
+	options := []huh.Option[int]{
+		huh.NewOption("Stripe Checkout (USD, CAD, GBP, etc)", stripe),
+		huh.NewOption("BTCPay Checkout (BTC or XMR)", btcpay),
+		huh.NewOption("Go Back", back),
+	}
+
+	err := huh.NewForm(huh.NewGroup(
+		huh.NewNote().
+			Title(utils.GenerateTitle("Subscription")).
+			Description(utils.GenerateDescriptionSection(subName, subDesc, 30)),
+		huh.NewSelect[int]().Options(options...).Value(&selected),
+	)).WithTheme(styles.Theme).Run()
+
+	subTag := subscriptions.GetSubTagName(subType, isYearly)
+
+	if err == huh.ErrUserAborted || selected == back {
+		showSubscriptionView()
+	} else if selected == stripe {
+		link, err := globals.API.InitStripeCheckout(subTag)
+		if err == nil {
+			showCheckoutLinkModel(link)
+		}
+	} else if selected == btcpay {
+		link, err := globals.API.InitBTCPayCheckout(subTag)
+		if err == nil {
+			showCheckoutLinkModel(link)
+		}
+	}
+}
+
+func showCheckoutLinkModel(link string) {
+	desc := fmt.Sprintf("Use the link below to finish checkout:\n\n%s\n\n"+
+		"When you are finished checking out, you can return to the CLI.",
+		shared.EscapeString(link))
+
+	_ = huh.NewForm(huh.NewGroup(
+		huh.NewNote().
+			Title(utils.GenerateTitle("Checkout")).
+			Description(desc),
+		huh.NewConfirm().Affirmative("OK").Negative("")),
+	).WithTheme(styles.Theme).Run()
+}
+
 func exitView() {}
 
 func init() {
 	actionMap = map[Action]func(){
-		SetEmail:        showChangeEmailView,
-		ChangeEmail:     showChangeEmailWarning,
-		ChangePassword:  showChangePasswordView,
-		SetPasswordHint: showPasswordHintView,
-		SetTwoFactor:    showSetTwoFactorView,
-		DeleteTwoFactor: showDeleteTwoFactorView,
-		DeleteAccount:   showAccountDeletionView,
-		Exit:            exitView,
+		SetEmail:             showChangeEmailView,
+		ChangeEmail:          showChangeEmailWarning,
+		ChangePassword:       showChangePasswordView,
+		SetPasswordHint:      showPasswordHintView,
+		SetTwoFactor:         showSetTwoFactorView,
+		ManageSubscription:   showSubscriptionView,
+		PurchaseSubscription: showSubscriptionView,
+		DeleteTwoFactor:      showDeleteTwoFactorView,
+		DeleteAccount:        showAccountDeletionView,
+		Exit:                 exitView,
 	}
 }

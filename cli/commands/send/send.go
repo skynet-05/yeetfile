@@ -109,7 +109,7 @@ func createFileLink(upload fileUpload, progress func(int, int)) (string, string,
 
 	encName, err := crypto.EncryptChunk(key, []byte(stat.Name()))
 	hexEncName := hex.EncodeToString(encName)
-	size := int(stat.Size())
+	size := stat.Size()
 	numChunks := transfer.GetNumChunks(stat.Size())
 
 	metadata := shared.UploadMetadata{

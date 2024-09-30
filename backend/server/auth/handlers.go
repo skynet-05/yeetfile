@@ -186,6 +186,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 		obscuredEmail, _ := utils.ObscureEmail(user.Email)
 		_ = json.NewEncoder(w).Encode(shared.AccountResponse{
 			Email:            obscuredEmail,
+			PaymentID:        user.PaymentID,
 			StorageAvailable: user.StorageAvailable,
 			StorageUsed:      user.StorageUsed,
 			SendAvailable:    user.SendAvailable,
@@ -195,6 +196,19 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			Has2FA:           len(user.Secret) > 0,
 		})
 	}
+}
+
+// AccountUsageHandler handles authenticated GET requests to fetch the user's
+// current vault and send usage
+func AccountUsageHandler(w http.ResponseWriter, _ *http.Request, id string) {
+	usage, err := db.GetUserUsage(id)
+	if err != nil {
+		log.Printf("Error fetching usage: %v\n", err)
+		http.Error(w, "Error fetching usage", http.StatusInternalServerError)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(usage)
 }
 
 // VerifyEmailHandler handles account verification using the link sent to a user's

@@ -207,7 +207,7 @@ func ModifyFileHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		modErr = updateVaultFile(id, userID, fileMod)
 		break
 	case http.MethodDelete:
-		var freed int
+		var freed int64
 		freed, modErr = deleteVaultFile(id, userID, isShared)
 
 		if modErr == nil {
@@ -304,7 +304,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		return
 	}
 
-	totalSize := len(data) - constants.TotalOverhead
+	totalSize := int64(len(data)) - int64(constants.TotalOverhead)
 	err = db.UpdateStorageUsed(userID, totalSize)
 	if err != nil {
 		abortUpload(metadata, userID, totalSize, chunkNum)
@@ -431,7 +431,7 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 		log.Printf("Error updating download: %v\n", err)
 	}
 
-	err = db.UpdateBandwidth(userID, len(bytes)-constants.TotalOverhead)
+	err = db.UpdateBandwidth(userID, int64(len(bytes)-constants.TotalOverhead))
 	if err != nil {
 		log.Printf("Error updating bandwidth: %v\n", err)
 	}

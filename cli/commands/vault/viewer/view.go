@@ -27,7 +27,7 @@ func RunViewerModel(
 ) (internal.Event, error) {
 	var fileBytes []byte
 	var err error
-	if item.Size < constants.ChunkSize*3 {
+	if item.Size < int64(constants.ChunkSize*3) {
 		var key []byte
 		_ = spinner.New().Title("Fetching file info...").Action(
 			func() {
@@ -52,7 +52,7 @@ func RunViewerModel(
 	}
 
 	var options []huh.Option[action]
-	if item.Size < constants.ChunkSize*3 {
+	if item.Size < int64(constants.ChunkSize*3) {
 		options = append(options, huh.NewOption("Display File", PreviewFile))
 	}
 

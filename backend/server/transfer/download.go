@@ -10,13 +10,13 @@ type DownloadRequest struct {
 	Password string `json:"password"`
 }
 
-func DownloadFile(b2ID string, length int, chunk int) (bool, []byte) {
+func DownloadFile(b2ID string, length int64, chunk int) (bool, []byte) {
 	start, end, eof := getReadBoundaries(chunk, length)
 	data, _ := service.B2.PartialDownloadById(b2ID, start, end)
 	return eof, data
 }
 
-func DownloadFileFromCache(fileID string, length int, chunk int) (bool, []byte) {
+func DownloadFileFromCache(fileID string, length int64, chunk int) (bool, []byte) {
 	start, end, eof := getReadBoundaries(chunk, length)
 	data, _ := cache.Read(fileID, start, end)
 	return eof, data
@@ -25,14 +25,16 @@ func DownloadFileFromCache(fileID string, length int, chunk int) (bool, []byte) 
 // getReadBoundaries calculates the correct start and end bytes to read from for
 // a specific file chunk, and determines if this read operation reaches the end
 // of the file
-func getReadBoundaries(chunk, length int) (int, int, bool) {
+func getReadBoundaries(chunk int, length int64) (int64, int64, bool) {
+	var start int64
+	var end int64
 	eof := false
 
-	start := (chunk-1)*constants.ChunkSize +
-		((constants.TotalOverhead) * (chunk - 1))
+	start = int64((chunk-1)*constants.ChunkSize +
+		((constants.TotalOverhead) * (chunk - 1)))
 
-	end := constants.ChunkSize +
-		constants.TotalOverhead +
+	end = int64(constants.ChunkSize) +
+		int64(constants.TotalOverhead) +
 		start - 1
 
 	if end >= length-1 {

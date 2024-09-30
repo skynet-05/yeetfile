@@ -1,5 +1,5 @@
 from constants import base_page
-from playwright.sync_api import Locator, Page
+from playwright.sync_api import Locator, Page, ConsoleMessage
 
 
 def fetch_folder_json(page: Page, folder_id: str) -> dict:
@@ -22,3 +22,10 @@ def delete_account(page: Page, account_id: str):
 
     page.on("dialog", lambda dialog: dialog.accept(account_id))
     page.get_by_test_id("delete-btn").click()
+
+
+def print_console_msg(msg: ConsoleMessage):
+    print(f'\nconsole.{msg.type}: {msg.text}')
+    if len(msg.args) > 0:
+        for idx, arg in enumerate(msg.args):
+            print(f'Argument {idx}: {arg.json_value()}')

@@ -16,7 +16,7 @@ import (
 var Characters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 var Numbers = []rune("1234567890")
 
-func ReadableFileSize(b int) string {
+func ReadableFileSize(b int64) string {
 	if b < 0 {
 		return "Unlimited"
 	}

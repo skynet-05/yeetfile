@@ -25,7 +25,7 @@ type PreparedDownload struct {
 	ID         string
 	Server     string
 	Name       string
-	Size       int
+	Size       int64
 	Chunks     int
 	Key        []byte
 	Expiration time.Time

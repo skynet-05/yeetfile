@@ -37,5 +37,5 @@ jobs:
           docker compose up --build -d
           docker compose logs
 
-          pytest -vx --tracing=retain-on-failure ./web/tests/test_single_user.py
-          pytest -vx --tracing=retain-on-failure ./web/tests/test_multi_user.py
+          pytest -vx -s --tracing=retain-on-failure ./web/tests/test_single_user.py
+          pytest -vx -s --tracing=retain-on-failure ./web/tests/test_multi_user.py

@@ -183,7 +183,7 @@ func ResetLargeUpload(b2FileID string, metadataID string) (b2.FilePartInfo, erro
 	return info, nil
 }
 
-func FinishLargeB2Upload(b2ID string, checksums []string) (string, int) {
+func FinishLargeB2Upload(b2ID string, checksums []string) (string, int64) {
 	largeFile, err := service.B2.FinishLargeFile(b2ID, checksums)
 	if err != nil {
 		panic(err)

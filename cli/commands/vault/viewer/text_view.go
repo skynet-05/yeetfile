@@ -43,8 +43,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+		switch msg.String() {
+		case "ctrl+c", "q", "esc":
 			return m, tea.Quit
+		case "J":
+			m.viewport.HalfViewDown()
+		case "K":
+			m.viewport.HalfViewUp()
+		case "G":
+			m.viewport.GotoBottom()
+		case "g":
+			m.viewport.GotoTop()
 		}
 
 	case tea.WindowSizeMsg:
@@ -72,7 +81,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if !m.ready {
-		return "\n  Initializing..."
+		return "\n Initializing..."
 	}
 	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
 }

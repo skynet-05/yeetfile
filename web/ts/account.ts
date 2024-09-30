@@ -31,10 +31,18 @@ const init = () => {
     // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
 
     let yearlyToggle = document.getElementById("yearly-toggle");
-    yearlyToggle.addEventListener("click", () => { window.location.assign("/account?yearly=1") });
+    if (yearlyToggle) {
+        yearlyToggle.addEventListener("click", () => {
+            window.location.assign("/account?yearly=1");
+        });
+    }
 
     let monthlyToggle = document.getElementById("monthly-toggle");
-    monthlyToggle.addEventListener("click", () => { window.location.assign("/account") });
+    if (monthlyToggle) {
+        monthlyToggle.addEventListener("click", () => {
+            window.location.assign("/account");
+        });
+    }
 }
 
 const logout = () => {

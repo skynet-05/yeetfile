@@ -248,7 +248,7 @@ func (c Config) GetKeys() ([]byte, []byte, error) {
 	return privateKey, publicKey, nil
 }
 
-func InitConfig() *Config {
+func LoadConfig() *Config {
 	var err error
 
 	// Setup config dir

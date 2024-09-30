@@ -8,6 +8,7 @@ import (
 	"yeetfile/cli/models"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 const folderIndicator = ">"
@@ -30,7 +31,7 @@ func CreateItemRows(items []models.VaultItem) []table.Row {
 	spacing := utils.GenerateListIdxSpacing(len(items))
 
 	for idx, item := range items {
-		size := shared.ReadableFileSize(item.Size)
+		size := shared.ReadableFileSize(item.Size - int64(constants.TotalOverhead))
 		name := item.Name
 		prefix := fileIndicator
 		suffix := ""
@@ -40,20 +41,21 @@ func CreateItemRows(items []models.VaultItem) []table.Row {
 			size = ""
 		}
 
-		spacing = utils.GetListIdxSpacing(spacing, idx, len(items))
+		spacing = utils.GetListIdxSpacing(spacing, idx+1, len(items))
 
-		var shared string
+		var sharedBy string
 		if len(item.SharedBy) > 0 {
-			shared = fmt.Sprintf("<- %s", item.SharedBy)
+			sharedBy = fmt.Sprintf("<- %s", item.SharedBy)
 		} else if item.SharedWith > 0 {
-			shared = fmt.Sprintf("%d ->", item.SharedWith)
+			sharedBy = fmt.Sprintf("%d ->", item.SharedWith)
 		} else {
-			shared = "-"
+			sharedBy = "-"
 		}
 
-		formattedName := fmt.Sprintf("%d%s| %s %s%s", idx, spacing, prefix, name, suffix)
-		modified := item.Modified.Format(time.DateTime)
-		rowStr := []string{formattedName, size, modified, shared}
+		formattedName := fmt.Sprintf("%d%s| %s %s%s", idx+1, spacing, prefix, name, suffix)
+		modified := item.Modified.Format(time.DateOnly)
+		rowStr := []string{formattedName, size, modified, sharedBy}
+
 		result = append(result, rowStr)
 	}
 

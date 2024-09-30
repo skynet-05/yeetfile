@@ -94,6 +94,10 @@ func getSendFields() []huh.Field {
 	return []huh.Field{
 		huh.NewInput().Title("Expiration").
 			Validate(func(s string) error {
+				if len(s) == 0 {
+					return nil
+				}
+
 				val, err := strconv.Atoi(s)
 				if err != nil {
 					return expValidationError
@@ -113,6 +117,10 @@ func getSendFields() []huh.Field {
 			}...).Value(&expirationUnits),
 		huh.NewInput().Title("Max Downloads").
 			Validate(func(s string) error {
+				if len(s) == 0 {
+					return nil
+				}
+
 				val, err := strconv.Atoi(s)
 				if err != nil {
 					return expValidationError

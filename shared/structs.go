@@ -4,27 +4,35 @@ import "time"
 
 type AccountResponse struct {
 	Email              string    `json:"email"`
+	PaymentID          string    `json:"paymentID"`
 	HasPasswordHint    bool      `json:"hasPasswordHint"`
 	Has2FA             bool      `json:"has2FA"`
-	StorageAvailable   int       `json:"storageAvailable"`
-	StorageUsed        int       `json:"storageUsed"`
-	SendAvailable      int       `json:"sendAvailable"`
-	SendUsed           int       `json:"sendUsed"`
+	StorageAvailable   int64     `json:"storageAvailable"`
+	StorageUsed        int64     `json:"storageUsed"`
+	SendAvailable      int64     `json:"sendAvailable"`
+	SendUsed           int64     `json:"sendUsed"`
 	SubscriptionExp    time.Time `json:"subscriptionExp" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 	SubscriptionMethod string    `json:"subscriptionMethod"`
+}
+
+type UsageResponse struct {
+	StorageAvailable int64 `json:"storageAvailable"`
+	StorageUsed      int64 `json:"storageUsed"`
+	SendAvailable    int64 `json:"sendAvailable"`
+	SendUsed         int64 `json:"sendUsed"`
 }
 
 type UploadMetadata struct {
 	Name       string `json:"name"`
 	Chunks     int    `json:"chunks"`
-	Size       int    `json:"size"`
+	Size       int64  `json:"size"`
 	Downloads  int    `json:"downloads"`
 	Expiration string `json:"expiration"`
 }
 
 type VaultUpload struct {
 	Name         string `json:"name"`
-	Length       int    `json:"length"`
+	Length       int64  `json:"length"`
 	Chunks       int    `json:"chunks"`
 	FolderID     string `json:"folderID"`
 	ProtectedKey []byte `json:"protectedKey"`
@@ -45,7 +53,7 @@ type NewFolderResponse struct {
 type VaultItem struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
-	Size         int       `json:"size"`
+	Size         int64     `json:"size"`
 	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	SharedWith   int       `json:"sharedWith"`
@@ -59,7 +67,7 @@ type VaultItem struct {
 type VaultItemInfo struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
-	Size         int       `json:"size"`
+	Size         int64     `json:"size"`
 	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 	CanModify    bool      `json:"canModify"`
@@ -104,7 +112,7 @@ type VaultFolderResponse struct {
 type VaultDownloadResponse struct {
 	Name         string `json:"name"`
 	ID           string `json:"id"`
-	Size         int    `json:"size"`
+	Size         int64  `json:"size"`
 	Chunks       int    `json:"chunks"`
 	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
@@ -120,7 +128,7 @@ type PlaintextUpload struct {
 type DownloadResponse struct {
 	Name       string    `json:"name"`
 	ID         string    `json:"id"`
-	Size       int       `json:"size"`
+	Size       int64     `json:"size"`
 	Chunks     int       `json:"chunks"`
 	Downloads  int       `json:"downloads"`
 	Expiration time.Time `json:"expiration" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
@@ -233,7 +241,7 @@ type ShareEdit struct {
 }
 
 type DeleteResponse struct {
-	FreedSpace int `json:"freedSpace"`
+	FreedSpace int64 `json:"freedSpace"`
 }
 
 type DeleteAccount struct {
@@ -280,6 +288,6 @@ type ServerInfo struct {
 	BillingEnabled     bool   `json:"billingEnabled"`
 	StripeEnabled      bool   `json:"stripeEnabled"`
 	BTCPayEnabled      bool   `json:"btcPayEnabled"`
-	DefaultStorage     int    `json:"defaultStorage"`
-	DefaultSend        int    `json:"defaultSend"`
+	DefaultStorage     int64  `json:"defaultStorage"`
+	DefaultSend        int64  `json:"defaultSend"`
 }

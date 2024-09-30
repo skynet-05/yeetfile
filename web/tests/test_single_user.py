@@ -4,7 +4,7 @@ from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, 
 
 from constants import base_page, demo_file, user_password, file_password
 
-from utils import fetch_folder_json, delete_account
+from utils import fetch_folder_json, delete_account, print_console_msg
 
 account_id: str = ""
 
@@ -78,6 +78,7 @@ def test_text_send(browser_context: BrowserContext):
     """Test uploading text to YeetFile Send."""
     text_content: str = "testing text send"
     page: Page = browser_context.new_page()
+    page.on("console", lambda msg: print_console_msg(msg))
     page.goto(f"{base_page}/send")
 
     page.get_by_test_id("upload-text-content").fill(text_content)
@@ -113,6 +114,7 @@ def test_file_send(browser_context: BrowserContext):
         f.write(file_content)
 
     page: Page = browser_context.new_page()
+    page.on("console", lambda msg: print_console_msg(msg))
     page.goto(f"{base_page}/send")
 
     page.get_by_test_id("upload-file-btn").click()
@@ -169,6 +171,7 @@ def test_file_send(browser_context: BrowserContext):
 def test_vault_file_upload(browser_context: BrowserContext):
     """Test uploading a file to YeetFile Vault"""
     page: Page = browser_context.new_page()
+    page.on("console", lambda msg: print_console_msg(msg))
 
     file_content: str = "testing file vault"
     with open(demo_file, "w") as f:
@@ -212,6 +215,7 @@ def test_vault_file_upload(browser_context: BrowserContext):
 def test_vault_folder_creation(browser_context: BrowserContext):
     """Tests creating a folder and uploading a file to the new folder"""
     page: Page = browser_context.new_page()
+    page.on("console", lambda msg: print_console_msg(msg))
 
     folder_name: str = "My Folder"
     page.goto(f"{base_page}/vault")
@@ -254,6 +258,7 @@ def test_vault_password(browser_context: BrowserContext):
     """Tests setting a unique session-specific vault password"""
     global account_id
     page: Page = browser_context.new_page()
+    page.on("console", lambda msg: print_console_msg(msg))
     page.goto(f"{base_page}/account")
     page.on("dialog", lambda dialog: dialog.accept())
     page.get_by_test_id("logout-btn").click()

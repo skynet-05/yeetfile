@@ -70,6 +70,7 @@ func Run(addr string) {
 		{POST, endpoints.Login, LimiterMiddleware(auth.LoginHandler)},
 		{POST, endpoints.Signup, LimiterMiddleware(auth.SignupHandler)},
 		{GET | PUT | DELETE, endpoints.Account, AuthMiddleware(auth.AccountHandler)},
+		{GET, endpoints.AccountUsage, AuthMiddleware(auth.AccountUsageHandler)},
 		{POST, endpoints.Forgot, LimiterMiddleware(auth.ForgotPasswordHandler)},
 		{GET, endpoints.PubKey, AuthLimiterMiddleware(auth.PubKeyHandler)},
 		{GET, endpoints.ProtectedKey, AuthMiddleware(auth.ProtectedKeyHandler)},
@@ -101,6 +102,7 @@ func Run(addr string) {
 		{GET, endpoints.HTMLChangeHint, AuthMiddleware(html.ChangeHintPageHandler)},
 		{GET, endpoints.HTMLTwoFactor, AuthMiddleware(html.TwoFactorPageHandler)},
 		{GET, endpoints.HTMLServerInfo, html.ServerInfoPageHandler},
+		{GET, endpoints.HTMLCheckoutComplete, html.CheckoutCompleteHandler},
 
 		// Misc
 		{

@@ -59,7 +59,7 @@ func CreateHeader(title string, desc string) *huh.Note {
 func GenerateTitle(s string) string {
 	prefix := "YeetFile CLI: "
 	verticalEdge := strings.Repeat("═", len(s)+len(prefix)+2)
-	title := styles.BoldStyle.Render(fmt.Sprintf(
+	title := styles.TitleStyle.Render(fmt.Sprintf(
 		"╔"+verticalEdge+"╗\n"+
 			"║ %s%s ║\n"+
 			"╚"+verticalEdge+"╝", prefix, s))
@@ -74,6 +74,11 @@ func GenerateWrappedText(s string) string {
 	lineLen := 0
 	i := 0
 	for j, word := range words {
+		if strings.HasSuffix(word, "\n") {
+			lineLen = 0
+			continue
+		}
+
 		if lineLen+len(word) > maxLen {
 			lineLen = 0
 			wrappedWords = append(wrappedWords, words[i:j]...)

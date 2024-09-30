@@ -113,7 +113,7 @@ func generateRandomUpload(user TestUser, folderID string, folderKey []byte) (sha
 
 	return shared.VaultUpload{
 		Name:         hexEncName,
-		Length:       len(fileContent),
+		Length:       int64(len(fileContent)),
 		Chunks:       1,
 		FolderID:     folderID,
 		ProtectedKey: encKey,
@@ -287,7 +287,7 @@ func TestUploadPastLimit(t *testing.T) {
 	encName, err := crypto.EncryptChunk(key, []byte(name))
 	assert.Nil(t, err)
 
-	encData, err := crypto.EncryptChunk(key, []byte(strings.Repeat(".", realSize)))
+	encData, err := crypto.EncryptChunk(key, []byte(strings.Repeat(".", int(realSize))))
 	assert.Nil(t, err)
 
 	hexEncName := hex.EncodeToString(encName)

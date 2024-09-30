@@ -1,0 +1,19 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<div id="center-div">
+  <div class="green-text slightly-bold-text">{{ .Title }}</div>
+  <br>
+  <div>{{ .Description }}</div>
+  <br>
+  {{ if ne .Note "" }}
+  <div>{{ .Note }}</div>
+  <br>
+  {{ end }}
+  <div>Thank you for using YeetFile!</div>
+  <hr>
+  <a href="{{ .Base.Endpoints.Account }}"><button class="accent-btn">Go to Account</button></a>
+  {{ template "messages.html" . }}
+</div>
+{{ template "footer.html" . }}
+</body>

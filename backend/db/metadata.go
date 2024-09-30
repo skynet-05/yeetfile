@@ -16,7 +16,7 @@ type FileMetadata struct {
 	Chunks       int
 	Name         string
 	B2ID         string
-	Length       int
+	Length       int64
 	FolderID     string
 	ProtectedKey []byte
 }
@@ -80,7 +80,7 @@ func RetrieveMetadata(id string) (FileMetadata, error) {
 	return FileMetadata{}, errors.New("no metadata found")
 }
 
-func UpdateB2Metadata(id string, b2ID string, length int) error {
+func UpdateB2Metadata(id string, b2ID string, length int64) error {
 	s := `UPDATE metadata
 	      SET b2_id=$1, length=$2
 	      WHERE id=$3`
@@ -106,7 +106,7 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 	var chunks int
 	var name string
 	var b2ID string
-	var length int
+	var length int64
 
 	err := rows.Scan(&id, &chunks, &name, &b2ID, &length)
 

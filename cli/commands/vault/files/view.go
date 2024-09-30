@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	huhSpinner "github.com/charmbracelet/huh/spinner"
 	"github.com/charmbracelet/lipgloss"
 	"os"
 	"strings"
@@ -18,6 +19,8 @@ import (
 	"yeetfile/cli/models"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
+	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 type Model struct {
@@ -47,6 +50,11 @@ type Status struct {
 	Total      int
 }
 
+type Storage struct {
+	available int64
+	used      int64
+}
+
 const Help = `
 Enter -> select/open | x -----> delete | s --> share | u ---> upload |
 Backspace ----> back | n -> new folder | r -> rename | d -> download |`
@@ -55,11 +63,14 @@ const FilterHelp = `
 Enter -> select/open | escape -> exit filter`
 
 var status Status
+var storage Storage
 
 var rows []table.Row
 var items []models.VaultItem
 var folderViews = []string{""}
 var folderPath = "/"
+
+var height = 12
 
 func (m Model) Init() tea.Cmd {
 	return m.spinner.Tick
@@ -69,8 +80,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
-	m.table.SetRows(rows)
 	if m.IncomingEvent.Status == internal.StatusOk {
+		m.filtering = false
+		m.filterStr = ""
+		rows = CreateItemRows(items)
 		switch m.IncomingEvent.Type {
 		case internal.UploadFileRequest:
 			m.upload(m.IncomingEvent)
@@ -87,7 +100,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.IncomingEvent = internal.Event{}
 	}
 
+	m.table.SetRows(rows)
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		height = msg.Height - 20
+		m.table.SetHeight(height)
+		return m, nil
+
 	case spinner.TickMsg:
 		if status.Processing {
 			var spinnerCmd tea.Cmd
@@ -122,64 +141,68 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					folderViews = folderViews[:len(folderViews)-1]
 				}
 				status.Loading = false
+				newModel.table.SetHeight(height)
 				return newModel, nil
-			}
-		case "enter":
-			item := items[m.table.Cursor()]
-			// Open folder or view file
-			if item.IsFolder {
-				status.Loading = true
-				newModel, err := NewModel(item.RefID)
-				if err == nil {
-					folderViews = append(folderViews, item.RefID)
-					folderPath += item.Name + "/"
-				}
-				status.Loading = false
-
-				return newModel, nil
-			} else {
-				// Enter file view
-				return m.NewFileViewRequest(item)
 			}
 		case "q", "ctrl+c", "esc": // Exit
 			m.quitting = true
 			return m, tea.Quit
 		case "n": // New folder
 			return m.NewFolderRequest()
-		case "d": // Download
+		case "enter", "d", "x", "r", "s":
 			if len(items) == 0 {
 				return m, nil
 			}
 
-			item := items[m.table.Cursor()]
-			if item.IsFolder {
-				status.Err = errors.New("folder download is not currently supported")
-				return m, nil
-			}
-
-			m.download(item)
-			return m, m.spinner.Tick
-		case "x", "r", "s": // Modify file (delete, rename, share, etc)
-			if len(items) == 0 {
-				return m, nil
-			}
-
-			item := items[m.table.Cursor()]
-			if !item.CanModify {
-				status.Err = errors.New("you are not allowed to modify this file")
-				return m, nil
-			} else if !item.IsOwner && msg.String() == "s" {
-				status.Err = errors.New("you cannot share content you do not own")
-				return m, nil
+			var item models.VaultItem
+			if len(m.filterStr) > 0 {
+				item = m.filteredItems[m.table.Cursor()]
+			} else {
+				item = items[m.table.Cursor()]
 			}
 
 			switch msg.String() {
-			case "r":
-				return m.NewRenameRequest(item)
-			case "x":
-				return m.NewDeleteRequest(item)
-			case "s":
-				return m.NewShareRequest(item)
+			case "enter": // Open file
+				// Open folder or view file
+				if item.IsFolder {
+					status.Loading = true
+					newModel, err := NewModel(item.RefID)
+					if err == nil {
+						folderViews = append(folderViews, item.RefID)
+						folderPath += item.Name + "/"
+					}
+					status.Loading = false
+
+					return newModel, nil
+				} else {
+					// Enter file view
+					return m.NewFileViewRequest(item)
+				}
+			case "d": // Download file
+				if item.IsFolder {
+					status.Err = errors.New("folder download is not currently supported")
+					return m, nil
+				}
+
+				m.download(item)
+				return m, m.spinner.Tick
+			case "x", "r", "s": // Modify file
+				if !item.CanModify {
+					status.Err = errors.New("you are not allowed to modify this file")
+					return m, nil
+				} else if !item.IsOwner && msg.String() == "s" {
+					status.Err = errors.New("you cannot share content you do not own")
+					return m, nil
+				}
+
+				switch msg.String() {
+				case "r":
+					return m.NewRenameRequest(item)
+				case "x":
+					return m.NewDeleteRequest(item)
+				case "s":
+					return m.NewShareRequest(item)
+				}
 			}
 		case "u": // Upload file
 			return m.NewUploadRequest()
@@ -212,27 +235,7 @@ func (m Model) filterItems(c string) (tea.Model, tea.Cmd) {
 		rows = CreateItemRows(items)
 		m.filtering = false
 	case "enter":
-		cursor := m.table.Cursor()
-		validCursor := cursor >= 0 && cursor < len(m.filteredItems)
-		if len(m.filteredItems) == 0 || !validCursor {
-			break
-		}
-
-		item := m.filteredItems[cursor]
-		if item.IsFolder {
-			m.filtering = false
-			m.filterStr = ""
-			status.Loading = true
-			newModel, err := NewModel(item.RefID)
-			if err == nil {
-				folderViews = append(folderViews, item.RefID)
-				folderPath += item.Name + "/"
-			}
-			status.Loading = false
-			return newModel, nil
-		}
-
-		return m.NewFileViewRequest(item)
+		m.filtering = false
 	case "tab", "left", "right":
 		// Ignore
 	case "up", "down":
@@ -286,20 +289,20 @@ func (m Model) View() string {
 	if m.quitting || m.ViewRequest.View > internal.NullView {
 		return ""
 	}
-
+	m.table.SetHeight(height)
 	return m.tableViewer()
 }
 
 func (m Model) tableViewer() string {
-	vaultView := styles.BaseStyle.Render(m.table.View())
+	vaultView := styles.TableStyle.Render(m.table.View())
 
 	if status.Err != nil {
 		errMsg := status.Err.Error()
 		vaultView += "\n✗ Error: " + errMsg
-	} else if m.filtering {
+	} else if m.filtering || len(m.filterStr) > 0 {
 		vaultView += "\nFilter: " + m.filterStr
 	} else if len(status.Success) > 0 {
-		vaultView += "\n" + status.Success
+		vaultView += "\n " + status.Success
 	} else if status.Loading {
 		vaultView += "Loading..."
 	} else if status.Processing && status.Total == 0 {
@@ -310,8 +313,14 @@ func (m Model) tableViewer() string {
 			m.progress.ViewAs(percent) + "\n"
 		vaultView += progressStr
 	} else {
-		progressStr := "\n Storage: " +
-			m.progress.ViewAs(.56) + " full │ 3.5KB / 100GB \n"
+		percentage := float64(storage.used) / float64(storage.available)
+		storageUsed := shared.ReadableFileSize(storage.used)
+		storageAvailable := shared.ReadableFileSize(storage.available)
+		progressStr := fmt.Sprintf(
+			"\n Storage: %s full | %s / %s \n",
+			m.progress.ViewAs(percentage),
+			storageUsed,
+			storageAvailable)
 		vaultView += progressStr
 	}
 
@@ -334,21 +343,35 @@ func (m Model) upload(event internal.Event) {
 	status.Message = fmt.Sprintf("Uploading %s...", fileName)
 
 	go func() {
-		err := m.Context.UploadFile(event.Value, func(current int, total int) {
+		size, err := m.Context.UploadFile(event.Value, func(current int, total int) {
 			status.Progress = current
 			status.Total = total
 		})
 		m.finishUpdates(err, true)
+		if err == nil {
+			msg := fmt.Sprintf("Successfully uploaded %s!", fileName)
+			status.Success = styles.SuccessStyle.Render(msg)
+			storage.used += size
+		}
 	}()
 }
 
 func (m Model) delete(event internal.Event) {
 	status.Processing = true
-	status.Message = fmt.Sprintf("Deleting '%s'...", event.Item.Name)
+	status.Message = fmt.Sprintf("Deleting %s...", event.Item.Name)
 
 	go func() {
 		err := m.Context.Delete(event.Item)
 		m.finishUpdates(err, true)
+		if err == nil {
+			storage.used -= event.Item.Size - int64(constants.TotalOverhead)
+			if storage.used < 0 {
+				storage.used = 0
+			}
+
+			msg := fmt.Sprintf("Deleted %s!", event.Item.Name)
+			status.Success = styles.SuccessStyle.Render(msg)
+		}
 	}()
 }
 
@@ -488,8 +511,9 @@ func NewModel(folderID string) (Model, error) {
 	status.Err = err
 	rows = CreateItemRows(items)
 
-	maxNameLen := 15
-	maxDateLen := 20
+	minNameLen := 20
+	maxNameLen := 30
+	maxDateLen := 12
 	maxSharedLen := 6
 	for _, row := range rows {
 		maxNameLen = max(len(row[0]), maxNameLen)
@@ -497,6 +521,7 @@ func NewModel(folderID string) (Model, error) {
 		maxSharedLen = max(len(row[3]), maxSharedLen)
 	}
 
+	maxNameLen = max(maxNameLen, minNameLen)
 	columns := []table.Column{
 		{Title: "Name", Width: maxNameLen},
 		{Title: "Size", Width: 10},
@@ -508,26 +533,26 @@ func NewModel(folderID string) (Model, error) {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(10),
+		table.WithHeight(12),
 	)
 
 	s := table.DefaultStyles()
-	s.Cell = s.Cell.Foreground(lipgloss.Color("255"))
 	s.Header = s.Header.
-		BorderStyle(lipgloss.ThickBorder()).
-		BorderForeground(lipgloss.Color("255")).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
 		BorderBottom(true).
 		Bold(false)
 	s.Selected = s.Selected.
-		Background(lipgloss.Color("#5A56E0"))
-	s.Cell = s.Cell.Foreground(lipgloss.Color("#ffffff"))
+		Foreground(styles.Theme.Focused.FocusedButton.GetForeground()).
+		Background(styles.Theme.Focused.FocusedButton.GetBackground()).
+		Bold(false)
 	t.SetStyles(s)
 
 	m := Model{
 		Context:  ctx,
 		table:    t,
 		spinner:  spinner.New(),
-		progress: progress.New(progress.WithDefaultScaledGradient()),
+		progress: progress.New(progress.WithScaledGradient("#5A56E0", "#8A86F0")),
 	}
 
 	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
@@ -565,7 +590,7 @@ func RunFilesModel(m Model, event internal.Event) (Model, error) {
 		keyPair, keyErr = unlockVaultKeys()
 		if keyErr != nil {
 			errMsg := fmt.Sprintf(
-				"Error unlocking vault keys: %v\n",
+				"Error decrypting vault keys: %v\n",
 				keyErr)
 			styles.PrintErrStr(errMsg)
 			os.Exit(1)
@@ -573,7 +598,20 @@ func RunFilesModel(m Model, event internal.Event) (Model, error) {
 	}
 
 	if m.init == false {
-		m, _ = NewModel("")
+		_ = huhSpinner.New().Title("Loading vault...").Action(func() {
+			m, _ = NewModel("")
+			usage, err := globals.API.GetAccountUsage()
+			if err != nil {
+				errMsg := fmt.Sprintf(
+					"Error fetching account usage values: %v\n",
+					err)
+				styles.PrintErrStr(errMsg)
+				os.Exit(1)
+			}
+
+			storage.available = usage.StorageAvailable
+			storage.used = usage.StorageUsed
+		}).Run()
 	}
 
 	m.IncomingEvent = event
@@ -593,6 +631,7 @@ func unlockVaultKeys() (crypto.KeyPair, error) {
 		errMsg := fmt.Sprintf("Error reading key files: %v\n", err)
 		styles.PrintErrStr(errMsg)
 	}
+
 	if privateKey, err := crypto.DecryptChunk(cliKey, encPrivateKey); err == nil {
 		kp = crypto.IngestKeys(privateKey, publicKey)
 	} else {

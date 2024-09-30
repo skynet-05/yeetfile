@@ -36,6 +36,7 @@ var (
 	Login          = Endpoint("/api/login")
 	Logout         = Endpoint("/api/logout")
 	Account        = Endpoint("/api/account")
+	AccountUsage   = Endpoint("/api/account/usage")
 	Forgot         = Endpoint("/api/forgot")
 	Session        = Endpoint("/api/session")
 	TwoFactor      = Endpoint("/api/2fa")
@@ -72,22 +73,23 @@ var (
 	BTCPayWebhook  = Endpoint("/btcpay/webhook")
 	BTCPayCheckout = Endpoint("/btcpay/checkout")
 
-	HTMLAccount        = Endpoint("/account")
-	HTMLHome           = Endpoint("/")
-	HTMLSend           = Endpoint("/send")
-	HTMLSendDownload   = Endpoint("/send/*")
-	HTMLVault          = Endpoint("/vault")
-	HTMLVaultFolder    = Endpoint("/vault/*")
-	HTMLVaultFile      = Endpoint("/vault/*/file/*")
-	HTMLLogin          = Endpoint("/login")
-	HTMLSignup         = Endpoint("/signup")
-	HTMLForgot         = Endpoint("/forgot")
-	HTMLChangeEmail    = Endpoint("/change/email/*")
-	HTMLChangePassword = Endpoint("/change/password")
-	HTMLChangeHint     = Endpoint("/change/hint")
-	HTMLVerifyEmail    = Endpoint("/verify/email")
-	HTMLTwoFactor      = Endpoint("/2fa")
-	HTMLServerInfo     = Endpoint("/info")
+	HTMLAccount          = Endpoint("/account")
+	HTMLHome             = Endpoint("/")
+	HTMLSend             = Endpoint("/send")
+	HTMLSendDownload     = Endpoint("/send/*")
+	HTMLVault            = Endpoint("/vault")
+	HTMLVaultFolder      = Endpoint("/vault/*")
+	HTMLVaultFile        = Endpoint("/vault/*/file/*")
+	HTMLLogin            = Endpoint("/login")
+	HTMLSignup           = Endpoint("/signup")
+	HTMLForgot           = Endpoint("/forgot")
+	HTMLChangeEmail      = Endpoint("/change/email/*")
+	HTMLChangePassword   = Endpoint("/change/password")
+	HTMLChangeHint       = Endpoint("/change/hint")
+	HTMLVerifyEmail      = Endpoint("/verify/email")
+	HTMLTwoFactor        = Endpoint("/2fa")
+	HTMLServerInfo       = Endpoint("/info")
+	HTMLCheckoutComplete = Endpoint("/checkout/complete")
 )
 
 var JSVarNameMap = map[Endpoint]string{
@@ -97,6 +99,7 @@ var JSVarNameMap = map[Endpoint]string{
 	Forgot:         "Forgot",
 	Session:        "Session",
 	Account:        "Account",
+	AccountUsage:   "AccountUsage",
 	TwoFactor:      "TwoFactor",
 	VerifyAccount:  "VerifyAccount",
 	VerifyEmail:    "VerifyEmail",
@@ -125,21 +128,22 @@ var JSVarNameMap = map[Endpoint]string{
 	PubKey:       "PubKey",
 	ProtectedKey: "ProtectedKey",
 
-	HTMLHome:           "HTMLHome",
-	HTMLAccount:        "HTMLAccount",
-	HTMLSend:           "HTMLSend",
-	HTMLSendDownload:   "HTMLSendDownload",
-	HTMLVault:          "HTMLVault",
-	HTMLVaultFolder:    "HTMLVaultFolder",
-	HTMLVaultFile:      "HTMLVaultFile",
-	HTMLLogin:          "HTMLLogin",
-	HTMLSignup:         "HTMLSignup",
-	HTMLChangeEmail:    "HTMLChangeEmail",
-	HTMLChangePassword: "HTMLChangePassword",
-	HTMLChangeHint:     "HTMLChangeHint",
-	HTMLVerifyEmail:    "HTMLVerifyEmail",
-	HTMLTwoFactor:      "HTMLTwoFactor",
-	HTMLServerInfo:     "HTMLServerInfo",
+	HTMLHome:             "HTMLHome",
+	HTMLAccount:          "HTMLAccount",
+	HTMLSend:             "HTMLSend",
+	HTMLSendDownload:     "HTMLSendDownload",
+	HTMLVault:            "HTMLVault",
+	HTMLVaultFolder:      "HTMLVaultFolder",
+	HTMLVaultFile:        "HTMLVaultFile",
+	HTMLLogin:            "HTMLLogin",
+	HTMLSignup:           "HTMLSignup",
+	HTMLChangeEmail:      "HTMLChangeEmail",
+	HTMLChangePassword:   "HTMLChangePassword",
+	HTMLChangeHint:       "HTMLChangeHint",
+	HTMLVerifyEmail:      "HTMLVerifyEmail",
+	HTMLTwoFactor:        "HTMLTwoFactor",
+	HTMLServerInfo:       "HTMLServerInfo",
+	HTMLCheckoutComplete: "HTMLCheckoutComplete",
 }
 
 func (e Endpoint) Format(server string, args ...string) string {

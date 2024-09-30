@@ -14,16 +14,16 @@ import (
 
 var path = ".cache"
 var enabled = true
-var maxCacheSize = 1024 * 1024 * 1024 * 25     // 25 gb max cache size
-var maxCachedFileSize = 1024 * 1024 * 1024 * 5 // 5 gb max file size
+var maxCacheSize int64 = 1024 * 1024 * 1024 * 25     // 25 gb max cache size
+var maxCachedFileSize int64 = 1024 * 1024 * 1024 * 5 // 5 gb max file size
 
 // Map file ID -> file size to ensure in-progress file caching is accounted for
 // when determining if there's available space in the cache
-var writeMap = map[string]int{}
+var writeMap = map[string]int64{}
 var accessMap = map[string]time.Time{}
 var locks []string
 
-func PrepCache(fileID string, size int) {
+func PrepCache(fileID string, size int64) {
 	if !enabled || size > maxCachedFileSize || size > maxCacheSize || len(fileID) == 0 {
 		return
 	}
@@ -34,7 +34,7 @@ func PrepCache(fileID string, size int) {
 		return
 	}
 
-	for totalCacheSize+int64(size) > int64(maxCacheSize) {
+	for totalCacheSize+size > int64(maxCacheSize) {
 		err = removeOldestUnlockedFile()
 		if err != nil {
 			return
@@ -50,7 +50,7 @@ func PrepCache(fileID string, size int) {
 
 // HasFile returns true if the fileID provided exists in the cache and matches
 // the expected size from the metadata table
-func HasFile(fileID string, length int) bool {
+func HasFile(fileID string, length int64) bool {
 	if len(fileID) == 0 {
 		return false
 	}
@@ -63,7 +63,7 @@ func HasFile(fileID string, length int) bool {
 
 	// Ensure the file in the cache matches the size stored in the metadata
 	// table
-	return info.Size() == int64(length)
+	return info.Size() == length
 }
 
 // Write writes file data to a cache file named with the file ID
@@ -96,7 +96,7 @@ func Write(fileID string, data []byte) error {
 
 // Read receives a file ID and start and end positions and reads from
 // a file in the cache
-func Read(fileID string, start int, end int) ([]byte, error) {
+func Read(fileID string, start int64, end int64) ([]byte, error) {
 	if !enabled || len(fileID) == 0 {
 		return nil, errors.New("cache not available")
 	}
@@ -130,13 +130,13 @@ func Read(fileID string, start int, end int) ([]byte, error) {
 		}
 
 		data = make([]byte, end-start+1)
-		_, err = file.ReadAt(data, int64(start))
+		_, err = file.ReadAt(data, start)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if start > 0 && end-start < constants.ChunkSize {
+	if start > 0 && end-start < int64(constants.ChunkSize) {
 		// The last chunk of the file is being deleted, so the file lock
 		// can be removed now
 		locks = removeLock(locks, fileID)

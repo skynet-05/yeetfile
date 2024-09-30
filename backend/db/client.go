@@ -102,7 +102,7 @@ func DeleteFileByMetadata(metadata FileMetadata) {
 	if ok, err := service.B2.CancelLargeFile(metadata.B2ID); ok && err == nil {
 		log.Printf("%s (large B2 upload) canceled\n", metadata.ID)
 		clearDatabase(metadata.ID)
-	} else if service.B2.DeleteFile(metadata.B2ID, metadata.Name) {
+	} else if ok, err = service.B2.DeleteFile(metadata.B2ID, metadata.Name); ok && err == nil {
 		log.Printf("%s deleted from B2\n", metadata.ID)
 		clearDatabase(metadata.ID)
 	} else {

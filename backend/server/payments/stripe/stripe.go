@@ -67,7 +67,7 @@ var stripeOrderTypeMap = map[string]string{
 
 // stripeProductStorage maps product IDs to their respective amounts of storage
 // that they grant a user
-var stripeProductStorage = map[string]int{
+var stripeProductStorage = map[string]int64{
 	config.YeetFileConfig.StripeBilling.SubNoviceMonthly: subscriptions.
 		StorageAmountMap[subscriptions.TypeNovice],
 	config.YeetFileConfig.StripeBilling.SubNoviceYearly: subscriptions.
@@ -86,7 +86,7 @@ var stripeProductStorage = map[string]int{
 
 // stripeProductSend maps product IDs to their respective amounts of storage
 // that they grant a user
-var stripeProductSend = map[string]int{
+var stripeProductSend = map[string]int64{
 	config.YeetFileConfig.StripeBilling.SubNoviceMonthly: subscriptions.
 		SendAmountMap[subscriptions.TypeNovice],
 	config.YeetFileConfig.StripeBilling.SubNoviceYearly: subscriptions.

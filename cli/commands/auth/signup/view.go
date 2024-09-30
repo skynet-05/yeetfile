@@ -34,13 +34,18 @@ func ShowSignupModel() {
 	var passwordHint string
 	var signupType string
 
+	var options []huh.Option[string]
+	if globals.ServerInfo.EmailConfigured {
+		options = huh.NewOptions(signupEmail, signupIDOnly)
+	} else {
+		options = huh.NewOptions(signupIDOnly)
+	}
+
 	err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewNote().Title(utils.GenerateTitle("Sign Up")),
 			huh.NewSelect[string]().
-				Options(huh.NewOptions(
-					signupEmail,
-					signupIDOnly)...).
+				Options(options...).
 				Title("Account Type").Value(&signupType),
 		),
 		huh.NewGroup(

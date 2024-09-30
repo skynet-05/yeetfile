@@ -23,10 +23,10 @@ type User struct {
 	Secret             []byte
 	PaymentID          string
 	MemberExp          time.Time
-	StorageAvailable   int
-	StorageUsed        int
-	SendAvailable      int
-	SendUsed           int
+	StorageAvailable   int64
+	StorageUsed        int64
+	SendAvailable      int64
+	SendUsed           int64
 	SubscriptionMethod string
 }
 
@@ -208,7 +208,7 @@ func GetUserStorage(id string) (UserStorage, UserSend, error) {
 
 // UpdateStorageUsed updates the amount of storage used by the user. Can be a
 // negative number to remove storage space.
-func UpdateStorageUsed(userID string, amount int) error {
+func UpdateStorageUsed(userID string, amount int64) error {
 	var storageUsed int
 	var storageAvailable int
 	s := `UPDATE users 
@@ -230,7 +230,7 @@ func UpdateStorageUsed(userID string, amount int) error {
 
 // UpdateBandwidth subtracts bandwidth from the user's bandwidth column, returning
 // an error if the value goes below 0.
-func UpdateBandwidth(userID string, amount int) error {
+func UpdateBandwidth(userID string, amount int64) error {
 	s := `UPDATE users SET bandwidth=bandwidth-$2 WHERE id=$1`
 	_, err := db.Exec(s, userID, amount)
 	return err
@@ -410,10 +410,10 @@ func GetUserByID(id string) (User, error) {
 		email            string
 		paymentID        string
 		expiration       time.Time
-		sendAvailable    int
-		sendUsed         int
-		storageAvailable int
-		storageUsed      int
+		sendAvailable    int64
+		sendUsed         int64
+		storageAvailable int64
+		storageUsed      int64
 		subMethod        string
 		pwHint           []byte
 		secret           []byte
@@ -554,11 +554,41 @@ func GetUserPasswordHintByEmail(email string) ([]byte, error) {
 	return hint, nil
 }
 
+// GetUserUsage fetches the storage used/available and send used/available for
+// the user matching the provided ID.
+func GetUserUsage(id string) (shared.UsageResponse, error) {
+	var (
+		storageUsed      int64
+		storageAvailable int64
+		sendUsed         int64
+		sendAvailable    int64
+	)
+
+	s := `SELECT storage_used, storage_available, send_used, send_available
+	      FROM users
+	      WHERE id = $1`
+	err := db.QueryRow(s, id).Scan(
+		&storageUsed,
+		&storageAvailable,
+		&sendUsed,
+		&sendAvailable)
+	if err != nil {
+		return shared.UsageResponse{}, err
+	}
+
+	return shared.UsageResponse{
+		StorageAvailable: storageAvailable,
+		StorageUsed:      storageUsed,
+		SendAvailable:    sendAvailable,
+		SendUsed:         sendUsed,
+	}, nil
+}
+
 // GetUserSendLimits returns the amount of used and available bytes for
 // sending files
-func GetUserSendLimits(id string) (int, int, error) {
-	var sendUsed int
-	var sendAvailable int
+func GetUserSendLimits(id string) (int64, int64, error) {
+	var sendUsed int64
+	var sendAvailable int64
 	err := db.QueryRow(`
 		SELECT send_used, send_available
 		FROM users
@@ -575,9 +605,9 @@ func GetUserSendLimits(id string) (int, int, error) {
 
 // GetUserStorageLimits returns the amount of used and available bytes for
 // storing files
-func GetUserStorageLimits(id string) (int, int, error) {
-	var storageUsed int
-	var storageAvailable int
+func GetUserStorageLimits(id string) (int64, int64, error) {
+	var storageUsed int64
+	var storageAvailable int64
 	err := db.QueryRow(`
 		SELECT storage_used, storage_available
 		FROM users
@@ -594,8 +624,8 @@ func GetUserStorageLimits(id string) (int, int, error) {
 
 // GetUserBandwidth returns the user's bandwidth, which can be used to determine
 // if a file download can be performed.
-func GetUserBandwidth(id string) (int, error) {
-	var bandwidth int
+func GetUserBandwidth(id string) (int64, error) {
+	var bandwidth int64
 	s := `SELECT bandwidth FROM users WHERE id=$1`
 	err := db.QueryRow(s, id).Scan(&bandwidth)
 	if err != nil {
@@ -680,7 +710,7 @@ func GetUserEmailByPaymentID(paymentID string) (string, error) {
 func SetUserSubscription(
 	paymentID, subTag, subMethod string,
 	exp time.Time,
-	storage, send int,
+	storage, send int64,
 ) error {
 	subDuration, err := subscriptions.GetSubscriptionDuration(subTag)
 	if err != nil {
@@ -785,7 +815,7 @@ func CheckMemberships() {
 	upgradeFunc := func(
 		ids []string,
 		sendAvailable,
-		storageAvailable int,
+		storageAvailable int64,
 	) error {
 		if ids == nil || len(ids) == 0 {
 			return nil

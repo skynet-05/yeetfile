@@ -7,7 +7,7 @@ type VaultItem struct {
 	RefID        string
 	Name         string
 	IsFolder     bool
-	Size         int
+	Size         int64
 	Modified     time.Time
 	SharedWith   int
 	SharedBy     string

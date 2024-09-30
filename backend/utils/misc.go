@@ -84,6 +84,20 @@ func GetEnvVarInt(key string, fallback int) int {
 	return num
 }
 
+func GetEnvVarInt64(key string, fallback int64) int64 {
+	value := GetEnvVar(key, strconv.FormatInt(fallback, 10))
+	if value == "" {
+		return fallback
+	}
+
+	num, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return fallback
+	}
+
+	return num
+}
+
 func GetEnvVarBool(key string, fallback bool) bool {
 	value := GetEnvVar(key, "")
 	value = strings.ToLower(value)
@@ -245,7 +259,7 @@ func CheckDirSize(path string) (int64, error) {
 	return size, err
 }
 
-func ParseSizeString(str string) int {
+func ParseSizeString(str string) int64 {
 	pattern := regexp.MustCompile(`^(\d+)([a-zA-Z]+)$`)
 	matches := pattern.FindStringSubmatch(str)
 
@@ -261,15 +275,15 @@ func ParseSizeString(str string) int {
 
 		switch letters[0] {
 		case 'T': // Terabyte
-			return 1024 * 1024 * 1024 * 1024 * num
+			return int64(1024 * 1024 * 1024 * 1024 * num)
 		case 'G': // Gigabyte
-			return 1024 * 1024 * 1024 * num
+			return int64(1024 * 1024 * 1024 * num)
 		case 'M': // Megabyte
-			return 1024 * 1024 * num
+			return int64(1024 * 1024 * num)
 		case 'K': // Kilobyte
-			return 1024 * num
+			return int64(1024 * num)
 		default:
-			return num
+			return int64(num)
 		}
 	} else {
 		log.Printf("No match found for size string: %s\n", str)

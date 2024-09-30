@@ -95,6 +95,12 @@ var PriceMapping = map[string]int{
 	YearlyAdvanced:  90,
 }
 
+var NameMap = map[string]string{
+	TypeNovice:   "Novice Yeeter",
+	TypeRegular:  "Regular Yeeter",
+	TypeAdvanced: "Advanced Yeeter",
+}
+
 // DescriptionMap maps subscription tags to a description of what the subscription
 // actually provides
 var DescriptionMap = map[string]string{
@@ -127,7 +133,7 @@ var membershipDurationFunctionMap = map[string]func() time.Time{
 
 // StorageAmountMap maps subscription types to an amount of vault storage that
 // should be provided to the user
-var StorageAmountMap = map[string]int{
+var StorageAmountMap = map[string]int64{
 	TypeNovice:   NoviceStorage * 1000 * 1000 * 1000,
 	TypeRegular:  RegularStorage * 1000 * 1000 * 1000,
 	TypeAdvanced: AdvancedStorage * 1000 * 1000 * 1000,
@@ -135,8 +141,16 @@ var StorageAmountMap = map[string]int{
 
 // SendAmountMap maps subscription types to an amount of file sending that
 // should be provided to the user
-var SendAmountMap = map[string]int{
+var SendAmountMap = map[string]int64{
 	TypeNovice:   NoviceSend * 1000 * 1000 * 1000,
 	TypeRegular:  RegularSend * 1000 * 1000 * 1000,
 	TypeAdvanced: AdvancedSend * 1000 * 1000 * 1000,
+}
+
+func GetSubTagName(subType string, isYearly bool) string {
+	if isYearly {
+		return fmt.Sprintf("%s-%s", yearly, subType)
+	}
+
+	return fmt.Sprintf("%s-%s", monthly, subType)
 }

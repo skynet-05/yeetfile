@@ -12,19 +12,20 @@ import (
 )
 
 const (
-	SendHTML           = "send.html"
-	VaultHTML          = "vault.html"
-	DownloadHTML       = "download.html"
-	VerificationHTML   = "verify.html"
-	SignupHTML         = "signup.html"
-	LoginHTML          = "login.html"
-	AccountHTML        = "account.html"
-	ForgotHTML         = "forgot.html"
-	ChangeEmailHTML    = "change_email.html"
-	ChangePasswordHTML = "change_password.html"
-	ChangeHintHTML     = "change_hint.html"
-	TwoFactorHTML      = "enable_2fa.html"
-	ServerInfoHTML     = "server_info.html"
+	SendHTML             = "send.html"
+	VaultHTML            = "vault.html"
+	DownloadHTML         = "download.html"
+	VerificationHTML     = "verify.html"
+	SignupHTML           = "signup.html"
+	LoginHTML            = "login.html"
+	AccountHTML          = "account.html"
+	ForgotHTML           = "forgot.html"
+	ChangeEmailHTML      = "change_email.html"
+	ChangePasswordHTML   = "change_password.html"
+	ChangeHintHTML       = "change_hint.html"
+	TwoFactorHTML        = "enable_2fa.html"
+	ServerInfoHTML       = "server_info.html"
+	CheckoutCompleteHTML = "checkout_complete.html"
 )
 
 //go:embed *.html
@@ -78,6 +79,13 @@ type InfoTemplate struct {
 	BTCPayEnabled      bool
 	DefaultStorage     string
 	DefaultSend        string
+}
+
+type CheckoutCompleteTemplate struct {
+	Base        BaseTemplate
+	Title       string
+	Description string
+	Note        string
 }
 
 type AccountTemplate struct {

@@ -81,8 +81,8 @@ func shareVaultItem(
 
 // DeleteVaultFolder recursively deletes the folder matching the specified
 // folder ID and all of its subfolders, returning the amount of freed space
-func DeleteVaultFolder(id, userID string, isShared bool) (int, error) {
-	freed := 0
+func DeleteVaultFolder(id, userID string, isShared bool) (int64, error) {
+	freed := int64(0)
 	if isShared {
 		// Delete shared folder reference and return
 		return 0, db.DeleteSharedFolder(id, userID)
@@ -127,7 +127,7 @@ func DeleteVaultFolder(id, userID string, isShared bool) (int, error) {
 }
 
 // deleteVaultFile deletes the file matching the specified ID and the
-func deleteVaultFile(id, userID string, isShared bool) (int, error) {
+func deleteVaultFile(id, userID string, isShared bool) (int64, error) {
 	if isShared {
 		// Delete shared file reference and return
 		return 0, db.DeleteSharedFile(id, userID)
@@ -140,7 +140,8 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 
 	if len(metadata.B2ID) > 0 {
 		b2Info := db.GetB2UploadValues(metadata.ID)
-		if !service.B2.DeleteFile(metadata.B2ID, b2Info.Name) {
+		deleted, err := service.B2.DeleteFile(metadata.B2ID, b2Info.Name)
+		if !deleted || err != nil {
 			log.Printf(
 				"Unable to delete vault file from b2: '%s'",
 				metadata.B2ID)
@@ -159,7 +160,7 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 		return 0, errors.New("failed to delete")
 	}
 
-	totalUploadSize := metadata.Length - (constants.TotalOverhead * metadata.Chunks)
+	totalUploadSize := metadata.Length - int64(constants.TotalOverhead*metadata.Chunks)
 	err = db.UpdateStorageUsed(userID, -totalUploadSize)
 	if err != nil {
 		log.Printf("Failed to update storage for user: %v\n", err)
@@ -171,11 +172,11 @@ func deleteVaultFile(id, userID string, isShared bool) (int, error) {
 	return totalUploadSize, err
 }
 
-func abortUpload(metadata db.FileMetadata, userID string, chunkLen, chunkNum int) {
+func abortUpload(metadata db.FileMetadata, userID string, chunkLen int64, chunkNum int) {
 	db.DeleteFileByMetadata(metadata)
 	totalSize := chunkLen
 	for chunkNum > 1 {
-		totalSize += constants.ChunkSize
+		totalSize += int64(constants.ChunkSize)
 	}
 
 	err := db.UpdateStorageUsed(userID, -totalSize)

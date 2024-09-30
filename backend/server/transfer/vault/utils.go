@@ -10,7 +10,7 @@ var OutOfSpaceError = errors.New("not enough storage available")
 
 // CanUserUpload checks if the user has enough storage available to upload a
 // file of the specified size
-func CanUserUpload(size int, id string) error {
+func CanUserUpload(size int64, id string) error {
 	// Validate that the user has enough space to upload this file
 	usedStorage, availableStorage, err := db.GetUserStorageLimits(id)
 	if err != nil {

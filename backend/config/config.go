@@ -22,8 +22,8 @@ const B2Storage = "b2"
 var defaultSecret = []byte("yeetfile-debug-secret-key-123456")
 var storageType = utils.GetEnvVar("YEETFILE_STORAGE", LocalStorage)
 var domain = os.Getenv("YEETFILE_DOMAIN")
-var defaultUserStorage = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_STORAGE", -1)
-var defaultUserSend = utils.GetEnvVarInt("YEETFILE_DEFAULT_USER_SEND", -1)
+var defaultUserStorage = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_STORAGE", -1)
+var defaultUserSend = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_SEND", -1)
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
 var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
 var secret = utils.GetEnvVarBytesB64("YEETFILE_SERVER_SECRET", defaultSecret)
@@ -149,8 +149,8 @@ var btcPayBilling = BTCPayBillingConfig{
 type ServerConfig struct {
 	StorageType        string
 	Domain             string
-	DefaultUserStorage int
-	DefaultUserSend    int
+	DefaultUserStorage int64
+	DefaultUserSend    int64
 	MaxUserCount       int
 	CurrentUserCount   int
 	Email              EmailConfig

@@ -55,11 +55,12 @@ func FetchVaultContext(folderID string) (*VaultContext, error) {
 
 // UploadFile uploads the file contained at the specified path to the user's
 // vault in the current folder. Provides a progress callback to indicate how
-// many chunks from the total have been uploaded.
-func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) error {
+// many chunks from the total have been uploaded. Returns the uploaded file
+// size and any errors.
+func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) (int64, error) {
 	file, stat, err := shared.GetFileInfo(path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	key, _ := crypto.GenerateRandomKey()
@@ -67,13 +68,13 @@ func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) error 
 		ctx.Crypto.EncryptionKey,
 		key)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	pending, err := transfer.InitVaultFile(
 		file, stat, ctx.FolderID, protectedKey, key)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	chunk := 0
@@ -83,10 +84,10 @@ func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) error 
 	})
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	totalSize := int(stat.Size()) + (constants.TotalOverhead * pending.NumChunks)
+	totalSize := stat.Size() + int64(constants.TotalOverhead*pending.NumChunks)
 	ctx.InsertItem(models.VaultItem{
 		ID:           result,
 		Name:         utils.GetFilenameFromPath(path),
@@ -97,7 +98,7 @@ func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) error 
 		ProtectedKey: protectedKey,
 	})
 
-	return nil
+	return stat.Size(), nil
 }
 
 func (ctx *VaultContext) CreateFolder(folderName string) error {

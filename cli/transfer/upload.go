@@ -94,7 +94,7 @@ func InitVaultFile(
 	}
 
 	name := hex.EncodeToString(encName)
-	size := int(stat.Size())
+	size := stat.Size()
 	numChunks := GetNumChunks(stat.Size())
 	upload := shared.VaultUpload{
 		Name:         name,

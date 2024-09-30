@@ -54,7 +54,7 @@ func GetSubscriptionExpiration(tag string) (time.Time, error) {
 
 // GetSubscriptionStorage returns the amount of storage a user should receive
 // for their selected subscription.
-func GetSubscriptionStorage(tag string) (int, error) {
+func GetSubscriptionStorage(tag string) (int64, error) {
 	subType, err := GetSubscriptionType(tag)
 	if err != nil {
 		return 0, err
@@ -70,7 +70,7 @@ func GetSubscriptionStorage(tag string) (int, error) {
 
 // GetSubscriptionSend returns the amount of sending space a user should receive
 // for their selected subscription.
-func GetSubscriptionSend(tag string) (int, error) {
+func GetSubscriptionSend(tag string) (int64, error) {
 	subType, err := GetSubscriptionType(tag)
 	if err != nil {
 		return 0, err

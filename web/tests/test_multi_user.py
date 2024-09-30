@@ -2,7 +2,7 @@ import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright, expect
 
 from constants import base_page, demo_file, user_password
-from utils import fetch_folder_json, delete_account
+from utils import fetch_folder_json, delete_account, print_console_msg
 
 account_id_a: str = ""
 account_id_b: str = ""
@@ -57,6 +57,7 @@ def test_share_file(browser_context: tuple[BrowserContext, BrowserContext]):
         f.write(file_content)
 
     user_a_page = context_a.new_page()
+    user_a_page.on("console", lambda msg: print_console_msg(msg))
     user_a_page.goto(f"{base_page}/vault")
 
     user_a_page.get_by_test_id("file-input").set_input_files(demo_file)
@@ -77,6 +78,7 @@ def test_share_file(browser_context: tuple[BrowserContext, BrowserContext]):
     user_a_page.get_by_test_id("submit-share").click()
 
     user_b_page = context_b.new_page()
+    user_b_page.on("console", lambda msg: print_console_msg(msg))
     user_b_page.goto(f"{base_page}/vault")
 
     file_link = user_b_page.get_by_role("link", name=demo_file)
@@ -91,6 +93,7 @@ def test_share_folder(browser_context: tuple[BrowserContext, BrowserContext]):
     folder_name = "My Folder"
 
     user_a_page = context_a.new_page()
+    user_a_page.on("console", lambda msg: print_console_msg(msg))
     user_a_page.goto(f"{base_page}/vault")
 
     user_a_page.get_by_test_id("new-vault-folder").click()
@@ -115,6 +118,7 @@ def test_share_folder(browser_context: tuple[BrowserContext, BrowserContext]):
     user_a_page.get_by_test_id("submit-share").click()
 
     user_b_page = context_b.new_page()
+    user_b_page.on("console", lambda msg: print_console_msg(msg))
     user_b_page.goto(f"{base_page}/vault")
 
     folder_link = user_b_page.get_by_role("link", name=folder_name)
