@@ -13,5 +13,5 @@ func ShowLogoutModel() {
 			utils.HandleCLIError("error logging out", err)
 		}).Run()
 
-	fmt.Println("You are logged out")
+	fmt.Print("\nYou are logged out\n")
 }

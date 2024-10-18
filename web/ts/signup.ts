@@ -7,6 +7,8 @@ let emailToggle;
 let idToggle;
 let serverPassword;
 
+const verifyButtonID = "verify-account";
+
 const init = () => {
     setupToggles();
 
@@ -15,13 +17,13 @@ const init = () => {
     // Email signup
     let emailSignupButton = document.getElementById("create-email-account") as HTMLButtonElement;
     emailSignupButton.addEventListener("click", async (event) => {
-        await emailSignup(emailSignupButton);
+        await emailSignup();
     });
 
     // Account ID only signup
     let accountSignupButton = document.getElementById("create-id-only-account") as HTMLButtonElement;
     accountSignupButton.addEventListener("click", (event) => {
-        accountIDOnlySignup(accountSignupButton);
+        accountIDOnlySignup();
     });
 
     // Enter key submits login form
@@ -31,7 +33,12 @@ const init = () => {
         }
 
         if (idToggle.checked) {
-            accountSignupButton.click();
+            let fieldset = document.getElementById("signup-fieldset") as HTMLFieldSetElement;
+            if (fieldset.disabled) {
+                document.getElementById(verifyButtonID).click();
+            } else {
+                accountSignupButton.click();
+            }
         } else if (emailToggle.checked) {
             emailSignupButton.click();
         }
@@ -60,31 +67,35 @@ const setupToggles = () => {
  * generateKeys generates the necessary keys for using YeetFile
  * @param identifier {string} - either email or account ID
  * @param password {string} - the user's password
- * @returns {Promise<{
- *     loginKeyHash: Uint8Array,
- *     protectedKey: Uint8Array,
- *     privateKey: Uint8Array,
- *     publicKey: Uint8Array,
- *     rootFolderKey: Uint8Array
- * }>}
+ * @param keyCallback {(Uint8Array, Uint8Array)} - the user's new private and public keys
+ * @returns {Promise<interfaces.Signup>}
  */
-const generateKeys = async (identifier, password) => {
+const generateKeys = async (
+    identifier: string,
+    password: string,
+    keyCallback: (
+        signup: interfaces.Signup,
+        privKey: Uint8Array,
+        pubKey: Uint8Array,
+    ) => void,
+) => {
     let userKey = await crypto.generateUserKey(identifier, password);
     let loginKeyHash = await crypto.generateLoginKeyHash(userKey, password);
     let keyPair = await crypto.generateKeyPair();
     let publicKey = await crypto.exportKey(keyPair.publicKey, "spki");
     let privateKey = await crypto.exportKey(keyPair.privateKey, "pkcs8");
-    let protectedKey = await crypto.encryptChunk(userKey, privateKey);
-    let folderKey = await crypto.generateRandomKey();
-    let protectedRootFolderKey = await crypto.encryptRSA(keyPair.publicKey, folderKey);
+    let protectedPrivateKey = await crypto.encryptChunk(userKey, privateKey);
 
-    return {
-        "loginKeyHash": loginKeyHash,
-        "publicKey": publicKey,
-        "privateKey": privateKey,
-        "protectedKey": protectedKey,
-        "rootFolderKey": protectedRootFolderKey
-    }
+    let vaultFolderKey = await crypto.generateRandomKey();
+    let protectedVaultFolderKey = await crypto.encryptRSA(keyPair.publicKey, vaultFolderKey);
+
+    let signup = new interfaces.Signup();
+    signup.loginKeyHash = loginKeyHash;
+    signup.publicKey = publicKey;
+    signup.protectedPrivateKey = protectedPrivateKey;
+    signup.protectedVaultFolderKey = protectedVaultFolderKey;
+
+    keyCallback(signup, privateKey, publicKey);
 }
 
 const inputsDisabled = (disabled: boolean) => {
@@ -94,59 +105,63 @@ const inputsDisabled = (disabled: boolean) => {
     });
 }
 
-const emailSignup = async (btn: HTMLButtonElement) => {
+/**
+ * Initiates the process of creating an account with an email.
+ */
+const emailSignup = async () => {
     inputsDisabled(true);
     let emailInput = document.getElementById("email") as HTMLInputElement;
     let passwordInput = document.getElementById("password") as HTMLInputElement;
     let confirmPasswordInput = document.getElementById("confirm-password") as HTMLInputElement;
 
-    if (emailInput.value && passwordIsValid(passwordInput.value, confirmPasswordInput.value)) {
-        let userKeys = await generateKeys(emailInput.value, passwordInput.value);
+    let password = passwordInput.value;
+    let confirmPassword = confirmPasswordInput.value;
 
-        const dbModule = await import('./db.js');
-        let db = new dbModule.YeetFileDB();
+    if (emailInput.value && passwordIsValid(password, confirmPassword)) {
+        await generateKeys(
+            emailInput.value,
+            passwordInput.value,
+            async (signup, privKey, pubKey) => {
+                const dbModule = await import("./db.js");
+                let db = new dbModule.YeetFileDB();
 
-        await db.insertVaultKeyPair(
-            userKeys["privateKey"],
-            userKeys["publicKey"],
-            "",
-            success => {
-            if (success) {
-                submitSignupForm(btn, emailInput.value, userKeys);
-            } else {
-                alert("Failed to insert vault key pair into indexeddb");
-                inputsDisabled(false);
-            }
-        });
+                await db.insertVaultKeyPair(privKey, pubKey, "", success => {
+                    if (success) {
+                        submitSignupForm(emailInput.value, signup);
+                    } else {
+                        alert("Failed to insert vault key pair into indexeddb");
+                        inputsDisabled(false);
+                    }
+                });
+            });
     } else {
         inputsDisabled(false);
         alert("Missing required fields");
     }
 }
 
-const accountIDOnlySignup = (btn: HTMLButtonElement) => {
+/**
+ * Initiates the process of creating an account ID-only account (not using an email)
+ */
+const accountIDOnlySignup = () => {
     let passwordInput = document.getElementById("account-password") as HTMLInputElement;
     let confirmPasswordInput = document.getElementById("account-confirm-password") as HTMLInputElement;
 
     if (passwordIsValid(passwordInput.value, confirmPasswordInput.value)) {
         inputsDisabled(true);
-        submitSignupForm(btn, "", undefined);
+        submitSignupForm("", new interfaces.Signup());
     }
 }
 
 /**
  * submitSignupForm submits the necessary info to create a new YeetFile account
- * @param submitBtn {}
  * @param email {string}
- * @param userKeys {{
- *     loginKeyHash: Uint8Array,
- *     protectedKey: Uint8Array,
- *     privateKey: Uint8Array,
- *     publicKey: Uint8Array,
- *     rootFolderKey: Uint8Array
- * }}
+ * @param userKeys {interfaces.Signup}
  */
-const submitSignupForm = (submitBtn, email, userKeys) => {
+const submitSignupForm = (
+    email: string,
+    userKeys: interfaces.Signup,
+) => {
     clearMessages();
 
     let xhr = new XMLHttpRequest();
@@ -174,24 +189,22 @@ const submitSignupForm = (submitBtn, email, userKeys) => {
         return;
     }
 
-    let sendData = new interfaces.Signup();
+    let sendData = userKeys;
     sendData.identifier = email;
     sendData.serverPassword = serverPassword.value;
     sendData.passwordHint = hintInput.value;
 
-    if (userKeys) {
-        sendData.loginKeyHash = Uint8Array.from(userKeys["loginKeyHash"]);
-        sendData.protectedKey = Uint8Array.from(userKeys["protectedKey"]);
-        sendData.publicKey = Uint8Array.from(userKeys["publicKey"]);
-        sendData.rootFolderKey = Uint8Array.from(userKeys["rootFolderKey"]);
-    }
-
     xhr.send(JSON.stringify(sendData, jsonReplacer));
 }
 
-const generateAccountIDSignupHTML = (id, img) => {
+/**
+ * Generates the "captcha" for verifying account ID-only signups
+ * @param id {string} - the user's new account ID
+ * @param img {string} - the base64 captcha image
+ */
+const generateAccountIDSignupHTML = (id: string, img: string) => {
     document.addEventListener("click", (event) => {
-        if ((event.target as HTMLElement).id === "verify-account") {
+        if ((event.target as HTMLElement).id === verifyButtonID) {
             verifyAccountID(id);
         }
     });
@@ -202,11 +215,16 @@ const generateAccountIDSignupHTML = (id, img) => {
     Please enter the 6-digit code above to verify your account.
     </p>
     <input type="text" data-testid="account-code" id="account-code" name="code" placeholder="Code"><br>
-    <button data-testid="verify-account" id="verify-account">Verify</button>
+    <button data-testid="${verifyButtonID}" id="${verifyButtonID}">Verify</button>
     `;
 }
 
-const generateSuccessHTML = (id) => {
+/**
+ * Displays the user's account ID in a message below the signup view, allowing
+ * them their one opportunity to copy the ID down.
+ * @param id {string} - the user's new account ID
+ */
+const generateSuccessHTML = (id: string) => {
     document.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).id === "goto-account") {
             window.location.assign("/account");
@@ -218,46 +236,50 @@ const generateSuccessHTML = (id) => {
     <button data-testid="goto-account" id="goto-account">Go To Account</button>`
 }
 
-const verifyAccountID = async id => {
-    let button = document.getElementById("verify-account") as HTMLButtonElement;
+/**
+ * Verifies an account ID-only signup using the 6-digit code the user entered.
+ * @param id {string} - the new user ID
+ */
+const verifyAccountID = async (id: string) => {
+    let button = document.getElementById(verifyButtonID) as HTMLButtonElement;
     let codeInput = document.getElementById("account-code") as HTMLInputElement;
     let passwordInput = document.getElementById("account-password") as HTMLInputElement;
 
     let password = passwordInput.value;
     button.disabled = true;
 
-    let userKeys = await generateKeys(id, password);
-    let body = new interfaces.VerifyAccount();
-    body.id = id;
-    body.code = codeInput.value;
-    body.publicKey = userKeys["publicKey"];
-    body.protectedKey = userKeys["protectedKey"];
-    body.loginKeyHash = userKeys["loginKeyHash"];
-    body.rootFolderKey = userKeys["rootFolderKey"];
+    await generateKeys(
+        id,
+        password,
+        async (userKeys, privKey, pubKey) => {
+            let body = new interfaces.VerifyAccount();
+            body.id = id;
+            body.code = codeInput.value;
+            body.loginKeyHash = userKeys.loginKeyHash;
+            body.publicKey = userKeys.publicKey;
+            body.protectedPrivateKey = userKeys.protectedPrivateKey;
+            body.protectedVaultFolderKey = userKeys.protectedVaultFolderKey;
 
-    fetch(Endpoints.VerifyAccount.path, {
-        method: "POST", body: JSON.stringify(body, jsonReplacer)
-    }).then(async response => {
-        if (response.ok) {
-            const dbModule = await import('./db.js');
-            let db = new dbModule.YeetFileDB();
-            await db.insertVaultKeyPair(
-                userKeys["privateKey"],
-                userKeys["publicKey"],
-                "",
-                success => {
-                    if (success) {
-                        let html = generateSuccessHTML(id);
-                        addVerifyHTML(html);
-                    } else {
-                        alert("Error inserting keys into indexed db!");
-                    }
-                });
-        } else {
-            button.disabled = false;
-            showMessage("Error " + await response.text(), true);
-        }
-    });
+            fetch(Endpoints.VerifyAccount.path, {
+                method: "POST", body: JSON.stringify(body, jsonReplacer)
+            }).then(async response => {
+                if (response.ok) {
+                    const dbModule = await import('./db.js');
+                    let db = new dbModule.YeetFileDB();
+                    await db.insertVaultKeyPair(privKey, pubKey, "", success => {
+                        if (success) {
+                            let html = generateSuccessHTML(id);
+                            addVerifyHTML(html);
+                        } else {
+                            alert("Error inserting keys into indexed db!");
+                        }
+                    });
+                } else {
+                    button.disabled = false;
+                    showMessage("Error " + await response.text(), true);
+                }
+            });
+        });
 }
 
 const addVerifyHTML = html => {
@@ -273,8 +295,8 @@ const passwordIsValid = (password, confirm) => {
     } else if (password !== confirm) {
         showMessage("Passwords do not match", true);
         return false;
-    } else if (password.length < 7) {
-        showMessage("Password must be at least 7 characters long", true);
+    } else if (password.length < 8) {
+        showMessage("Password must be at least 8 characters long", true);
         return false;
     } else {
         clearMessages();

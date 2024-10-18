@@ -11,6 +11,9 @@ const (
 	NullView View = iota
 	FilesView
 	FilePickerView
+	NewPassView
+	EditPassView
+	ViewPassView
 	FileViewerView
 	ConfirmationView
 	NewFolderView
@@ -26,6 +29,8 @@ const (
 	DeleteFileRequest
 	ViewFileRequest
 	NewFolderRequest
+	NewPassRequest
+	EditPassRequest
 	RenameRequest
 	ShareRequest
 	DownloadRequest

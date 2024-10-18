@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"yeetfile/cli/requests"
@@ -28,4 +29,17 @@ func (ctx *Context) GetServerInfo() (shared.ServerInfo, error) {
 	}
 
 	return serverInfo, nil
+}
+
+func (ctx *Context) GetStaticFile(dir, file string) ([]byte, error) {
+	url := endpoints.StaticFile.Format(ctx.Server, dir, file)
+	resp, err := requests.GetRequest(ctx.Session, url)
+	if err != nil {
+		return nil, err
+	} else if resp.StatusCode != http.StatusOK {
+		return nil, utils.ParseHTTPError(resp)
+	}
+
+	bytes, err := io.ReadAll(resp.Body)
+	return bytes, err
 }

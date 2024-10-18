@@ -29,6 +29,7 @@ const (
 	Login    Command = "login"
 	Logout   Command = "logout"
 	Vault    Command = "vault"
+	Pass     Command = "pass"
 	Send     Command = "send"
 	Download Command = "download"
 	Account  Command = "account"
@@ -40,7 +41,8 @@ var CommandMap = map[Command][]func(){
 	Signup:   {signup.ShowSignupModel, login.ShowLoginModel},
 	Login:    {login.ShowLoginModel},
 	Logout:   {logout.ShowLogoutModel},
-	Vault:    {vault.ShowVaultModel},
+	Vault:    {vault.ShowFileVaultModel},
+	Pass:     {vault.ShowPassVaultModel},
 	Send:     {send.ShowSendModel},
 	Download: {download.ShowDownloadModel},
 	Account:  {account.ShowAccountModel},
@@ -57,6 +59,8 @@ var ActionHelp = []string{
 	fmt.Sprintf("%s  | Manage your YeetFile account", Account),
 	fmt.Sprintf("%s    | Manage files and folders in your YeetFile Vault\n"+
 		"             - Example: yeetfile vault", Vault),
+	fmt.Sprintf("%s     | Manage passwords in your YeetFile Password Vault\n"+
+		"             - Example: yeetfile pass", Pass),
 	fmt.Sprintf("%s     | Create an end-to-end encrypted shareable link to a file or text\n"+
 		"             - Example: yeetfile send\n"+
 		"             - Example: yeetfile send path/to/file.png\n"+
@@ -116,6 +120,10 @@ func Entrypoint(args []string) {
 			return
 		}
 	} else {
+		if args[1] == "-h" || args[1] == "--help" || args[1] == "help" {
+			printHelp()
+			return
+		}
 		command = Command(args[1])
 	}
 

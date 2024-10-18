@@ -48,48 +48,6 @@ var expExceedsMaxErr = errors.New(fmt.Sprintf(
 	"expiration must be < %d days in the future",
 	constants.MaxSendAgeDays))
 
-func ShowSendModel() {
-	var filepath string
-	var text string
-	if len(os.Args) > 2 {
-		if _, err := os.Stat(os.Args[2]); err != nil {
-			text = strings.Join(os.Args[2:], " ")
-		} else {
-			filepath = os.Args[2]
-		}
-	}
-
-	if len(filepath) > 0 {
-		showSendFileModel(filepath)
-		return
-	} else if len(text) > 0 {
-		showSendTextModel(text)
-		return
-	}
-
-	var option int
-	err := huh.NewForm(
-		huh.NewGroup(
-			huh.NewNote().Title(utils.GenerateTitle("Send")),
-			huh.NewSelect[int]().Title("Type").Options(
-				[]huh.Option[int]{
-					huh.NewOption(fileOption, 0),
-					huh.NewOption(textOption, 1),
-				}...).
-				Value(&option),
-		),
-	).WithTheme(styles.Theme).WithShowHelp(true).Run()
-	if err != nil {
-		return
-	}
-
-	if option == 0 {
-		showSendFileModel("")
-	} else {
-		showSendTextModel("")
-	}
-}
-
 func getSendFields() []huh.Field {
 	return []huh.Field{
 		huh.NewInput().Title("Expiration").
@@ -334,4 +292,46 @@ func showLinkModel(title, id, secret string) {
 	)).WithTheme(styles.Theme).Run()
 
 	log.Println(err)
+}
+
+func ShowSendModel() {
+	var filepath string
+	var text string
+	if len(os.Args) > 2 {
+		if _, err := os.Stat(os.Args[2]); err != nil {
+			text = strings.Join(os.Args[2:], " ")
+		} else {
+			filepath = os.Args[2]
+		}
+	}
+
+	if len(filepath) > 0 {
+		showSendFileModel(filepath)
+		return
+	} else if len(text) > 0 {
+		showSendTextModel(text)
+		return
+	}
+
+	var option int
+	err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewNote().Title(utils.GenerateTitle("Send")),
+			huh.NewSelect[int]().Title("Type").Options(
+				[]huh.Option[int]{
+					huh.NewOption(fileOption, 0),
+					huh.NewOption(textOption, 1),
+				}...).
+				Value(&option),
+		),
+	).WithTheme(styles.Theme).WithShowHelp(true).Run()
+	if err != nil {
+		return
+	}
+
+	if option == 0 {
+		showSendFileModel("")
+	} else {
+		showSendTextModel("")
+	}
 }

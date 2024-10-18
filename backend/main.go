@@ -20,12 +20,14 @@ func main() {
 	var expiryCronID cron.EntryID
 	var memberCronID cron.EntryID
 	var limiterCronID cron.EntryID
+	var bandwidthCronID cron.EntryID
 	var downloadsCronID cron.EntryID
 
 	var err error
 	if config.IsDebugMode {
 		expiryCronID, err = c.AddFunc("@every 1s", db.CheckExpiry)
 	} else {
+		go db.CheckExpiry()
 		expiryCronID, err = c.AddFunc("@every 30s", db.CheckExpiry)
 	}
 
@@ -37,6 +39,7 @@ func main() {
 
 	if config.YeetFileConfig.BillingEnabled {
 		// Enable membership inspection if billing is enabled
+		go db.CheckMemberships()
 		memberCronID, err = c.AddFunc("@daily", db.CheckMemberships)
 		if err != nil {
 			panic(err)
@@ -44,6 +47,15 @@ func main() {
 
 		log.Println("Membership cron task added!")
 	}
+
+	go db.CheckBandwidth()
+	bandwidthDuration := fmt.Sprintf("@every %dh", constants.BandwidthMonitorDuration*24)
+	bandwidthCronID, err = c.AddFunc(bandwidthDuration, db.CheckBandwidth)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("Bandwidth cron task added!")
 
 	limiterCronID, err = c.AddFunc(
 		fmt.Sprintf("@every %ds", constants.LimiterSeconds),
@@ -76,6 +88,9 @@ func main() {
 						e.Next.Format(time.RFC1123))
 				} else if e.ID == downloadsCronID {
 					log.Println("Downloads cleanup | next run: " +
+						e.Next.Format(time.RFC1123))
+				} else if e.ID == bandwidthCronID {
+					log.Println("Bandwidth monitor | next run: " +
 						e.Next.Format(time.RFC1123))
 				}
 			}

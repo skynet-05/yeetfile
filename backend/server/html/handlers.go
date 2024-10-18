@@ -2,6 +2,7 @@ package html
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -16,9 +17,9 @@ import (
 	"yeetfile/shared/endpoints"
 )
 
-// VaultPageHandler returns the html template used for interacting with files
+// FileVaultPageHandler returns the html template used for interacting with files
 // (uploading, renaming, downloading, deleting) in the user's vault
-func VaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string) {
+func FileVaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string) {
 	userStorage, _, err := db.GetUserStorage(userID)
 	if err != nil {
 		handleError(w, "Error fetching vault", http.StatusInternalServerError)
@@ -31,10 +32,10 @@ func VaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string) {
 		templates.VaultTemplate{
 			Base: templates.BaseTemplate{
 				LoggedIn: true,
-				Title:    "Vault",
+				Title:    "File Vault",
 				Page:     "vault",
 				Javascript: []string{
-					"vault.js",
+					"file_vault.js",
 					"render.js",
 					"ponyfill.min.js",
 				},
@@ -44,6 +45,42 @@ func VaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string) {
 			},
 			StorageUsed:      userStorage.StorageUsed,
 			StorageAvailable: userStorage.StorageAvailable,
+			VaultName:        "File Vault",
+			IsPasswordVault:  false,
+		},
+	)
+}
+
+// PassVaultPageHandler returns the html template used for interacting with
+// stored passwords/logins
+func PassVaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string) {
+	passCount, maxPassCount, err := db.GetUserPassCount(userID)
+	if err != nil {
+		log.Println(passCount, maxPassCount, err)
+		handleError(w, "Error fetching pass vault", http.StatusInternalServerError)
+		return
+	}
+
+	_ = templates.ServeTemplate(
+		w,
+		templates.VaultHTML,
+		templates.VaultTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn: true,
+				Title:    "Password Vault",
+				Page:     "pass",
+				Javascript: []string{
+					"pass_vault.js",
+					"render.js",
+				},
+				CSS:       []string{"vault.css"},
+				Config:    config.HTMLConfig,
+				Endpoints: endpoints.HTMLPageEndpoints,
+			},
+			StorageUsed:      passCount,
+			StorageAvailable: maxPassCount,
+			VaultName:        "Password Vault",
+			IsPasswordVault:  true,
 		},
 	)
 }

@@ -21,6 +21,7 @@ export const PlaintextIDPrefix = "%s";
 export const FileIDPrefix = "%s";
 export const VerificationCodeLength = %d;
 export const MaxHintLen = %d;
+export const MaxPassNoteLen = %d;
 export const Argon2Iter = %d;
 export const Argon2Mem = %d;`
 
@@ -61,6 +62,7 @@ func GenerateSharedJS() (string, string) {
 		constants.FileIDPrefix,
 		constants.VerificationCodeLength,
 		constants.MaxHintLen,
+		constants.MaxPassNoteLen,
 		constants.Argon2Iter,
 		constants.Argon2Mem)
 

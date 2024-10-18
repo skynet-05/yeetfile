@@ -65,11 +65,19 @@ func (ctx *Context) GetVaultItemMetadata(
 // vault folder.
 func (ctx *Context) FetchFolderContents(
 	id string,
+	isPassVault bool,
 ) (shared.VaultFolderResponse, error) {
-	url := endpoints.VaultFolder.Format(ctx.Server, id)
+	var endpoint endpoints.Endpoint
+	if isPassVault {
+		endpoint = endpoints.PassFolder
+	} else {
+		endpoint = endpoints.VaultFolder
+	}
+
+	url := endpoint.Format(ctx.Server, id)
 	resp, err := requests.GetRequest(ctx.Session, url)
 	if err != nil {
-		log.Fatal(err)
+		return shared.VaultFolderResponse{}, err
 	} else if resp.StatusCode != http.StatusOK {
 		return shared.VaultFolderResponse{}, utils.ParseHTTPError(resp)
 	}
@@ -86,13 +94,21 @@ func (ctx *Context) FetchFolderContents(
 // CreateVaultFolder creates a new folder in the user's vault
 func (ctx *Context) CreateVaultFolder(
 	newFolder shared.NewVaultFolder,
+	isPassVault bool,
 ) (shared.NewFolderResponse, error) {
+	var endpoint endpoints.Endpoint
+	if isPassVault {
+		endpoint = endpoints.PassFolder
+	} else {
+		endpoint = endpoints.VaultFolder
+	}
+
 	reqData, err := json.Marshal(newFolder)
 	if err != nil {
 		return shared.NewFolderResponse{}, err
 	}
 
-	url := endpoints.VaultFolder.Format(ctx.Server)
+	url := endpoint.Format(ctx.Server)
 	resp, err := requests.PostRequest(ctx.Session, url, reqData)
 	if err != nil {
 		return shared.NewFolderResponse{}, err

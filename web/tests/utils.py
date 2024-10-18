@@ -2,10 +2,14 @@ from constants import base_page
 from playwright.sync_api import Locator, Page, ConsoleMessage
 
 
-def fetch_folder_json(page: Page, folder_id: str) -> dict:
+def fetch_folder_json(page: Page, folder_id: str, pass_vault: bool = False) -> dict:
+    api = "/api/vault/folder"
+    if pass_vault:
+        api = "/api/pass/folder"
+
     json_data = page.evaluate(f"""
         async () => {{
-            const response = await fetch("/api/vault/folder/{folder_id}");
+            const response = await fetch("{api}/{folder_id}");
             const data = await response.json();
             return data;
         }}

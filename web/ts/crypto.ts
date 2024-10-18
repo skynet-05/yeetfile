@@ -258,6 +258,137 @@ export const generateRandomKey = (): Uint8Array => {
 }
 
 /**
+ * Generates a random number between min and max
+ * @param min
+ * @param max
+ */
+export const generateRandomNumber = (min: number, max: number): number => {
+    const range = max - min + 1;
+    const array = new Uint32Array(1);
+    let randomValue: number;
+
+    do {
+        webcrypto.getRandomValues(array);
+        randomValue = array[0] / (0xFFFFFFFF + 1);
+    } while (randomValue * range >= range);
+
+    return Math.floor(randomValue * range) + min;
+}
+
+/**
+ * Generates a string of cryptographically secure random characters
+ * @param len
+ * @param useUpper
+ * @param useLower
+ * @param useNumbers
+ * @param useSymbols
+ * @param symbols
+ */
+export const generateRandomString = (
+    len: number,
+    useUpper: boolean,
+    useLower: boolean,
+    useNumbers: boolean,
+    useSymbols: boolean,
+    symbols: string,
+) => {
+    const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lower = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "1234567890";
+    const defaultSymbols = "!@#$%^&*";
+
+    const getRandomChar = (chars: string) => {
+        let rand = generateRandomNumber(0, 255);
+        return chars[Math.floor(rand % chars.length)];
+    }
+
+    let characters = "";
+    let result = [];
+    if (useUpper) {
+        characters += upper;
+        result.push(getRandomChar(upper));
+    }
+
+    if (useLower) {
+        characters += lower;
+        result.push(getRandomChar(lower));
+    }
+
+    if (useNumbers) {
+        characters += numbers;
+        result.push(getRandomChar(numbers));
+    }
+
+    if (useSymbols) {
+        if (symbols.length > 0) {
+            characters += symbols;
+            result.push(getRandomChar(symbols));
+        } else {
+            characters += defaultSymbols;
+            result.push(getRandomChar(defaultSymbols));
+        }
+    }
+
+    for (let i = result.length; i < len; i++) {
+        result.push(getRandomChar(characters));
+    }
+
+    result = result.sort(() => {
+        let rand = generateRandomNumber(0, 255);
+        return rand % 2 === 0 ? 1 : -1
+    });
+
+    return result.join("");
+}
+
+/**
+ * Generates a passphrase using the provided wordlist and parameters
+ * @param wordlist
+ * @param numWords
+ * @param separator
+ * @param capitalize
+ * @param useNumber
+ */
+export const generatePassphrase = (
+    wordlist: Array<string>,
+    numWords: number,
+    separator: string,
+    capitalize: boolean,
+    useNumber: boolean,
+) => {
+    let passphrase = "";
+    let numIdx = -1;
+    if (useNumber) {
+        numIdx = generateRandomNumber(0, (numWords * 2) - 1);
+    }
+
+    for (let i = 0; i < numWords; i++) {
+        if (numIdx === i * 2) {
+            passphrase += generateRandomNumber(0, 9);
+        }
+
+        let wordIdx = generateRandomNumber(0, wordlist.length - 1);
+        let word = wordlist[wordIdx];
+
+        if (capitalize) {
+            word = word.substring(0, 1).toUpperCase() + word.substring(1).toLowerCase();
+        }
+
+        passphrase += word;
+
+        if (numIdx === (i * 2) + 1) {
+            passphrase += generateRandomNumber(0, 9);
+        }
+
+        if (i < numWords - 1) {
+            passphrase += separator;
+        }
+    }
+
+    return passphrase;
+}
+
+/**
  * ingestPublicKey takes the raw base64 of the user's public key and
  * converts them into a CryptoKey object that can be used for encryption.
  * @param publicKey {Uint8Array}

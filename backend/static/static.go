@@ -18,6 +18,7 @@ import (
 //go:embed css/*
 //go:embed img/*
 //go:embed icons/*.svg
+//go:embed json/*
 var StaticFiles embed.FS
 
 //go:embed stream_saver/sw.js
@@ -55,6 +56,7 @@ func minifyStaticFiles(assetType string, fn minifyFn) {
 			}(originalFile)
 
 			if config.IsDebugMode {
+				// Skip minifying in debug mode
 				fileBytes, _ := io.ReadAll(originalFile)
 				MinifiedFiles[file.Name()] = fileBytes
 			} else {

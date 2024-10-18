@@ -62,9 +62,11 @@ type LoginTemplate struct {
 
 type VaultTemplate struct {
 	Base             BaseTemplate
+	VaultName        string
 	FolderName       string
 	StorageAvailable int
 	StorageUsed      int
+	IsPasswordVault  bool
 }
 
 type InfoTemplate struct {

@@ -65,17 +65,31 @@ func CheckFolderOwnership(userID, folderID string) (shared.FolderOwnershipInfo, 
 	return CheckFolderOwnership(userID, parentID)
 }
 
-func GetVaultItems(userID, folderID string) ([]shared.VaultItem, shared.FolderOwnershipInfo, error) {
+func GetVaultItems(
+	userID,
+	folderID string,
+	pwFiles bool,
+) ([]shared.VaultItem, shared.FolderOwnershipInfo, error) {
 	var rows *sql.Rows
 	var err error
 	var ownership shared.FolderOwnershipInfo
 
-	if len(folderID) == 0 {
+	var qFilter string
+	if pwFiles {
+		qFilter = ` AND (v.pw_data IS NOT NULL AND LENGTH(v.pw_data) > 0)
+		            ORDER BY modified DESC`
+	} else {
+		qFilter = ` AND (v.pw_data IS NULL OR LENGTH(v.pw_data) = 0)
+		            ORDER BY modified DESC`
+	}
+
+	if len(folderID) == 0 || folderID == userID {
 		query := `SELECT v.id, v.name, v.length, v.modified, v.protected_key,
-       		                 v.shared_by, v.link_tag, v.can_modify, v.ref_id,
+       		                 v.shared_by, v.link_tag, v.can_modify, v.ref_id, v.pw_data,
        		                 (SELECT COUNT(*) FROM sharing s WHERE s.item_id = v.id) AS share_count
-		          FROM vault v WHERE owner_id=$1 AND folder_id=$1
-		          ORDER BY modified DESC`
+       		                 FROM vault v WHERE owner_id=$1 AND folder_id=$1`
+
+		query += qFilter
 		rows, err = db.Query(query, userID)
 	} else {
 		ownership, err = CheckFolderOwnership(userID, folderID)
@@ -85,10 +99,10 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, shared.FolderOw
 		}
 
 		query := `SELECT v.id, v.name, v.length, v.modified, v.protected_key,
-       		                 v.shared_by, v.link_tag, v.can_modify, v.ref_id,
+       		                 v.shared_by, v.link_tag, v.can_modify, v.ref_id, v.pw_data,
        		                 (SELECT COUNT(*) FROM sharing s WHERE s.item_id = v.id) AS share_count
-		          FROM vault v WHERE folder_id=$1
-		          ORDER BY modified DESC`
+		          FROM vault v WHERE folder_id=$1`
+		query += qFilter
 		rows, err = db.Query(query, folderID)
 	}
 
@@ -109,10 +123,12 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, shared.FolderOw
 		var linkTag string
 		var canModify bool
 		var refID string
+		var pwData []byte
 		var shareCount int
 
 		err = rows.Scan(&id, &name, &length, &modified, &protectedKey,
-			&sharedBy, &linkTag, &canModify, &refID, &shareCount)
+			&sharedBy, &linkTag, &canModify, &refID, &pwData,
+			&shareCount)
 		if err != nil {
 			return nil, shared.FolderOwnershipInfo{}, err
 		}
@@ -123,7 +139,7 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, shared.FolderOw
 			isOwner = ownership.IsOwner
 		}
 
-		if !ownership.IsOwner {
+		if refID != id {
 			// Hide share count for non-owners
 			shareCount = 0
 		}
@@ -140,6 +156,7 @@ func GetVaultItems(userID, folderID string) ([]shared.VaultItem, shared.FolderOw
 			CanModify:    canModify,
 			RefID:        refID,
 			IsOwner:      isOwner,
+			PasswordData: pwData,
 		})
 	}
 
@@ -179,10 +196,29 @@ func AddVaultItem(userID string, item shared.VaultUpload) (string, error) {
 		itemID = shared.GenRandomString(VaultIDLength)
 	}
 
+	pwData := item.PasswordData
+	if len(pwData) == 0 {
+		pwData = nil
+	}
+
 	s := `INSERT INTO vault
-	      (id, owner_id, name, length, folder_id, chunks, protected_key, modified, ref_id)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $1)`
-	_, err = db.Exec(s, itemID, userID, item.Name, item.Length, item.FolderID, item.Chunks, item.ProtectedKey, time.Now().UTC())
+	      (
+	       id, owner_id, name, length, folder_id, 
+	       chunks, protected_key, modified, pw_data, 
+	       ref_id
+	      )
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $1)`
+	_, err = db.Exec(
+		s,
+		itemID,
+		userID,
+		item.Name,
+		item.Length,
+		item.FolderID,
+		item.Chunks,
+		item.ProtectedKey,
+		time.Now().UTC(),
+		pwData)
 	if err != nil {
 		return "", err
 	}
@@ -245,14 +281,14 @@ func ShareFile(share shared.NewSharedItem, userID string) (string, error) {
 
 	s1 := `INSERT INTO vault
     	           (id, name, folder_id, owner_id, b2_id, length, chunks,
-                    protected_key, shared_by, modified, can_modify, ref_id)
-	       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+                    protected_key, shared_by, modified, can_modify, ref_id, pw_data)
+	       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 	_, err = db.Exec(s1,
 		itemID, file.Name,
 		share.RecipientID, share.RecipientID,
 		file.B2ID, file.Length, file.Chunks,
 		share.ProtectedKey, sharedByName,
-		time.Now().UTC(), share.CanModify, file.ID)
+		time.Now().UTC(), share.CanModify, file.ID, file.PasswordData)
 	if err != nil {
 		return "", err
 	}
@@ -283,18 +319,19 @@ func VaultItemIDExists(id string) bool {
 	return false
 }
 
-// UpdateVaultFileName updates the name of a file in the vault. Note that the
-// name is always an encrypted string
-func UpdateVaultFileName(id, ownerID, newName string) error {
+// UpdateVaultFile updates the contents of a file in the vault. Note that the
+// name is always an encrypted string, and that password data is always an
+// encrypted byte array
+func UpdateVaultFile(id, ownerID string, mod shared.ModifyVaultItem) error {
 	err := UserCanEditItem(id, ownerID, false)
 	if err != nil {
 		return err
 	}
 
 	s := `UPDATE vault
-	      SET name=$1, modified=$2
-	      WHERE ref_id=$3`
-	_, err = db.Exec(s, newName, time.Now().UTC(), id)
+	      SET name=$1, pw_data=$2, modified=$3
+	      WHERE ref_id=$4`
+	_, err = db.Exec(s, mod.Name, mod.PasswordData, time.Now().UTC(), id)
 	if err != nil {
 		return err
 	}
@@ -413,7 +450,7 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 		return FileMetadata{}, errors.New(msg)
 	}
 
-	_, err = CheckFolderOwnership(ownerID, folderID)
+	ownership, err := CheckFolderOwnership(ownerID, folderID)
 	if err != nil {
 		// Check if this is a file shared from another user's home dir
 		isShared, err := IsSharedWithRecipient(folderID, id, ownerID)
@@ -422,7 +459,7 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 		}
 	}
 
-	s := `SELECT id, b2_id, ref_id, name, length, chunks, protected_key
+	s := `SELECT id, b2_id, ref_id, name, length, chunks, protected_key, pw_data
 	      FROM vault
 	      WHERE ref_id = $1`
 
@@ -450,23 +487,27 @@ func RetrieveVaultMetadata(id, ownerID string) (FileMetadata, error) {
 		var length int64
 		var chunks int
 		var protectedKey []byte
+		var passwordData []byte
 		err = rows.Scan(
 			&itemID, &b2ID, &refID, &name,
-			&length, &chunks, &protectedKey)
+			&length, &chunks, &protectedKey, &passwordData)
 		if err != nil {
 			log.Printf("Error scanning rows: %v\n", err)
 			return FileMetadata{}, err
 		}
 
 		return FileMetadata{
-			ID:           itemID,
-			B2ID:         b2ID,
-			RefID:        refID,
-			Name:         name,
-			Length:       length,
-			Chunks:       chunks,
-			FolderID:     folderID,
-			ProtectedKey: protectedKey,
+			ID:                itemID,
+			B2ID:              b2ID,
+			RefID:             refID,
+			Name:              name,
+			Length:            length,
+			Chunks:            chunks,
+			FolderID:          folderID,
+			ProtectedKey:      protectedKey,
+			PasswordData:      passwordData,
+			OwnsParentFolder:  ownership.IsOwner,
+			ParentFolderOwner: ownership.ID,
 		}, nil
 	}
 

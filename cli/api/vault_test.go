@@ -4,6 +4,7 @@ package api
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func createRandomFolder(
 		Name:         hexName,
 		ProtectedKey: protectedKey,
 		ParentID:     parentFolderID,
-	})
+	}, false)
 
 	return folderKey, resp.ID, err
 }
@@ -219,7 +220,7 @@ func TestVaultFolders(t *testing.T) {
 		Name:         hexName,
 		ProtectedKey: protectedKey,
 		ParentID:     "",
-	})
+	}, false)
 
 	if err != nil {
 		t.Fatalf("Error creating vault folder: %v\n", err)
@@ -235,7 +236,7 @@ func TestVaultFolders(t *testing.T) {
 		t.Fatalf("UserB was able to upload a file to UserA's folder")
 	}
 
-	folder, err := UserA.context.FetchFolderContents(resp.ID)
+	folder, err := UserA.context.FetchFolderContents(resp.ID, false)
 	if err != nil {
 		t.Fatalf("Error fetching folder contents: %v\n", err)
 	}
@@ -254,7 +255,7 @@ func TestVaultFolders(t *testing.T) {
 		assert.Equal(t, b, folderKey[i])
 	}
 
-	_, err = UserB.context.FetchFolderContents(resp.ID)
+	_, err = UserB.context.FetchFolderContents(resp.ID, false)
 	if err == nil {
 		t.Fatalf("UserB was able to fetch contents of UserA's folder")
 	}
@@ -361,4 +362,57 @@ func TestDownloadLimiter(t *testing.T) {
 	err = downloadFunc()
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), fmt.Sprint(http.StatusTooManyRequests))
+}
+
+func TestPassVaultItem(t *testing.T) {
+	username := "username"
+	password := "password"
+	url := "https://testing.com"
+
+	passKey, _ := crypto.GenerateRandomKey()
+	encName, _ := crypto.EncryptChunk(passKey, []byte("test"))
+	hexName := hex.EncodeToString(encName)
+
+	passEntry := shared.PassEntry{
+		Username:        username,
+		Password:        password,
+		PasswordHistory: nil,
+		URLs:            []string{url},
+		Notes:           "",
+	}
+
+	jsonData, err := json.Marshal(passEntry)
+	assert.Nil(t, err)
+
+	encData, err := crypto.EncryptChunk(passKey, jsonData)
+	assert.Nil(t, err)
+
+	encKey, err := crypto.EncryptRSA(UserA.pubKey, passKey)
+	assert.Nil(t, err)
+
+	upload := shared.VaultUpload{
+		Name:         hexName,
+		Length:       1,
+		Chunks:       1,
+		FolderID:     "",
+		ProtectedKey: encKey,
+		PasswordData: encData,
+	}
+
+	meta, err := UserA.context.InitVaultFile(upload)
+	assert.Nil(t, err)
+
+	response, err := UserA.context.GetVaultItemMetadata(meta.ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, response.PasswordData)
+	assert.NotEmpty(t, response.PasswordData)
+
+	decData, err := crypto.DecryptChunk(passKey, response.PasswordData)
+	assert.Nil(t, err)
+
+	var decPassEntry shared.PassEntry
+	err = json.Unmarshal(decData, &decPassEntry)
+	assert.Nil(t, err)
+
+	assert.Equal(t, decPassEntry, passEntry)
 }

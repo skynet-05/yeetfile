@@ -1,19 +1,43 @@
 package vault
 
 import (
+	"log"
 	"yeetfile/cli/commands/vault/confirmation"
 	"yeetfile/cli/commands/vault/filepicker"
 	"yeetfile/cli/commands/vault/files"
 	"yeetfile/cli/commands/vault/folder"
 	"yeetfile/cli/commands/vault/internal"
+	"yeetfile/cli/commands/vault/pass"
 	"yeetfile/cli/commands/vault/rename"
 	"yeetfile/cli/commands/vault/share"
 	"yeetfile/cli/commands/vault/viewer"
 	"yeetfile/cli/utils"
 )
 
-func ShowVaultModel() {
-	m, err := files.RunFilesModel(files.Model{}, internal.Event{})
+func ShowPassVaultModel() {
+	m, err := files.RunVaultModel(
+		files.Model{IsPassVault: true},
+		internal.Event{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	showVaultModel(m)
+}
+
+func ShowFileVaultModel() {
+	m, err := files.RunVaultModel(
+		files.Model{IsPassVault: false},
+		internal.Event{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	showVaultModel(m)
+}
+
+func showVaultModel(m files.Model) {
+	var err error
 	for err == nil && m.ViewRequest.View > internal.NullView {
 		if err != nil {
 			utils.HandleCLIError("Error in vault view", err)
@@ -43,12 +67,18 @@ func ShowVaultModel() {
 			event, subviewErr = viewer.RunViewerModel(
 				m.ViewRequest.Item,
 				m.ViewRequest.CryptoCtx)
+		case internal.NewPassView:
+			event, subviewErr = pass.RunNewPassEntryModel()
+		case internal.EditPassView:
+			event, subviewErr = pass.RunEditPassEntryModel(m.ViewRequest.Item)
+		case internal.ViewPassView:
+			subviewErr = pass.RunViewPassEntryModel(m.ViewRequest.Item)
 		case internal.FilesView:
-			m, err = files.RunFilesModel(m, m.IncomingEvent)
+			m, err = files.RunVaultModel(m, m.IncomingEvent)
 			continue
 		}
 
 		utils.HandleCLIError("Error in subview", subviewErr)
-		m, err = files.RunFilesModel(m, event)
+		m, err = files.RunVaultModel(m, event)
 	}
 }

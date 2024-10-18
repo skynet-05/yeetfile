@@ -122,32 +122,35 @@ const calcTimeRemaining = expiration => {
 
     let timeDifference = expTime.getTime() - currentTime.getTime();
 
-    const totalSeconds = Math.floor(timeDifference / 1000);
-    const totalMinutes = Math.floor(totalSeconds / 60);
-    const totalHours = Math.floor(totalMinutes / 60);
-    const days = Math.floor(totalHours / 24);
+    let totalSeconds = Math.floor(timeDifference / 1000);
+    let totalMinutes = Math.floor(totalSeconds / 60);
+    let totalHours = Math.floor(totalMinutes / 60);
+    let days = Math.floor(totalHours / 24);
 
-    const hours = totalHours % 24;
-    const minutes = totalMinutes % 60;
-    const seconds = totalSeconds % 60;
+    let hours = totalHours % 24;
+    let minutes = totalMinutes % 60;
+    let seconds = totalSeconds % 60;
 
-    let label = `${seconds} seconds`;
+    if (minutes === 0 && hours === 0 && days === 0 && seconds <= 0) {
+        clearInterval(timeoutInterval);
+        return "0 seconds (deleted)";
+    } else if (seconds <= 0) {
+        seconds = 59;
+        minutes -= 1;
+    }
+
+    let label = `${seconds} second${seconds > 1 ? "s" : ""}`;
 
     if (minutes > 0) {
-        label = `${minutes} minutes, ` + label;
+        label = `${minutes} minute${minutes > 1 ? "s" : ""}, ` + label;
     }
 
     if (hours > 0) {
-        label = `${hours} hours, ` + label;
+        label = `${hours} hour${hours > 1 ? "s" : ""}, ` + label;
     }
 
     if (days > 0) {
-        label = `${days} days, ` + label;
-    }
-
-    if (seconds <= 0) {
-        label = "0 seconds (deleted)";
-        clearInterval(timeoutInterval);
+        label = `${days} day${days > 1 ? "s" : ""}, ` + label;
     }
 
     return label;

@@ -142,15 +142,6 @@ func GenChecksum(data []byte) ([]byte, string) {
 	return checksum, fmt.Sprintf("%x", checksum)
 }
 
-func Contains(items []string, target string) bool {
-	for _, item := range items {
-		if item == target {
-			return true
-		}
-	}
-	return false
-}
-
 func PrettyPrintStruct(v any) {
 	s, _ := json.MarshalIndent(v, "", "\t")
 	fmt.Println(string(s))
@@ -194,55 +185,6 @@ func IsAnyByteSliceMissing(b ...[]byte) bool {
 	}
 
 	return false
-}
-
-// GetStructFromFormOrJSON takes a struct and an http request and pulls out
-// values from either an http form or a json request body.
-func GetStructFromFormOrJSON[T any](t *T, req *http.Request) (T, error) {
-	_ = req.ParseForm()
-	hasForm := false
-
-	val := reflect.ValueOf(t).Elem()
-	for i := 0; i < val.Type().NumField(); i++ {
-		// Skip fields without json tag
-		if tag, ok := val.Type().Field(i).Tag.Lookup("json"); ok {
-			formVal := req.FormValue(tag)
-			if len(formVal) == 0 {
-				break
-			}
-
-			hasForm = true
-			switch val.Field(i).Type().Kind() {
-			case reflect.String:
-				val.Field(i).SetString(formVal)
-				break
-			case reflect.Int:
-				intVal, _ := strconv.Atoi(formVal)
-				val.Field(i).SetInt(int64(intVal))
-				break
-			case reflect.Bool:
-				boolVal, _ := strconv.ParseBool(formVal)
-				val.Field(i).SetBool(boolVal)
-				break
-			case reflect.Float32:
-				fallthrough
-			case reflect.Float64:
-				floatVal, _ := strconv.ParseFloat(formVal, 64)
-				val.Field(i).SetFloat(floatVal)
-				break
-			}
-		}
-	}
-
-	if !hasForm {
-		// No HTML form, should decode instead
-		err := json.NewDecoder(req.Body).Decode(&t)
-		if err != nil {
-			return *t, err
-		}
-	}
-
-	return *t, nil
 }
 
 func CheckDirSize(path string) (int64, error) {
@@ -322,28 +264,45 @@ func ObscureEmail(email string) (string, error) {
 	return hiddenEmail, nil
 }
 
-// LimitedReader reads the request body, limited to max chunk size + encryption
-// overhead + 1024 bytes. This is big enough for all requests made to the
-// YeetFile API.
+// LimitedChunkReader reads the request body, limited to max chunk size + encryption
+// overhead + 1024 bytes. This is big enough for all data-containing requests
+// made to the YeetFile API.
+func LimitedChunkReader(w http.ResponseWriter, body io.ReadCloser) ([]byte, error) {
+	return limitedReader(w, body, constants.ChunkSize+constants.TotalOverhead+1024)
+}
+
+// LimitedReader reads the request body, limited to 4096 bytes. This is an arbitrary
+// limit, but should always be more than big enough for all API requests.
 func LimitedReader(w http.ResponseWriter, body io.ReadCloser) ([]byte, error) {
-	limitedBody := http.MaxBytesReader(
-		w,
-		body,
-		int64(constants.ChunkSize+constants.TotalOverhead+1024))
+	return limitedReader(w, body, 4096)
+}
+
+func limitedReader(w http.ResponseWriter, body io.ReadCloser, limit int) ([]byte, error) {
+	limitedBody := http.MaxBytesReader(w, body, int64(limit))
 	return io.ReadAll(limitedBody)
 }
 
-func GetTrailingURLSegments(endpoint endpoints.Endpoint, path string) []string {
+func LimitedJSONReader(w http.ResponseWriter, body io.ReadCloser) *json.Decoder {
+	return limitedJSONReader(w, body, 12288)
+}
+
+func limitedJSONReader(w http.ResponseWriter, body io.ReadCloser, limit int) *json.Decoder {
+	limitedBody := http.MaxBytesReader(w, body, int64(limit))
+	return json.NewDecoder(limitedBody)
+}
+
+func GetTrailingURLSegments(path string, strip ...endpoints.Endpoint) []string {
 	if strings.HasSuffix(path, "/") {
 		path = path[0 : len(path)-1]
 	}
 
-	endpointBase := strings.ReplaceAll(string(endpoint), "/*", "")
-	path = strings.Replace(path, endpointBase, "", 1)
-
-	if strings.HasSuffix(path, string(endpoint)) {
-		// There is no trailing segment, it ends with the base endpoint
-		return []string{}
+	for _, endpoint := range strip {
+		endpointBase := strings.ReplaceAll(string(endpoint), "/*", "")
+		path = strings.Replace(path, endpointBase, "", 1)
+		if strings.HasSuffix(path, string(endpoint)) {
+			// There is no trailing segment, it ends with the base endpoint
+			return []string{}
+		}
 	}
 
 	path = strings.TrimPrefix(path, "/")

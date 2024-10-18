@@ -62,6 +62,7 @@ func CreateVaultFolder(
 	folderID string,
 	protectedKey,
 	key []byte,
+	isPassVault bool,
 ) (shared.NewFolderResponse, error) {
 	encName, err := crypto.EncryptChunk(key, []byte(folderName))
 	if err != nil {
@@ -75,7 +76,7 @@ func CreateVaultFolder(
 		ParentID:     folderID,
 	}
 
-	folderResponse, err := globals.API.CreateVaultFolder(newFolder)
+	folderResponse, err := globals.API.CreateVaultFolder(newFolder, isPassVault)
 	return folderResponse, err
 }
 

@@ -11,6 +11,7 @@ type HTMLEndpoints struct {
 	Account        string
 	Send           string
 	Vault          string
+	Pass           string
 	Login          string
 	Signup         string
 	Forgot         string
@@ -37,6 +38,7 @@ var (
 	Logout         = Endpoint("/api/logout")
 	Account        = Endpoint("/api/account")
 	AccountUsage   = Endpoint("/api/account/usage")
+	PaymentID      = Endpoint("/api/account/paymentID")
 	Forgot         = Endpoint("/api/forgot")
 	Session        = Endpoint("/api/session")
 	TwoFactor      = Endpoint("/api/2fa")
@@ -46,6 +48,11 @@ var (
 	ChangePassword = Endpoint("/api/change/password")
 	ChangeHint     = Endpoint("/api/change/hint")
 	ServerInfo     = Endpoint("/api/info")
+
+	PassRoot     = Endpoint("/api/pass")
+	PassFolder   = Endpoint("/api/pass/folder/*")
+	PassEntry    = Endpoint("/api/pass/entry/*")
+	NewPassEntry = Endpoint("/api/pass/u")
 
 	VaultRoot   = Endpoint("/api/vault")
 	VaultFolder = Endpoint("/api/vault/folder/*")
@@ -73,10 +80,16 @@ var (
 	BTCPayWebhook  = Endpoint("/btcpay/webhook")
 	BTCPayCheckout = Endpoint("/btcpay/checkout")
 
+	StaticFile = Endpoint("/static/*/*")
+
 	HTMLAccount          = Endpoint("/account")
 	HTMLHome             = Endpoint("/")
 	HTMLSend             = Endpoint("/send")
 	HTMLSendDownload     = Endpoint("/send/*")
+	HTMLPass             = Endpoint("/pass")
+	HTMLPassFolder       = Endpoint("/pass/*")
+	HTMLPassEntry        = Endpoint("/pass/*/entry/*")
+	HTMLPassIndex        = Endpoint("/pass/index")
 	HTMLVault            = Endpoint("/vault")
 	HTMLVaultFolder      = Endpoint("/vault/*")
 	HTMLVaultFile        = Endpoint("/vault/*/file/*")
@@ -100,6 +113,7 @@ var JSVarNameMap = map[Endpoint]string{
 	Session:        "Session",
 	Account:        "Account",
 	AccountUsage:   "AccountUsage",
+	PaymentID:      "PaymentID",
 	TwoFactor:      "TwoFactor",
 	VerifyAccount:  "VerifyAccount",
 	VerifyEmail:    "VerifyEmail",
@@ -107,6 +121,11 @@ var JSVarNameMap = map[Endpoint]string{
 	ChangePassword: "ChangePassword",
 	ChangeHint:     "ChangeHint",
 	ServerInfo:     "ServerInfo",
+
+	PassRoot:     "PassRoot",
+	PassFolder:   "PassFolder",
+	PassEntry:    "PassEntry",
+	NewPassEntry: "NewPassEntry",
 
 	VaultRoot:   "VaultRoot",
 	VaultFolder: "VaultFolder",
@@ -128,10 +147,15 @@ var JSVarNameMap = map[Endpoint]string{
 	PubKey:       "PubKey",
 	ProtectedKey: "ProtectedKey",
 
+	StaticFile: "StaticFile",
+
 	HTMLHome:             "HTMLHome",
 	HTMLAccount:          "HTMLAccount",
 	HTMLSend:             "HTMLSend",
 	HTMLSendDownload:     "HTMLSendDownload",
+	HTMLPass:             "HTMLPass",
+	HTMLPassFolder:       "HTMLPassFolder",
+	HTMLPassIndex:        "HTMLPassIndex",
 	HTMLVault:            "HTMLVault",
 	HTMLVaultFolder:      "HTMLVaultFolder",
 	HTMLVaultFile:        "HTMLVaultFile",
@@ -165,6 +189,7 @@ func init() {
 	HTMLPageEndpoints = HTMLEndpoints{
 		Account:        string(HTMLAccount),
 		Send:           string(HTMLSend),
+		Pass:           string(HTMLPass),
 		Vault:          string(HTMLVault),
 		VaultFile:      string(HTMLVaultFile),
 		Login:          string(HTMLLogin),

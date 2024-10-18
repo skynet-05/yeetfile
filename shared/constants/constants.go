@@ -18,6 +18,9 @@ const Argon2Iter uint32 = 2
 const LimiterSeconds = 30
 const LimiterAttempts = 6
 
+const TotalBandwidthMultiplier = 3 // 3x available storage
+const BandwidthMonitorDuration = 7 // 7 day period
+
 const IVSize int = 12
 const KeySize int = 32
 const ChunkSize int = 10000000 // 10 mb
@@ -27,8 +30,10 @@ const MaxHintLen = 200
 const PlaintextIDPrefix = "text"
 const FileIDPrefix = "file"
 const VerificationCodeLength = 6
+const ChangeIDLength = 9
 const MaxTransferThreads = 3
 const MaxSendAgeDays = 30 //days
+const MaxPassNoteLen = 500
 const RecoveryCodeLen = 8
 const SubMethodStripe = "stripe"
 const SubMethodBTCPay = "btcpay"

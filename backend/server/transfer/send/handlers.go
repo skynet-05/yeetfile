@@ -84,7 +84,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 		return
 	}
 
-	data, err := utils.LimitedReader(w, req.Body)
+	data, err := utils.LimitedChunkReader(w, req.Body)
 	if err != nil {
 		log.Printf("[YF Send] Chunk reader err: %v\n", err)
 		http.Error(w, "Error", http.StatusBadRequest)
@@ -133,7 +133,6 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	var plaintextUpload shared.PlaintextUpload
 	err = json.Unmarshal(data, &plaintextUpload)
 	if err != nil {
-		log.Printf("%v\n", req.Body)
 		log.Printf("Error: %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return

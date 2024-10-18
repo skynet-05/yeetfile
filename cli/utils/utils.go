@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -179,4 +181,20 @@ func ShowErrorForm(msg string) {
 			Affirmative("OK").
 			Negative("")),
 	).WithTheme(styles.Theme).Run()
+}
+
+func RunCmd(stdOut bool, cmd string, args ...string) error {
+	if cmd == "clear" {
+		switch runtime.GOOS {
+		case "windows":
+			cmd = "cmd"
+			args = []string{"/c", "cls"}
+		}
+	}
+	newCmd := exec.Command(cmd, args...)
+	if stdOut {
+		newCmd.Stdout = os.Stdout
+	}
+	err := newCmd.Run()
+	return err
 }

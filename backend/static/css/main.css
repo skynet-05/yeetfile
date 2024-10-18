@@ -1,5 +1,6 @@
 :root {
     --text-color: #000000;
+    --secondary-text-color: #888888;
     --accent-color: #5A56E0;
     --shared-color: #2E8B57;
     --destructive-color: #a83c3c;
@@ -51,6 +52,11 @@ fieldset {
     filter: invert(41%) sepia(14%) saturate(5662%) hue-rotate(86deg) brightness(95%) contrast(78%) !important;
 }
 
+.secondary-icon {
+    cursor: pointer;
+    filter: invert(50%) !important;
+}
+
 .mobile-only {
     display: none;
 }
@@ -78,6 +84,10 @@ fieldset {
     text-align: center;
 }
 
+.right-aligned-text {
+    text-align: right;
+}
+
 .grid-2-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -91,9 +101,14 @@ fieldset {
     height: 100%;
 }
 
+.break-words {
+    word-break: break-all;
+}
+
 .align-items-right {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
 }
 
 .align-items-right button {
@@ -112,6 +127,10 @@ fieldset {
 
 .full-height {
     height: 100%;
+}
+
+.display-block {
+    display: block;
 }
 
 a .disabled {
@@ -164,6 +183,7 @@ progress {
     cursor: pointer;
     height: 23px;
     z-index: -10;
+    padding-bottom: 2px;
 }
 
 #center-div, #nojs-div {
@@ -254,7 +274,7 @@ button, input:is([type="button"], [type="reset"]) {
 input[type=submit]:disabled,
 button:disabled {
     background-color: darkgrey;
-    color: grey;
+    color: #212121;
     cursor: default;
 }
 
@@ -264,6 +284,10 @@ input[type='radio'] {
 
 div {
     background-color: #ffffff;
+}
+
+.secondary-text {
+    color: var(--secondary-text-color);
 }
 
 .hidden {
@@ -336,6 +360,7 @@ input:disabled, textarea:disabled {
 .red-link {
     color: var(--destructive-color) !important;
     text-decoration: none;
+    cursor: pointer;
 }
 
 .red-text {
@@ -436,6 +461,10 @@ input:disabled, textarea:disabled {
     font-style: italic;
 }
 
+.padding-top-5 {
+    padding-top: 5px;
+}
+
 .padding-left-3 {
     padding-left: 3px;
 }
@@ -453,6 +482,8 @@ input:disabled, textarea:disabled {
         /*--card-bg-color: #171720;*/
         --card-bg-color: #242333;
         --shared-color: #3EB974;
+        --text-color: #ffffff;
+        --secondary-text-color: #aaaaaa;
     }
 
     input:disabled {

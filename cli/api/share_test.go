@@ -77,7 +77,7 @@ func TestShareFolder(t *testing.T) {
 	fileID, err := uploadRandomFile(UserA, folderID, folderKey)
 	assert.Nil(t, err)
 
-	_, err = UserB.context.FetchFolderContents(fileID)
+	_, err = UserB.context.FetchFolderContents(fileID, false)
 	assert.NotNil(t, err)
 
 	shareRequest, err := prepSharedContent(UserA, folderKey, false, UserB.id)
@@ -86,7 +86,7 @@ func TestShareFolder(t *testing.T) {
 	shareInfo, err := UserA.context.ShareFolderWithUser(shareRequest, folderID)
 	assert.Nil(t, err)
 
-	folderContents, err := UserB.context.FetchFolderContents(folderID)
+	folderContents, err := UserB.context.FetchFolderContents(folderID, false)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(folderContents.Items))
 
@@ -113,7 +113,7 @@ func TestShareFolder(t *testing.T) {
 	newFileID, err := uploadRandomFile(UserB, folderID, folderKey)
 	assert.Nil(t, err)
 
-	userAContents, err := UserA.context.FetchFolderContents(folderID)
+	userAContents, err := UserA.context.FetchFolderContents(folderID, false)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(userAContents.Items))
 
@@ -133,7 +133,7 @@ func TestShareFolder(t *testing.T) {
 	err = UserB.context.ModifyVaultFolder(folderID, shared.ModifyVaultItem{Name: hexEncName})
 	assert.Nil(t, err)
 
-	folderInfo, err := UserA.context.FetchFolderContents(folderID)
+	folderInfo, err := UserA.context.FetchFolderContents(folderID, false)
 	assert.Nil(t, err)
 	encNameBytes, _ := hex.DecodeString(folderInfo.CurrentFolder.Name)
 	decNameBytes, _ := crypto.DecryptChunk(folderKey, encNameBytes)
@@ -142,6 +142,6 @@ func TestShareFolder(t *testing.T) {
 	_, err = UserA.context.RemoveSharedFolderUsers(folderID, []shared.ShareInfo{shareInfo})
 	assert.Nil(t, err)
 
-	_, err = UserB.context.FetchFolderContents(folderID)
+	_, err = UserB.context.FetchFolderContents(folderID, false)
 	assert.NotNil(t, err)
 }

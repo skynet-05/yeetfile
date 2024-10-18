@@ -51,7 +51,7 @@ func Run(addr string) {
 		{GET, endpoints.DownloadSendFileData, send.DownloadChunkHandler},
 
 		// YeetFile Vault
-		{ALL, endpoints.VaultFolder, AuthMiddleware(vault.FolderHandler)},
+		{ALL, endpoints.VaultFolder, AuthMiddleware(vault.FolderHandler(vault.FileVault))},
 		{GET | PUT | DELETE, endpoints.VaultFile, AuthMiddleware(vault.FileHandler)},
 		{POST, endpoints.UploadVaultFileMetadata, AuthMiddleware(vault.UploadMetadataHandler)},
 		{POST, endpoints.UploadVaultFileData, AuthMiddleware(vault.UploadDataHandler)},
@@ -59,7 +59,11 @@ func Run(addr string) {
 		{GET, endpoints.DownloadVaultFileData, AuthMiddleware(vault.DownloadChunkHandler)},
 		{ALL, endpoints.ShareFile, AuthMiddleware(vault.ShareHandler(false))},
 		{ALL, endpoints.ShareFolder, AuthMiddleware(vault.ShareHandler(true))},
-		//{GET, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
+
+		// YeetFile Pass (YeetPass)
+		{ALL, endpoints.PassFolder, AuthMiddleware(vault.FolderHandler(vault.PassVault))},
+		{POST, endpoints.PassEntry, AuthMiddleware(vault.UploadMetadataHandler)},
+		{DELETE, endpoints.PassEntry, AuthMiddleware(vault.FileHandler)},
 
 		// Auth (signup, login/logout, account mgmt, etc)
 		{POST, endpoints.VerifyEmail, auth.VerifyEmailHandler},
@@ -77,6 +81,7 @@ func Run(addr string) {
 		{POST | PUT, endpoints.ChangeEmail, AuthMiddleware(auth.ChangeEmailHandler)},
 		{PUT, endpoints.ChangePassword, AuthMiddleware(auth.ChangePasswordHandler)},
 		{POST, endpoints.ChangeHint, AuthMiddleware(auth.ChangeHintHandler)},
+		//{PUT, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
 
 		// Payments (Stripe, BTCPay)
 		{POST, endpoints.StripeWebhook, payments.StripeWebhook},
@@ -88,9 +93,12 @@ func Run(addr string) {
 		// HTML
 		{GET, endpoints.HTMLHome, html.SendPageHandler},
 		{GET, endpoints.HTMLSend, html.SendPageHandler},
-		{GET, endpoints.HTMLVault, AuthMiddleware(html.VaultPageHandler)},
-		{GET, endpoints.HTMLVaultFolder, AuthMiddleware(html.VaultPageHandler)},
-		{GET, endpoints.HTMLVaultFile, AuthMiddleware(html.VaultPageHandler)},
+		{GET, endpoints.HTMLPass, AuthMiddleware(html.PassVaultPageHandler)},
+		{GET, endpoints.HTMLPassFolder, AuthMiddleware(html.PassVaultPageHandler)},
+		{GET, endpoints.HTMLPassEntry, AuthMiddleware(html.PassVaultPageHandler)},
+		{GET, endpoints.HTMLVault, AuthMiddleware(html.FileVaultPageHandler)},
+		{GET, endpoints.HTMLVaultFolder, AuthMiddleware(html.FileVaultPageHandler)},
+		{GET, endpoints.HTMLVaultFile, AuthMiddleware(html.FileVaultPageHandler)},
 		{GET, endpoints.HTMLSendDownload, html.DownloadPageHandler},
 		{GET, endpoints.HTMLSignup, NoAuthMiddleware(html.SignupPageHandler)},
 		{GET, endpoints.HTMLLogin, NoAuthMiddleware(html.LoginPageHandler)},
@@ -105,9 +113,14 @@ func Run(addr string) {
 		{GET, endpoints.HTMLCheckoutComplete, html.CheckoutCompleteHandler},
 
 		// Misc
-		{
+		{ // Static folder files
 			GET,
 			"/static/*/?/*",
+			misc.FileHandler("/static/", "", static.StaticFiles),
+		},
+		{ // Static subfolder files
+			GET,
+			"/static/*/?/*/*",
 			misc.FileHandler("/static/", "", static.StaticFiles),
 		},
 		{GET, "/up", misc.UpHandler},

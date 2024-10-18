@@ -65,12 +65,30 @@ func GenerateCLISessionKey() ([]byte, error) {
 // that are stored (not sent) in YeetFile. This is always encrypted using the
 // master PBKDF2 key before being sent to the server.
 func GenerateRandomKey() ([]byte, error) {
-	key := make([]byte, constants.KeySize)
+	return GenerateRandomArray(constants.KeySize)
+}
+
+// GenerateRandomArray generates a random byte array of the specified size
+func GenerateRandomArray(size int) ([]byte, error) {
+	key := make([]byte, size)
 	if _, err := rand.Read(key); err != nil {
 		return nil, err
 	}
 
 	return key, nil
+}
+
+// GenerateRandomNumber generates a CSPRNG random int. Note that although the
+// functions used require an int64, both the `size` and output are both regular
+// int types.
+func GenerateRandomNumber(size int) (int, error) {
+	maxValue := big.NewInt(int64(size))
+	n, err := rand.Int(rand.Reader, maxValue)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(n.Int64()), nil
 }
 
 // DerivePBKDFKey uses PBKDF2 to derive a key from a known password and salt.

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
@@ -21,7 +20,7 @@ import (
 // LoginHandler handles a POST request to /login to log the user in.
 func LoginHandler(w http.ResponseWriter, req *http.Request) {
 	var login shared.Login
-	if json.NewDecoder(req.Body).Decode(&login) != nil {
+	if utils.LimitedJSONReader(w, req.Body).Decode(&login) != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -57,9 +56,9 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
 // The data received must match the shared.Signup struct.
 func SignupHandler(w http.ResponseWriter, req *http.Request) {
 	var signupData shared.Signup
-	if json.NewDecoder(req.Body).Decode(&signupData) != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Unable to parse request"))
+	if utils.LimitedJSONReader(w, req.Body).Decode(&signupData) != nil {
+		log.Printf("Unable to parse shared.Signup request\n")
+		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	}
 
@@ -139,7 +138,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 	switch req.Method {
 	case http.MethodDelete:
 		var deleteAccount shared.DeleteAccount
-		if json.NewDecoder(req.Body).Decode(&deleteAccount) != nil {
+		if utils.LimitedJSONReader(w, req.Body).Decode(&deleteAccount) != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte("error decoding request"))
 			return
@@ -157,7 +156,7 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			return
 		}
 
-		_, err = vault.DeleteVaultFolder(id, id, false)
+		_, err = vault.DeleteVaultFolder(id, id, false, false)
 		if err != nil {
 			log.Printf("Error deleting user root folder: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -215,7 +214,7 @@ func AccountUsageHandler(w http.ResponseWriter, _ *http.Request, id string) {
 // email immediately after signup.
 func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 	var verifyEmail shared.VerifyEmail
-	if json.NewDecoder(req.Body).Decode(&verifyEmail) != nil {
+	if utils.LimitedJSONReader(w, req.Body).Decode(&verifyEmail) != nil {
 		http.Error(w, "Error decoding request", http.StatusBadRequest)
 		return
 	}
@@ -275,8 +274,9 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 // to the user containing a multi-digit code.
 func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 	var verify shared.VerifyAccount
-	if json.NewDecoder(req.Body).Decode(&verify) != nil {
-		utils.Log("Unable to parse request")
+	err := utils.LimitedJSONReader(w, req.Body).Decode(&verify)
+	if err != nil {
+		log.Printf("Unable to parse VerifyAccount request: %v\n", err)
 		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	} else if utils.IsStructMissingAnyField(verify) {
@@ -286,7 +286,7 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Verify user verification code
-	_, err := db.VerifyUser(verify.ID, verify.Code)
+	_, err = db.VerifyUser(verify.ID, verify.Code)
 	if err != nil {
 		log.Printf("Error verifying user: %v\n", err)
 		http.Error(w, "Incorrect verification code", http.StatusUnauthorized)
@@ -294,26 +294,24 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	hash, err := bcrypt.GenerateFromPassword(verify.LoginKeyHash, 8)
-
-	_, err = db.NewUser(db.User{
-		ID:           verify.ID,
-		ProtectedKey: verify.ProtectedKey,
-		PasswordHash: hash,
-		PublicKey:    verify.PublicKey,
-	})
-
 	if err != nil {
-		utils.Log(fmt.Sprintf("Bad request: %v\n", err))
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Bad request"))
+		log.Printf("Error generating bcrypt login hash: %v\n", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	err = db.NewRootFolder(verify.ID, verify.RootFolderKey)
+	_, err = createNewUser(db.VerifiedAccountValues{
+		AccountID:               verify.ID,
+		Email:                   "",
+		PasswordHash:            hash,
+		ProtectedPrivateKey:     verify.ProtectedPrivateKey,
+		PublicKey:               verify.PublicKey,
+		ProtectedVaultFolderKey: verify.ProtectedVaultFolderKey,
+	})
+
 	if err != nil {
-		utils.Log(fmt.Sprintf("Bad request: %v\n", err))
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte("Bad request"))
+		log.Printf("Error creating user: %v\n", err)
+		http.Error(w, "Error creating account", http.StatusInternalServerError)
 		return
 	}
 
@@ -340,7 +338,7 @@ func LogoutHandler(w http.ResponseWriter, req *http.Request) {
 // is sent.
 func ForgotPasswordHandler(w http.ResponseWriter, req *http.Request) {
 	var forgot shared.ForgotPassword
-	if json.NewDecoder(req.Body).Decode(&forgot) != nil {
+	if utils.LimitedJSONReader(w, req.Body).Decode(&forgot) != nil {
 		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	}
@@ -507,7 +505,7 @@ func startEmailChangeHandler(w http.ResponseWriter, _ *http.Request, id string) 
 
 func finishEmailChangeHandler(w http.ResponseWriter, req *http.Request, id string) {
 	var changeEmail shared.ChangeEmail
-	if json.NewDecoder(req.Body).Decode(&changeEmail) != nil {
+	if utils.LimitedJSONReader(w, req.Body).Decode(&changeEmail) != nil {
 		http.Error(w, "Unable to decode request", http.StatusBadRequest)
 		return
 	}
@@ -540,8 +538,8 @@ func finishEmailChangeHandler(w http.ResponseWriter, req *http.Request, id strin
 	}
 
 	code, err := db.NewVerification(shared.Signup{
-		Identifier:   changeEmail.NewEmail,
-		ProtectedKey: changeEmail.ProtectedKey,
+		Identifier:          changeEmail.NewEmail,
+		ProtectedPrivateKey: changeEmail.ProtectedKey,
 	}, bcryptHash, userID)
 	if err != nil {
 		log.Printf("Error creating email verification entry: %v\n", err)
@@ -564,7 +562,7 @@ func finishEmailChangeHandler(w http.ResponseWriter, req *http.Request, id strin
 // key with new values.
 func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) {
 	var changePassword shared.ChangePassword
-	if json.NewDecoder(req.Body).Decode(&changePassword) != nil {
+	if utils.LimitedJSONReader(w, req.Body).Decode(&changePassword) != nil {
 		http.Error(w, "Unable to decode request", http.StatusBadRequest)
 		return
 	}
@@ -595,7 +593,7 @@ func ChangePasswordHandler(w http.ResponseWriter, req *http.Request, id string) 
 // encrypted and stored in the user's db entry.
 func ChangeHintHandler(w http.ResponseWriter, req *http.Request, id string) {
 	var changeHint shared.ChangePasswordHint
-	if json.NewDecoder(req.Body).Decode(&changeHint) != nil {
+	if utils.LimitedJSONReader(w, req.Body).Decode(&changeHint) != nil {
 		http.Error(w, "Unable to decode request", http.StatusBadRequest)
 		return
 	}
@@ -644,7 +642,7 @@ func TwoFactorHandler(w http.ResponseWriter, req *http.Request, userID string) {
 		}
 	case http.MethodPost:
 		var totp shared.SetTOTP
-		if err := json.NewDecoder(req.Body).Decode(&totp); err != nil {
+		if err := utils.LimitedJSONReader(w, req.Body).Decode(&totp); err != nil {
 			http.Error(w, "Error decoding request body", http.StatusBadRequest)
 			return
 		}

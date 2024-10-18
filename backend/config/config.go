@@ -22,6 +22,7 @@ const B2Storage = "b2"
 var defaultSecret = []byte("yeetfile-debug-secret-key-123456")
 var storageType = utils.GetEnvVar("YEETFILE_STORAGE", LocalStorage)
 var domain = os.Getenv("YEETFILE_DOMAIN")
+var defaultUserMaxPasswords = utils.GetEnvVarInt("YEETFILE_DEFAULT_MAX_PASSWORDS", -1)
 var defaultUserStorage = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_STORAGE", -1)
 var defaultUserSend = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_SEND", -1)
 var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
@@ -147,20 +148,21 @@ var btcPayBilling = BTCPayBillingConfig{
 // =============================================================================
 
 type ServerConfig struct {
-	StorageType        string
-	Domain             string
-	DefaultUserStorage int64
-	DefaultUserSend    int64
-	MaxUserCount       int
-	CurrentUserCount   int
-	Email              EmailConfig
-	StripeBilling      StripeBillingConfig
-	BTCPayBilling      BTCPayBillingConfig
-	BillingEnabled     bool
-	Version            string
-	PasswordHash       []byte
-	ServerSecret       []byte
-	FallbackWebSecret  []byte
+	StorageType         string
+	Domain              string
+	DefaultMaxPasswords int
+	DefaultUserStorage  int64
+	DefaultUserSend     int64
+	MaxUserCount        int
+	CurrentUserCount    int
+	Email               EmailConfig
+	StripeBilling       StripeBillingConfig
+	BTCPayBilling       BTCPayBillingConfig
+	BillingEnabled      bool
+	Version             string
+	PasswordHash        []byte
+	ServerSecret        []byte
+	FallbackWebSecret   []byte
 }
 
 type TemplateConfig struct {
@@ -203,19 +205,20 @@ func init() {
 	}
 
 	YeetFileConfig = ServerConfig{
-		StorageType:        storageType,
-		Domain:             domain,
-		DefaultUserStorage: defaultUserStorage,
-		DefaultUserSend:    defaultUserSend,
-		MaxUserCount:       maxNumUsers,
-		Email:              email,
-		StripeBilling:      stripeBilling,
-		BTCPayBilling:      btcPayBilling,
-		BillingEnabled:     stripeBilling.Configured || btcPayBilling.Configured,
-		Version:            constants.VERSION,
-		PasswordHash:       passwordHash,
-		ServerSecret:       secret,
-		FallbackWebSecret:  fallbackWebSecret,
+		StorageType:         storageType,
+		Domain:              domain,
+		DefaultMaxPasswords: defaultUserMaxPasswords,
+		DefaultUserStorage:  defaultUserStorage,
+		DefaultUserSend:     defaultUserSend,
+		MaxUserCount:        maxNumUsers,
+		Email:               email,
+		StripeBilling:       stripeBilling,
+		BTCPayBilling:       btcPayBilling,
+		BillingEnabled:      stripeBilling.Configured || btcPayBilling.Configured,
+		Version:             constants.VERSION,
+		PasswordHash:        passwordHash,
+		ServerSecret:        secret,
+		FallbackWebSecret:   fallbackWebSecret,
 	}
 
 	// Subset of main server config to use in HTML templating

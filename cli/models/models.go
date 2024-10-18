@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"time"
+	"yeetfile/shared"
+)
 
 type VaultItem struct {
 	ID           string
@@ -14,4 +17,5 @@ type VaultItem struct {
 	IsOwner      bool
 	CanModify    bool
 	ProtectedKey []byte
+	PassEntry    shared.PassEntry
 }

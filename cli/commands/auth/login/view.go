@@ -3,6 +3,7 @@ package login
 import (
 	"errors"
 	"fmt"
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/huh"
 	"strings"
 	"yeetfile/cli/api"
@@ -34,13 +35,13 @@ and can do so in a few ways:`
 var cliKeyFormat = "%s=\"%s\""
 
 var configCLIKeyTitle = "Set in your shell's config file"
-var configCLIKeyMsg = "echo '%s' >> .bashrc"
+var configCLIKeyMsg = " echo '%s' >> .bashrc"
 
 var sessionCLIKeyTitle = "Export for your current shell session"
-var sessionCLIKeyMsg = "export %s"
+var sessionCLIKeyMsg = " export %s"
 
 var prefixCLIKeyTitle = "Prefix all commands with the env var"
-var prefixCLIKeyMsg = "Example: %s yeetfile vault"
+var prefixCLIKeyMsg = " %s yeetfile vault"
 
 func ShowLoginModel() {
 	var identifier string
@@ -66,7 +67,14 @@ func ShowLoginModel() {
 				title,
 				huh.NewInput().Title("Identifier").
 					Description("Email or Account ID").
-					Value(&identifier),
+					Value(&identifier).
+					Validate(func(s string) error {
+						if len(s) == 0 {
+							return errors.New("identifier cannot be blank")
+						}
+
+						return nil
+					}),
 				huh.NewInput().Title("Password").
 					EchoMode(huh.EchoModePassword).
 					Value(&password),
@@ -155,22 +163,61 @@ func showCLISessionNote(sessionKey string) {
 		shared.EscapeString(crypto.CLIKeyEnvVar),
 		sessionKey)
 	desc := fmt.Sprintf(cliKeyMessage, formattedVar)
+
+	actionNone := "None"
+	actionOpt1 := "Option 1"
+	actionOpt2 := "Option 2"
+	actionOpt3 := "Option 3"
+
+	valueOpt1 := fmt.Sprintf(configCLIKeyMsg, formattedVar)
+	valueOpt2 := fmt.Sprintf(sessionCLIKeyMsg, formattedVar)
+	valueOpt3 := fmt.Sprintf(prefixCLIKeyMsg, formattedVar)
+
+	titleOpt1 := fmt.Sprintf(" %s: %s", actionOpt1, configCLIKeyTitle)
+	titleOpt2 := fmt.Sprintf(" %s: %s", actionOpt2, sessionCLIKeyTitle)
+	titleOpt3 := fmt.Sprintf(" %s: %s", actionOpt3, prefixCLIKeyTitle)
+
+	var selected string
+
 	err := huh.NewForm(
 		huh.NewGroup(
 			huh.NewNote().Title(
 				utils.GenerateTitle("Vault Session Key")).
 				Description(desc),
 			huh.NewNote().
-				Title("Option 1: "+configCLIKeyTitle).
-				Description(fmt.Sprintf(configCLIKeyMsg, formattedVar)),
+				Title(titleOpt1).
+				Description(valueOpt1),
 			huh.NewNote().
-				Title("Option 2: "+sessionCLIKeyTitle).
-				Description(fmt.Sprintf(sessionCLIKeyMsg, formattedVar)),
+				Title(titleOpt2).
+				Description(valueOpt2),
 			huh.NewNote().
-				Title("Option 3: "+prefixCLIKeyTitle).
-				Description(fmt.Sprintf(prefixCLIKeyMsg, formattedVar)),
-			huh.NewConfirm().Affirmative("OK").Negative(""))).
-		WithTheme(styles.Theme).Run()
+				Title(titleOpt3).
+				Description(valueOpt3),
+			huh.NewSelect[string]().Title("Copy to Clipboard").Options(
+				huh.NewOptions("None", actionOpt1, actionOpt2, actionOpt3)...).
+				Value(&selected)),
+	).WithTheme(styles.Theme).Run()
+
+	if selected != actionNone {
+		valueMap := map[string]string{
+			actionOpt1: shared.UnescapeString(valueOpt1),
+			actionOpt2: shared.UnescapeString(valueOpt2),
+			actionOpt3: shared.UnescapeString(valueOpt3),
+		}
+
+		value, ok := valueMap[selected]
+		if !ok {
+			fmt.Println("Invalid selection")
+			return
+		}
+
+		err = clipboard.WriteAll(value)
+		if err != nil {
+			fmt.Println("Failed to write to clipboard:")
+			fmt.Println(value)
+		}
+	}
+
 	utils.HandleCLIError("error showing session note", err)
 }
 

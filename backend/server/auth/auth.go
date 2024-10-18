@@ -60,23 +60,44 @@ func ValidateCredentials(
 }
 
 func createNewUser(values db.VerifiedAccountValues) (string, error) {
+	var id string
+	var err error
+
 	// Create new user
-	id, err := db.NewUser(db.User{
-		Email:        values.Email,
-		PasswordHash: values.PasswordHash,
-		ProtectedKey: values.ProtectedKey,
-		PublicKey:    values.PublicKey,
-		PasswordHint: values.PasswordHint,
-	})
+	if len(values.AccountID) > 0 {
+		id = values.AccountID
+		_, err = db.NewUser(db.User{
+			ID:                  values.AccountID,
+			PublicKey:           values.PublicKey,
+			ProtectedPrivateKey: values.ProtectedPrivateKey,
+			PasswordHash:        values.PasswordHash,
+		})
+	} else {
+		id, err = db.NewUser(db.User{
+			Email:               values.Email,
+			PasswordHash:        values.PasswordHash,
+			PublicKey:           values.PublicKey,
+			ProtectedPrivateKey: values.ProtectedPrivateKey,
+			PasswordHint:        values.PasswordHint,
+		})
+	}
 
 	if err != nil {
 		log.Printf("Error initializing new account: %v\n", err)
 		return "", err
 	}
 
-	err = db.NewRootFolder(id, values.RootFolderKey)
+	// Initialize user's root vault folder
+	err = db.NewRootFolder(id, values.ProtectedVaultFolderKey)
 	if err != nil {
 		log.Printf("Error initializing user vault: %v\n", err)
+		return "", err
+	}
+
+	// Initialize user pass metadata index
+	err = db.InitPassIndex(id)
+	if err != nil {
+		log.Printf("Error initializing password index: %v\n", err)
 		return "", err
 	}
 
@@ -85,9 +106,9 @@ func createNewUser(values db.VerifiedAccountValues) (string, error) {
 
 func updateUser(values db.VerifiedAccountValues) error {
 	err := db.UpdateUser(db.User{
-		Email:        values.Email,
-		PasswordHash: values.PasswordHash,
-		ProtectedKey: values.ProtectedKey,
+		Email:               values.Email,
+		PasswordHash:        values.PasswordHash,
+		ProtectedPrivateKey: values.ProtectedPrivateKey,
 	}, values.AccountID)
 
 	if err != nil {

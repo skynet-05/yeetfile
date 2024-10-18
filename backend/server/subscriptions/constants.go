@@ -23,6 +23,8 @@ const NoviceSend = 10
 const RegularSend = 25
 const AdvancedSend = 50
 
+const NonMemberPassMax = 100
+
 var MonthlyNovice = fmt.Sprintf("%s-%s", monthly, TypeNovice)
 var MonthlyRegular = fmt.Sprintf("%s-%s", monthly, TypeRegular)
 var MonthlyAdvanced = fmt.Sprintf("%s-%s", monthly, TypeAdvanced)

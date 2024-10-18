@@ -35,11 +35,11 @@ var userFileIDs map[string][]string
 func setupTestUser() TestUser {
 	ctx := InitContext(server, "")
 	signup, err := ctx.SubmitSignup(shared.Signup{
-		Identifier:    "",
-		LoginKeyHash:  nil,
-		PublicKey:     nil,
-		ProtectedKey:  nil,
-		RootFolderKey: nil,
+		Identifier:              "",
+		LoginKeyHash:            nil,
+		PublicKey:               nil,
+		ProtectedPrivateKey:     nil,
+		ProtectedVaultFolderKey: nil,
 	})
 
 	if _, ok := err.(*net.OpError); ok {
@@ -51,12 +51,12 @@ func setupTestUser() TestUser {
 	signupKeys, err := crypto.GenerateSignupKeys(signup.Identifier, userPassword)
 
 	verifyAcct := shared.VerifyAccount{
-		ID:            signup.Identifier,
-		Code:          "123456", // Requires YEETFILE_DEBUG=1 to succeed
-		LoginKeyHash:  signupKeys.LoginKeyHash,
-		ProtectedKey:  signupKeys.ProtectedPrivateKey,
-		PublicKey:     signupKeys.PublicKey,
-		RootFolderKey: signupKeys.ProtectedRootFolderKey,
+		ID:                      signup.Identifier,
+		Code:                    "123456", // Requires YEETFILE_DEBUG=1 to succeed
+		LoginKeyHash:            signupKeys.LoginKeyHash,
+		ProtectedPrivateKey:     signupKeys.ProtectedPrivateKey,
+		PublicKey:               signupKeys.PublicKey,
+		ProtectedVaultFolderKey: signupKeys.ProtectedRootFolderKey,
 	}
 
 	err = ctx.VerifyAccount(verifyAcct)

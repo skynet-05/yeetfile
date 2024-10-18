@@ -88,7 +88,8 @@ func main() {
 		Add(shared.ChangeEmail{}).
 		Add(shared.NewTOTP{}).
 		Add(shared.SetTOTP{}).
-		Add(shared.SetTOTPResponse{})
+		Add(shared.SetTOTPResponse{}).
+		Add(shared.ItemIndex{})
 
 	converter.WithBackupDir("")
 	err = converter.ConvertToFile(structsOut)

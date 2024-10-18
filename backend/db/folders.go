@@ -12,7 +12,7 @@ import (
 
 var FolderNotFoundError = errors.New("folder not found")
 
-func NewRootFolder(id string, protectedFolderKey []byte) error {
+func NewRootFolder(id string, protectedKey []byte) error {
 	if len(id) == 0 {
 		return errors.New("invalid folder ID length")
 	}
@@ -25,11 +25,11 @@ func NewRootFolder(id string, protectedFolderKey []byte) error {
 	return insertFolder(id, id, shared.NewVaultFolder{
 		Name:         "",
 		ParentID:     "",
-		ProtectedKey: protectedFolderKey,
-	})
+		ProtectedKey: protectedKey,
+	}, false)
 }
 
-func NewFolder(folder shared.NewVaultFolder, ownerID string) (string, error) {
+func NewFolder(folder shared.NewVaultFolder, ownerID string, pwFolder bool) (string, error) {
 	folderID := shared.GenRandomString(VaultIDLength)
 	for FolderIDExists(folderID) {
 		folderID = shared.GenRandomString(VaultIDLength)
@@ -44,16 +44,34 @@ func NewFolder(folder shared.NewVaultFolder, ownerID string) (string, error) {
 			return "", err
 		}
 
+		if parentOwnerID != ownerID {
+			_, err = CheckFolderOwnership(ownerID, folder.ParentID)
+			if err != nil {
+				return "", err
+			}
+		}
+
 		ownerID = parentOwnerID
 	}
 
-	return folderID, insertFolder(folderID, ownerID, folder)
+	return folderID, insertFolder(folderID, ownerID, folder, pwFolder)
 }
 
-func insertFolder(id, ownerID string, folder shared.NewVaultFolder) error {
-	s := `INSERT INTO folders (id, name, owner_id, protected_key, modified, parent_id, ref_id)
-	      VALUES ($1, $2, $3, $4, $5, $6, $1)`
-	_, err := db.Exec(s, id, folder.Name, ownerID, folder.ProtectedKey, time.Now().UTC(), folder.ParentID)
+func insertFolder(id, ownerID string, folder shared.NewVaultFolder, pwFolder bool) error {
+	s := `INSERT INTO folders 
+	      (id, name, owner_id, protected_key, modified, parent_id, pw_folder, ref_id)
+	      VALUES 
+	      ($1, $2, $3, $4, $5, $6, $7, $1)`
+
+	_, err := db.Exec(
+		s,
+		id,
+		folder.Name,
+		ownerID,
+		folder.ProtectedKey,
+		time.Now().UTC(),
+		folder.ParentID,
+		pwFolder)
 
 	return err
 }
@@ -74,14 +92,59 @@ func FolderIDExists(id string) bool {
 	return false
 }
 
+// GetFolderTree returns a tree representation of the user's vault
+func GetFolderTree(userID string, isPassVault bool) error {
+	s := `WITH RECURSIVE folder_tree AS (
+	          SELECT 
+	              f.id AS folder_id, f.name, 0::bigint as length, f.modified, f.protected_key,
+	              f.shared_by, f.link_tag, f.ref_id, f.can_modify,
+	              (SELECT COUNT(*) FROM sharing s WHERE s.item_id = f.id) AS share_count,
+	              true AS is_folder
+	          FROM folders f
+	          WHERE f.parent_id = $1
+
+	          UNION ALL
+
+	          SELECT
+	              f.id AS folder_id, f.name, 0::bigint as length, f.modified, f.protected_key,
+	              f.shared_by, f.link_tag, f.ref_id, f.can_modify,
+	              (SELECT COUNT(*) FROM sharing s WHERE s.item_id = f.id) AS share_count,
+	              true AS is_folder
+	          FROM folders f
+	          INNER JOIN folder_tree ft ON f.parent_id = ft.folder_id
+	      )
+	      SELECT *
+	      FROM folder_tree
+	      UNION ALL
+
+	      -- Retrieve all vault items associated with the folders in the tree
+	      SELECT 
+	          v.id, v.name, v.length, v.modified, v.protected_key,
+	          v.shared_by, v.link_tag, v.ref_id, v.can_modify,
+	          (SELECT COUNT(*) FROM sharing s WHERE s.item_id = v.id) AS share_count,
+                  false as is_folder
+	      FROM vault v  
+	      WHERE v.folder_id IN (SELECT folder_id FROM folder_tree)
+
+	      ORDER BY modified DESC;`
+
+	rows, err := db.Query(s, userID)
+	for rows.Next() {
+		// TODO: Create tree of index-able vault items
+	}
+
+	return err
+}
+
 func GetSubfolders(
 	folderID,
 	ownerID string,
 	ownership shared.FolderOwnershipInfo,
+	pwFolder bool,
 ) ([]shared.VaultFolder, error) {
 	var err error
 	if ownership == (shared.FolderOwnershipInfo{}) {
-		_, err = CheckFolderOwnership(ownerID, folderID)
+		ownership, err = CheckFolderOwnership(ownerID, folderID)
 		if err != nil {
 			return nil, err
 		}
@@ -96,12 +159,14 @@ func GetSubfolders(
 	          f.link_tag, 
 	          f.ref_id, 
 	          f.can_modify,
+	          f.pw_folder,
 	          (SELECT COUNT(*) FROM sharing s WHERE s.item_id = f.id) AS share_count
 	          FROM folders f
 	          WHERE f.parent_id = $1
+	          AND f.pw_folder = $2
 	          ORDER BY f.modified DESC`
 
-	rows, err := db.Query(query, folderID)
+	rows, err := db.Query(query, folderID, pwFolder)
 	if err != nil {
 		return []shared.VaultFolder{}, err
 	}
@@ -117,10 +182,21 @@ func GetSubfolders(
 		var linkTag string
 		var refID string
 		var canModify bool
+		var passwordFolder bool
 		var shareCount int
 
-		err = rows.Scan(&id, &name, &modified, &protectedKey,
-			&sharedBy, &linkTag, &refID, &canModify, &shareCount)
+		err = rows.Scan(
+			&id,
+			&name,
+			&modified,
+			&protectedKey,
+			&sharedBy,
+			&linkTag,
+			&refID,
+			&canModify,
+			&passwordFolder,
+			&shareCount)
+
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return []shared.VaultFolder{}, err
@@ -142,16 +218,17 @@ func GetSubfolders(
 		}
 
 		subfolders = append(subfolders, shared.VaultFolder{
-			ID:           id,
-			Name:         name,
-			Modified:     modified,
-			ProtectedKey: protectedKey,
-			SharedWith:   shareCount,
-			SharedBy:     sharedBy,
-			LinkTag:      linkTag,
-			CanModify:    canModify,
-			RefID:        refID,
-			IsOwner:      isOwner,
+			ID:             id,
+			Name:           name,
+			Modified:       modified,
+			ProtectedKey:   protectedKey,
+			SharedWith:     shareCount,
+			SharedBy:       sharedBy,
+			LinkTag:        linkTag,
+			CanModify:      canModify,
+			RefID:          refID,
+			IsOwner:        isOwner,
+			PasswordFolder: passwordFolder,
 		})
 	}
 
@@ -211,6 +288,56 @@ func ChangeFolderPermission(folderID, ownerID string, canModify bool) error {
 	return nil
 }
 
+func GetFolderOwnerStorage(folderID string) (int64, int64, error) {
+	var (
+		storageUsed      int64
+		storageAvailable int64
+	)
+
+	s := `
+	    WITH folder_owner AS (
+	        SELECT owner_id FROM folders WHERE id = $1
+	    )
+	    SELECT storage_used, storage_available
+		FROM users
+		WHERE id = (SELECT owner_id FROM folder_owner);`
+
+	err := db.QueryRow(s, folderID).Scan(&storageUsed, &storageAvailable)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return storageUsed, storageAvailable, nil
+}
+
+func UpdateFolderOwnerStorage(folderID string, amount int64) error {
+	var (
+		storageUsed      int64
+		storageAvailable int64
+	)
+
+	s := `
+	    WITH folder_owner AS (
+	        SELECT owner_id FROM folders WHERE id = $1
+	    )
+	    UPDATE users 
+	      SET storage_used = CASE 
+	                           WHEN storage_used + $2 < 0 THEN 0
+	                           ELSE storage_used + $2
+	                         END
+	      WHERE id = (SELECT owner_id FROM folder_owner) 
+	      RETURNING storage_used, storage_available`
+
+	err := db.QueryRow(s, folderID, amount).Scan(&storageUsed, &storageAvailable)
+	if err != nil {
+		return err
+	} else if storageUsed > storageAvailable && amount > 0 {
+		return UserStorageExceeded
+	}
+
+	return nil
+}
+
 func GetFolderOwnership(
 	folderID,
 	ownerID string,
@@ -258,12 +385,12 @@ func GetFolderInfo(
 
 	var rows *sql.Rows
 	if ownerOnly {
-		query := `SELECT id, owner_id, name, modified, protected_key, parent_id, ref_id
+		query := `SELECT id, owner_id, name, modified, protected_key, parent_id, ref_id, pw_folder
 	                  FROM folders 
 	                  WHERE id=$1 AND owner_id=$2`
 		rows, err = db.Query(query, folderID, ownerID)
 	} else {
-		query := `SELECT id, owner_id, name, modified, protected_key, parent_id, ref_id
+		query := `SELECT id, owner_id, name, modified, protected_key, parent_id, ref_id, pw_folder
 	                  FROM folders 
 	                  WHERE id=$1 OR ref_id=$1`
 		rows, err = db.Query(query, folderID)
@@ -286,8 +413,17 @@ func GetFolderInfo(
 		var protectedKey []byte
 		var parentID string
 		var refID string
+		var pwFolder bool
 
-		err = rows.Scan(&id, &folderOwnerID, &name, &modified, &protectedKey, &parentID, &refID)
+		err = rows.Scan(
+			&id,
+			&folderOwnerID,
+			&name,
+			&modified,
+			&protectedKey,
+			&parentID,
+			&refID,
+			&pwFolder)
 		if err != nil {
 			return shared.VaultFolder{}, err
 		}
@@ -314,14 +450,15 @@ func GetFolderInfo(
 		}
 
 		return shared.VaultFolder{
-			ID:           id,
-			Name:         name,
-			Modified:     modified,
-			ProtectedKey: protectedKey,
-			ParentID:     parentID,
-			RefID:        refID,
-			IsOwner:      ownership.IsOwner,
-			CanModify:    ownership.CanModify,
+			ID:             id,
+			Name:           name,
+			Modified:       modified,
+			ProtectedKey:   protectedKey,
+			ParentID:       parentID,
+			RefID:          refID,
+			IsOwner:        ownership.IsOwner,
+			CanModify:      ownership.CanModify,
+			PasswordFolder: pwFolder,
 		}, nil
 	}
 
@@ -335,7 +472,7 @@ func GetKeySequence(folderID, ownerID string) ([][]byte, error) {
 	s := `WITH RECURSIVE parent_hierarchy AS (
 	         SELECT ref_id, owner_id, parent_id, protected_key, 1 as depth
 	         FROM folders
-	         WHERE ref_id=$1
+	         WHERE ref_id=$1 AND (parent_id=$2 OR id = ref_id)
 	
 	         UNION ALL
 	
@@ -344,13 +481,14 @@ func GetKeySequence(folderID, ownerID string) ([][]byte, error) {
 	         INNER JOIN parent_hierarchy ph ON f.ref_id = ph.parent_id
 	     ),
 	     hierarchy_with_depth_count AS (
-	         SELECT ph.*, COUNT(*) OVER (PARTITION BY depth) AS depth_count
+	         SELECT ph.*, COUNT(*) OVER (PARTITION BY depth) AS depth_count,
+	             ROW_NUMBER() OVER (PARTITION BY depth ORDER BY (CASE WHEN owner_id = $2 THEN 1 ELSE 2 END)) AS rn
 	         FROM parent_hierarchy ph
 	     )
 	     SELECT protected_key
 	     FROM hierarchy_with_depth_count
 	     WHERE (depth_count = 1)
-	        OR (depth_count > 1 AND owner_id=$2)
+	        OR (depth_count > 1 AND rn = 1)
 	     ORDER BY depth DESC;`
 
 	rows, err := db.Query(s, folderID, ownerID)
@@ -414,11 +552,13 @@ func ShareFolder(share shared.NewSharedItem, userID string) (string, error) {
 
 	// Add new folder entry for recipient
 	s1 := `INSERT INTO folders (id, name, parent_id, owner_id, 
-                     protected_key, shared_by, modified, ref_id, can_modify)
-	       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+                     protected_key, shared_by, modified, ref_id, can_modify,
+                     pw_folder)
+	       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 	_, err = db.Exec(s1, folderID, folder.Name,
 		share.RecipientID, share.RecipientID, share.ProtectedKey,
-		sharedByName, time.Now().UTC(), folder.ID, share.CanModify)
+		sharedByName, time.Now().UTC(), folder.ID, share.CanModify,
+		folder.PasswordFolder)
 	if err != nil {
 		return "", err
 	}

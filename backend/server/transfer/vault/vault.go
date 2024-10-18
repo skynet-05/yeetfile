@@ -12,7 +12,7 @@ import (
 
 func updateVaultFile(id, userID string, mod shared.ModifyVaultItem) error {
 	if len(mod.Name) > 0 {
-		err := db.UpdateVaultFileName(id, userID, mod.Name)
+		err := db.UpdateVaultFile(id, userID, mod)
 		if err != nil {
 			return err
 		}
@@ -81,20 +81,30 @@ func shareVaultItem(
 
 // DeleteVaultFolder recursively deletes the folder matching the specified
 // folder ID and all of its subfolders, returning the amount of freed space
-func DeleteVaultFolder(id, userID string, isShared bool) (int64, error) {
+func DeleteVaultFolder(id, userID string, isShared, passVault bool) (int64, error) {
 	freed := int64(0)
 	if isShared {
 		// Delete shared folder reference and return
 		return 0, db.DeleteSharedFolder(id, userID)
 	}
 
-	subfolders, err := db.GetSubfolders(id, userID, shared.FolderOwnershipInfo{})
+	subfolders, err := db.GetSubfolders(id, userID, shared.FolderOwnershipInfo{}, passVault)
 	if err != nil {
 		return 0, err
 	}
 
+	if id == userID {
+		// User is deleting their root folder, must grab !passVault folders too
+		additional, err := db.GetSubfolders(id, userID, shared.FolderOwnershipInfo{}, !passVault)
+		if err != nil {
+			return 0, err
+		}
+
+		subfolders = append(subfolders, additional...)
+	}
+
 	for _, sub := range subfolders {
-		subFreed, err := DeleteVaultFolder(sub.ID, userID, isShared)
+		subFreed, err := DeleteVaultFolder(sub.ID, userID, isShared, sub.PasswordFolder)
 		if err != nil {
 			return 0, err
 		}
@@ -102,9 +112,19 @@ func DeleteVaultFolder(id, userID string, isShared bool) (int64, error) {
 		freed += subFreed
 	}
 
-	items, _, err := db.GetVaultItems(userID, id)
+	items, _, err := db.GetVaultItems(userID, id, passVault)
 	if err != nil {
 		return 0, err
+	}
+
+	if id == userID {
+		// User is deleting their root folder, must grab !passVault items too
+		additional, _, err := db.GetVaultItems(userID, id, !passVault)
+		if err != nil {
+			return 0, err
+		}
+
+		items = append(items, additional...)
 	}
 
 	for _, item := range items {

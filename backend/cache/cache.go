@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/backend/utils"
+	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
 
@@ -180,7 +181,7 @@ func removeOldestUnlockedFile() error {
 		segments := strings.Split(filePath, "/")
 		file := segments[len(segments)-1]
 
-		if utils.Contains(locks, file) {
+		if shared.ArrayContains(locks, file) {
 			// Skip locked files
 			return nil
 		}
@@ -243,6 +244,9 @@ func init() {
 		log.Printf("Max cache size: %s (%d bytes)",
 			userCacheDirSize,
 			maxCacheSize)
+	} else {
+		enabled = false
+		return
 	}
 
 	userCacheFileSize := os.Getenv("YEETFILE_CACHE_MAX_FILE_SIZE")
@@ -251,6 +255,9 @@ func init() {
 		log.Printf("Max size of files in cache: %s (%d bytes)",
 			userCacheFileSize,
 			maxCachedFileSize)
+	} else {
+		enabled = false
+		return
 	}
 
 	err := os.MkdirAll(path, 0755)

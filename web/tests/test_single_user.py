@@ -254,6 +254,58 @@ def test_vault_folder_creation(browser_context: BrowserContext):
     expect(page.get_by_test_id("table-body")).to_be_empty()
 
 
+def test_pass_vault(browser_context: BrowserContext):
+    """Tests creating a new password entry in the password vault"""
+    page: Page = browser_context.new_page()
+    page.on("console", lambda msg: print_console_msg(msg))
+
+    entry_name = "my password"
+    username = "username"
+    url = "https://testing.asdf.com"
+
+    page.goto(f"{base_page}/pass")
+
+    page.get_by_test_id("add-entry").click()
+    expect(page.get_by_test_id("password-dialog")).to_be_visible()
+
+    page.get_by_test_id("entry-name").fill(entry_name)
+    page.get_by_test_id("entry-username").fill(username)
+    page.get_by_test_id("generate-password").click()
+
+    expect(page.get_by_test_id("password-generator-dialog")).to_be_visible()
+
+    # Select passphrase generator
+    page.get_by_test_id("passphrase-type").click()
+    expect(page.get_by_test_id("passphrase-table")).to_be_visible()
+    expect(page.get_by_test_id("password-table")).to_be_hidden()
+
+    expect(page.get_by_test_id("generated-password")).not_to_be_empty()
+
+    password = page.get_by_test_id("generated-password").inner_text()
+    page.get_by_test_id("confirm-password").click()
+
+    expect(page.get_by_test_id("password-generator-dialog")).not_to_be_visible()
+    expect(page.get_by_test_id("password-dialog")).to_be_visible()
+
+    # Confirm generated password is a match
+    assert page.get_by_test_id("entry-password").input_value() == password
+
+    page.get_by_test_id("entry-url").fill(url)
+    page.get_by_test_id("submit-password").click()
+
+    page.goto(f"{base_page}/pass")
+    folder_json = fetch_folder_json(page, "", True)
+    assert len(folder_json["items"]) == 1
+    file_id = folder_json["items"][0]["id"]
+
+    page.get_by_test_id(f"load-item-{file_id}").click()
+    expect(page.get_by_test_id("password-dialog")).to_be_visible()
+    assert page.get_by_test_id("entry-name").input_value() == entry_name
+    assert page.get_by_test_id("entry-username").input_value() == username
+    assert page.get_by_test_id("entry-password").input_value() == password
+    assert page.get_by_test_id("entry-url").input_value() == url
+
+
 def test_vault_password(browser_context: BrowserContext):
     """Tests setting a unique session-specific vault password"""
     global account_id
@@ -280,7 +332,7 @@ def test_vault_password(browser_context: BrowserContext):
     page.goto(f"{base_page}/vault")
     expect(page.get_by_test_id("table-body")).to_be_empty()
     expect(page.get_by_test_id("vault-pass-dialog")).to_be_visible()
-    page.get_by_test_id("vault-pass").fill("WRONG")
+    page.get_by_test_id("vault-pass").fill("wrong")
     page.get_by_test_id("submit-pass").click()
     expect(page.get_by_test_id("vault-pass-dialog")).to_be_visible()
     page.get_by_test_id("vault-pass").fill(vault_password)

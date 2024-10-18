@@ -11,14 +11,17 @@ import (
 const uploadIDLength = 12
 
 type FileMetadata struct {
-	ID           string
-	RefID        string
-	Chunks       int
-	Name         string
-	B2ID         string
-	Length       int64
-	FolderID     string
-	ProtectedKey []byte
+	ID                string
+	RefID             string
+	Chunks            int
+	Name              string
+	B2ID              string
+	Length            int64
+	FolderID          string
+	ProtectedKey      []byte
+	PasswordData      []byte
+	OwnsParentFolder  bool
+	ParentFolderOwner string
 }
 
 // InsertMetadata creates a new metadata entry in the db and returns a unique ID for

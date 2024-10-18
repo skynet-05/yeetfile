@@ -8,8 +8,8 @@
     margin-top: 20px;
 }
 
-table tr, table td, table td * {
-    vertical-align: top;
+#vault-table tr, #vault-table td, #vault-table td * {
+    vertical-align: middle;
 }
 
 thead > tr > th {
@@ -23,10 +23,29 @@ table {
     width: 100%;
 }
 
-th, td {
+#vault-table th, #vault-table td {
     padding: 5px;
-    text-align: left;
     border-bottom: 1px solid #ccc;
+}
+
+#vault-table td span {
+    line-height: 25px;
+}
+
+#new-password-table th, #new-password-table td {
+    padding: 2px;
+}
+
+#password-generator-dialog pre {
+    margin-top: 0;
+}
+
+#generated-password {
+    font-size: x-large;
+}
+
+th, td {
+    text-align: left;
     z-index: 10;
 }
 
@@ -100,6 +119,19 @@ tr:last-child td {
 #vault-file-content, #vault-file-content iframe {
     width: 100%;
     height: 100%;
+}
+
+#password-dialog textarea {
+    height: 180px;
+}
+
+#password-dialog input[type=text] input[type=password] {
+    width: 500px;
+}
+
+#password-dialog input:disabled, textarea:disabled {
+    background-color: darkgrey;
+    color: #212121;
 }
 
 pre {

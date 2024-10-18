@@ -192,12 +192,12 @@ func showIDOnlySignupModel(password, serverPw string) {
 			// only signup
 			response, signupErr = globals.API.SubmitSignup(
 				shared.Signup{
-					Identifier:     "",
-					LoginKeyHash:   nil,
-					PublicKey:      nil,
-					ProtectedKey:   nil,
-					RootFolderKey:  nil,
-					ServerPassword: serverPw,
+					Identifier:              "",
+					LoginKeyHash:            nil,
+					PublicKey:               nil,
+					ProtectedPrivateKey:     nil,
+					ProtectedVaultFolderKey: nil,
+					ServerPassword:          serverPw,
 				},
 			)
 		}).Run()

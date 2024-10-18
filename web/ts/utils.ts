@@ -255,3 +255,9 @@ const registerEnterKeySubmit = (btn: HTMLButtonElement): void => {
         }
     });
 }
+
+const copyToClipboard = (text: string, callback: (success: boolean) => void) => {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => callback(true));
+    }
+};

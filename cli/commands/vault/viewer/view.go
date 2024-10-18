@@ -117,6 +117,15 @@ func showFilePreview(name string, modified time.Time, fileBytes []byte) {
 		showText(name, modified.Format(time.DateTime), fileBytes)
 		return
 	} else if fileBytes != nil && isLikelyImage(name) {
+		cmd, args, err := getImageViewerCommand()
+		if err == nil && len(cmd) > 0 {
+			err = imageOutput(cmd, args, fileBytes)
+			if err == nil {
+				return
+			}
+		}
+
+		// Fall back to displaying ascii image
 		noteContent = imageToAscii(fileBytes)
 	} else if fileBytes != nil {
 		noteContent = "Unable to preview file in CLI app"

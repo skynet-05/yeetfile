@@ -12,6 +12,9 @@ var API *api.Context
 var Config *config.Config
 var ServerInfo shared.ServerInfo
 
+var LongWordlist []string
+var ShortWordlist []string
+
 func init() {
 	Config = config.LoadConfig()
 
@@ -39,5 +42,34 @@ func init() {
 	ServerInfo, err = API.GetServerInfo()
 	if err != nil {
 		log.Fatalf("Error fetching server info: %v\n", err)
+	}
+
+	LongWordlist, ShortWordlist, err = Config.GetWordlists()
+	if err != nil {
+		long, err := API.GetStaticFile("json", "eff_long_wordlist.json")
+		if err != nil {
+			log.Println("Failed to fetch long wordlist:", err)
+		}
+
+		short, err := API.GetStaticFile("json", "eff_short_wordlist.json")
+		if err != nil {
+			log.Println("Failed to fetch short wordlist:", err)
+		}
+
+		err = Config.SetLongWordlist(long)
+		if err != nil {
+			log.Println("Failed to store long wordlist:", err)
+		}
+
+		err = Config.SetShortWordlist(short)
+		if err != nil {
+			log.Println("Failed to store short wordlist:", err)
+		}
+
+		LongWordlist, ShortWordlist, err = Config.GetWordlists()
+		if err != nil {
+			log.Println("Wordlists fetched, but failed to retrieve"+
+				" after writing:", err)
+		}
 	}
 }

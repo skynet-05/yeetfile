@@ -2,6 +2,7 @@ package files
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"time"
 	"yeetfile/cli/crypto"
@@ -18,6 +19,7 @@ var folderContexts = make(map[string]*VaultContext)
 type VaultContext struct {
 	FolderID string
 	CanEdit  bool
+	IsOwner  bool
 	Crypto   crypto.CryptoCtx
 	Folders  []shared.VaultFolder
 	Files    []shared.VaultItem
@@ -26,12 +28,12 @@ type VaultContext struct {
 
 var keyPair crypto.KeyPair
 
-func FetchVaultContext(folderID string) (*VaultContext, error) {
+func FetchVaultContext(folderID string, isPassVault bool) (*VaultContext, error) {
 	if context, ok := folderContexts[folderID]; ok {
 		return context, nil
 	}
 
-	folderResp, err := globals.API.FetchFolderContents(folderID)
+	folderResp, err := globals.API.FetchFolderContents(folderID, isPassVault)
 	if err != nil {
 		return &VaultContext{}, err
 	}
@@ -47,6 +49,7 @@ func FetchVaultContext(folderID string) (*VaultContext, error) {
 		Folders:  folderResp.Folders,
 		Files:    folderResp.Items,
 		CanEdit:  folderResp.CurrentFolder.CanModify,
+		IsOwner:  folderResp.CurrentFolder.IsOwner,
 	}
 
 	folderContexts[folderID] = &ctx
@@ -64,9 +67,7 @@ func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) (int64
 	}
 
 	key, _ := crypto.GenerateRandomKey()
-	protectedKey, err := ctx.Crypto.EncryptFunc(
-		ctx.Crypto.EncryptionKey,
-		key)
+	protectedKey, err := ctx.Crypto.EncryptFunc(ctx.Crypto.EncryptionKey, key)
 	if err != nil {
 		return 0, err
 	}
@@ -95,13 +96,103 @@ func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) (int64
 		Size:         totalSize,
 		Modified:     time.Now(),
 		CanModify:    ctx.CanEdit,
+		IsOwner:      ctx.IsOwner,
 		ProtectedKey: protectedKey,
 	})
 
 	return stat.Size(), nil
 }
 
-func (ctx *VaultContext) CreateFolder(folderName string) error {
+func (ctx *VaultContext) UploadPassEntry(item models.VaultItem) error {
+	key, _ := crypto.GenerateRandomKey()
+	protectedKey, err := ctx.Crypto.EncryptFunc(ctx.Crypto.EncryptionKey, key)
+	if err != nil {
+		return err
+	}
+
+	encName, err := crypto.EncryptChunk(key, []byte(item.Name))
+	if err != nil {
+		return err
+	}
+
+	name := hex.EncodeToString(encName)
+
+	jsonData, err := json.Marshal(item.PassEntry)
+	if err != nil {
+		return err
+	}
+
+	encPassData, err := crypto.EncryptChunk(key, jsonData)
+	if err != nil {
+		return err
+	}
+
+	upload := shared.VaultUpload{
+		Name:         name,
+		Length:       1,
+		Chunks:       1,
+		FolderID:     ctx.FolderID,
+		ProtectedKey: protectedKey,
+		PasswordData: encPassData,
+	}
+
+	meta, err := globals.API.InitVaultFile(upload)
+	if err != nil {
+		return err
+	}
+
+	ctx.InsertItem(models.VaultItem{
+		ID:           meta.ID,
+		Name:         item.Name,
+		IsFolder:     false,
+		Size:         1,
+		Modified:     time.Now(),
+		CanModify:    ctx.CanEdit,
+		IsOwner:      ctx.IsOwner,
+		ProtectedKey: protectedKey,
+		PassEntry:    item.PassEntry,
+	})
+
+	return nil
+}
+
+func (ctx *VaultContext) UpdatePassEntry(item models.VaultItem) error {
+	key, err := ctx.Crypto.DecryptFunc(ctx.Crypto.DecryptionKey, item.ProtectedKey)
+	if err != nil {
+		return err
+	}
+
+	encName, err := crypto.EncryptChunk(key, []byte(item.Name))
+	if err != nil {
+		return err
+	}
+
+	hexEncName := hex.EncodeToString(encName)
+
+	jsonData, err := json.Marshal(item.PassEntry)
+	if err != nil {
+		return err
+	}
+
+	encPassData, err := crypto.EncryptChunk(key, jsonData)
+	if err != nil {
+		return err
+	}
+
+	err = globals.API.ModifyVaultFile(item.RefID, shared.ModifyVaultItem{
+		Name:         hexEncName,
+		PasswordData: encPassData,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	ctx.updateItem(item)
+	return nil
+}
+
+func (ctx *VaultContext) CreateFolder(folderName string, isPassVault bool) error {
 	key, _ := crypto.GenerateRandomKey()
 	protectedKey, err := ctx.Crypto.EncryptFunc(
 		ctx.Crypto.EncryptionKey,
@@ -114,7 +205,8 @@ func (ctx *VaultContext) CreateFolder(folderName string) error {
 		folderName,
 		ctx.FolderID,
 		protectedKey,
-		key)
+		key,
+		isPassVault)
 	if err != nil {
 		return err
 	}
@@ -298,6 +390,13 @@ func (ctx *VaultContext) parseFiles() ([]models.VaultItem, error) {
 
 		nameBytes, _ := hex.DecodeString(file.Name)
 		name, _ := crypto.DecryptChunk(key, nameBytes)
+
+		var passEntry shared.PassEntry
+		if file.PasswordData != nil && len(file.PasswordData) > 0 {
+			passEntryData, _ := crypto.DecryptChunk(key, file.PasswordData)
+			err = json.Unmarshal(passEntryData, &passEntry)
+		}
+
 		fileModels = append(fileModels, models.VaultItem{
 			ID:           file.ID,
 			RefID:        file.RefID,
@@ -310,6 +409,7 @@ func (ctx *VaultContext) parseFiles() ([]models.VaultItem, error) {
 			ProtectedKey: file.ProtectedKey,
 			IsOwner:      file.IsOwner,
 			CanModify:    file.CanModify,
+			PassEntry:    passEntry,
 		})
 	}
 

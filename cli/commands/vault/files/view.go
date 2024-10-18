@@ -28,6 +28,8 @@ type Model struct {
 	ViewRequest   internal.ViewRequest
 	Context       *VaultContext
 
+	IsPassVault bool
+
 	filteredItems []models.VaultItem
 
 	filtering bool
@@ -55,9 +57,13 @@ type Storage struct {
 	used      int64
 }
 
-const Help = `
+const FileVaultHelp = `
 Enter -> select/open | x -----> delete | s --> share | u ---> upload |
 Backspace ----> back | n -> new folder | r -> rename | d -> download |`
+
+const PassVaultHelp = `
+Enter -> select/open | x -----> delete | s --> share | u ---> add item |
+Backspace ----> back | n -> new folder | r -> rename |`
 
 const FilterHelp = `
 Enter -> select/open | escape -> exit filter`
@@ -83,7 +89,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.IncomingEvent.Status == internal.StatusOk {
 		m.filtering = false
 		m.filterStr = ""
-		rows = CreateItemRows(items)
+		rows = CreateItemRows(items, m.IsPassVault)
 		switch m.IncomingEvent.Type {
 		case internal.UploadFileRequest:
 			m.upload(m.IncomingEvent)
@@ -91,6 +97,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.delete(m.IncomingEvent)
 		case internal.NewFolderRequest:
 			m.createFolder(m.IncomingEvent)
+		case internal.NewPassRequest:
+			m.createPass(m.IncomingEvent)
+		case internal.EditPassRequest:
+			m.editPass(m.IncomingEvent)
 		case internal.RenameRequest:
 			m.rename(m.IncomingEvent)
 		case internal.ShareRequest:
@@ -129,7 +139,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(folderViews) > 1 {
 				status.Loading = true
 				folderID := folderViews[len(folderViews)-2]
-				newModel, err := NewModel(folderID)
+				newModel, err := NewModel(folderID, m.IsPassVault)
 				if err == nil {
 					splitPath := strings.Split(folderPath, "/")
 					folderPath = strings.Join(splitPath[:len(splitPath)-2], "/")
@@ -166,7 +176,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Open folder or view file
 				if item.IsFolder {
 					status.Loading = true
-					newModel, err := NewModel(item.RefID)
+					newModel, err := NewModel(item.RefID, m.IsPassVault)
 					if err == nil {
 						folderViews = append(folderViews, item.RefID)
 						folderPath += item.Name + "/"
@@ -175,6 +185,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					return newModel, nil
 				} else {
+					if m.IsPassVault {
+						if item.CanModify {
+							return m.EditPassRequest(item)
+						} else {
+							return m.ViewPassRequest(item)
+						}
+					}
+
 					// Enter file view
 					return m.NewFileViewRequest(item)
 				}
@@ -205,7 +223,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case "u": // Upload file
-			return m.NewUploadRequest()
+			if m.IsPassVault {
+				return m.NewPassRequest()
+			} else {
+				return m.NewUploadRequest()
+			}
 		}
 	}
 
@@ -232,7 +254,7 @@ func (m Model) filterItems(c string) (tea.Model, tea.Cmd) {
 			m.filtering = false
 		}
 	case "ctrl+c", "esc":
-		rows = CreateItemRows(items)
+		rows = CreateItemRows(items, m.IsPassVault)
 		m.filtering = false
 	case "enter":
 		m.filtering = false
@@ -277,7 +299,7 @@ func (m Model) filterItems(c string) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		rows = CreateItemRows(filteredItems)
+		rows = CreateItemRows(filteredItems, m.IsPassVault)
 		m.filteredItems = filteredItems
 		m.table.SetCursor(0)
 	}
@@ -296,6 +318,11 @@ func (m Model) View() string {
 func (m Model) tableViewer() string {
 	vaultView := styles.TableStyle.Render(m.table.View())
 
+	title := "File Vault"
+	if m.IsPassVault {
+		title = "Password Vault"
+	}
+
 	if status.Err != nil {
 		errMsg := status.Err.Error()
 		vaultView += "\n✗ Error: " + errMsg
@@ -312,7 +339,7 @@ func (m Model) tableViewer() string {
 		progressStr := "\n " + status.Message + " " +
 			m.progress.ViewAs(percent) + "\n"
 		vaultView += progressStr
-	} else {
+	} else if !m.IsPassVault {
 		percentage := float64(storage.used) / float64(storage.available)
 		storageUsed := shared.ReadableFileSize(storage.used)
 		storageAvailable := shared.ReadableFileSize(storage.available)
@@ -327,11 +354,13 @@ func (m Model) tableViewer() string {
 	var helpStr string
 	if m.filtering {
 		helpStr = FilterHelp
+	} else if m.IsPassVault {
+		helpStr = PassVaultHelp
 	} else {
-		helpStr = Help
+		helpStr = FileVaultHelp
 	}
 
-	return utils.GenerateTitle("Vault > home"+folderPath) + "\n" +
+	return utils.GenerateTitle(title+" > home"+folderPath) + "\n" +
 		vaultView + "\n" +
 		styles.HelpStyle.Render(helpStr)
 }
@@ -419,14 +448,48 @@ func (m Model) createFolder(event internal.Event) {
 	status.Message = fmt.Sprintf("Creating folder '%s'...", event.Value)
 
 	go func() {
-		err := m.Context.CreateFolder(event.Value)
+		err := m.Context.CreateFolder(event.Value, m.IsPassVault)
 
 		status = Status{}
 		if err != nil {
 			status.Err = err
 		} else {
 			items = m.Context.Content
-			rows = CreateItemRows(items)
+			rows = CreateItemRows(items, m.IsPassVault)
+		}
+	}()
+}
+
+func (m Model) createPass(event internal.Event) {
+	status.Processing = true
+	status.Message = fmt.Sprintf("Adding '%s' pass to vault...", event.Item.Name)
+
+	go func() {
+		err := m.Context.UploadPassEntry(event.Item)
+
+		status = Status{}
+		if err != nil {
+			status.Err = err
+		} else {
+			items = m.Context.Content
+			rows = CreateItemRows(items, m.IsPassVault)
+		}
+	}()
+}
+
+func (m Model) editPass(event internal.Event) {
+	status.Processing = true
+	status.Message = fmt.Sprintf("Updating '%s'...", event.Item.Name)
+
+	go func() {
+		err := m.Context.UpdatePassEntry(event.Item)
+
+		status = Status{}
+		if err != nil {
+			status.Err = err
+		} else {
+			items = m.Context.Content
+			rows = CreateItemRows(items, m.IsPassVault)
 		}
 	}()
 }
@@ -437,7 +500,7 @@ func (m Model) finishUpdates(err error, updateItems bool) {
 		status.Err = err
 	} else if updateItems {
 		items = m.Context.Content
-		rows = CreateItemRows(items)
+		rows = CreateItemRows(items, m.IsPassVault)
 	}
 }
 
@@ -500,8 +563,36 @@ func (m Model) NewUploadRequest() (tea.Model, tea.Cmd) {
 	return m, tea.Quit
 }
 
-func NewModel(folderID string) (Model, error) {
-	ctx, err := FetchVaultContext(folderID)
+func (m Model) NewPassRequest() (tea.Model, tea.Cmd) {
+	m.ViewRequest = internal.ViewRequest{
+		View: internal.NewPassView,
+		Type: internal.UploadFileRequest,
+	}
+
+	return m, tea.Quit
+}
+
+func (m Model) EditPassRequest(item models.VaultItem) (tea.Model, tea.Cmd) {
+	m.ViewRequest = internal.ViewRequest{
+		View: internal.EditPassView,
+		Type: internal.EditPassRequest,
+		Item: item,
+	}
+
+	return m, tea.Quit
+}
+
+func (m Model) ViewPassRequest(item models.VaultItem) (tea.Model, tea.Cmd) {
+	m.ViewRequest = internal.ViewRequest{
+		View: internal.ViewPassView,
+		Item: item,
+	}
+
+	return m, tea.Quit
+}
+
+func NewModel(folderID string, isPassVault bool) (Model, error) {
+	ctx, err := FetchVaultContext(folderID, isPassVault)
 	if err == nil && len(ctx.Content) == 0 {
 		items, err = ctx.parseContent()
 	} else if err == nil {
@@ -509,24 +600,34 @@ func NewModel(folderID string) (Model, error) {
 	}
 
 	status.Err = err
-	rows = CreateItemRows(items)
+	rows = CreateItemRows(items, isPassVault)
 
-	minNameLen := 20
 	maxNameLen := 30
-	maxDateLen := 12
+	maxSizeOrURLLen := 12
+	maxDateOrUsernameLen := 12
 	maxSharedLen := 6
 	for _, row := range rows {
 		maxNameLen = max(len(row[0]), maxNameLen)
-		maxDateLen = max(len(row[2]), maxDateLen)
+		maxSizeOrURLLen = max(len(row[1]), maxSizeOrURLLen)
+		maxDateOrUsernameLen = max(len(row[2]), maxDateOrUsernameLen)
 		maxSharedLen = max(len(row[3]), maxSharedLen)
 	}
 
-	maxNameLen = max(maxNameLen, minNameLen)
-	columns := []table.Column{
-		{Title: "Name", Width: maxNameLen},
-		{Title: "Size", Width: 10},
-		{Title: "Modified", Width: maxDateLen},
-		{Title: "Shared", Width: maxSharedLen},
+	var columns []table.Column
+	if isPassVault {
+		columns = []table.Column{
+			{Title: "Name", Width: min(maxNameLen, 25)},
+			{Title: "URL(s)", Width: min(maxSizeOrURLLen, 25)},
+			{Title: "Username", Width: maxDateOrUsernameLen},
+			{Title: "Shared", Width: maxSharedLen},
+		}
+	} else {
+		columns = []table.Column{
+			{Title: "Name", Width: maxNameLen},
+			{Title: "Size", Width: maxSizeOrURLLen},
+			{Title: "Modified", Width: maxDateOrUsernameLen},
+			{Title: "Shared", Width: maxSharedLen},
+		}
 	}
 
 	t := table.New(
@@ -543,16 +644,23 @@ func NewModel(folderID string) (Model, error) {
 		BorderBottom(true).
 		Bold(false)
 	s.Selected = s.Selected.
-		Foreground(styles.Theme.Focused.FocusedButton.GetForeground()).
-		Background(styles.Theme.Focused.FocusedButton.GetBackground()).
-		Bold(false)
+		Foreground(styles.Black).
+		Background(styles.White).
+		Bold(true)
+	s.Cell = s.Cell.Bold(false)
 	t.SetStyles(s)
 
+	progressBar := progress.New()
+	progressBar.FullColor = ""
+	progressBar.EmptyColor = ""
+	progressBar.Width = 33
+
 	m := Model{
-		Context:  ctx,
-		table:    t,
-		spinner:  spinner.New(),
-		progress: progress.New(progress.WithScaledGradient("#5A56E0", "#8A86F0")),
+		Context:     ctx,
+		table:       t,
+		spinner:     spinner.New(),
+		progress:    progressBar,
+		IsPassVault: isPassVault,
 	}
 
 	m.spinner.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
@@ -584,7 +692,7 @@ func ShowVaultPasswordPromptModel(errorMsgs ...string) ([]byte, error) {
 	return []byte(password), err
 }
 
-func RunFilesModel(m Model, event internal.Event) (Model, error) {
+func RunVaultModel(m Model, event internal.Event) (Model, error) {
 	if keyPair.PublicKey == nil || keyPair.PrivateKey == nil {
 		var keyErr error
 		keyPair, keyErr = unlockVaultKeys()
@@ -599,7 +707,7 @@ func RunFilesModel(m Model, event internal.Event) (Model, error) {
 
 	if m.init == false {
 		_ = huhSpinner.New().Title("Loading vault...").Action(func() {
-			m, _ = NewModel("")
+			m, _ = NewModel("", m.IsPassVault)
 			usage, err := globals.API.GetAccountUsage()
 			if err != nil {
 				errMsg := fmt.Sprintf(

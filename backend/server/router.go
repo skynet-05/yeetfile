@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"yeetfile/backend/utils"
+	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
 )
 
@@ -83,7 +83,7 @@ func (r *router) matchPath(pattern, path string) bool {
 	segments := strings.Split(path, "/")
 
 	isWildcard := parts[1] == "*"
-	isEndpoint := utils.Contains(r.reserved, segments[1])
+	isEndpoint := shared.ArrayContains(r.reserved, segments[1])
 
 	if len(parts) != len(segments) || (isWildcard && isEndpoint) {
 		return false

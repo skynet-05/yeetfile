@@ -69,17 +69,17 @@ create table if not exists stripe
 
 create table if not exists verify
 (
-    identity        text not null
+    identity                   text not null
         constraint verification_pk
             primary key,
-    code            text,
-    date            timestamp,
-    pw_hash         bytea,
-    protected_key   bytea,
-    public_key      bytea,
-    root_folder_key bytea,
-    pw_hint         bytea,
-    account_id      text
+    code                       text,
+    date                       timestamp,
+    pw_hash                    bytea,
+    protected_private_key      bytea,
+    public_key                 bytea,
+    protected_vault_folder_key bytea,
+    pw_hint                    bytea,
+    account_id                 text
 );
 
 create table if not exists vault
@@ -98,12 +98,18 @@ create table if not exists vault
     protected_key bytea,
     link_tag      text    default ''::text,
     can_modify    boolean default true,
-    ref_id        text
+    ref_id        text,
+    pw_data       bytea
 );
+
+create index if not exists vault_folder_id_index
+    on vault (folder_id);
 
 create table if not exists folders
 (
-    id            text  not null,
+    id            text  not null
+        constraint folders_pk
+            primary key,
     name          text  not null,
     owner_id      text  not null,
     protected_key bytea not null,
@@ -112,8 +118,12 @@ create table if not exists folders
     modified      timestamp,
     link_tag      text    default ''::text,
     can_modify    boolean default true,
-    ref_id        text    default ''::text
+    ref_id        text    default ''::text,
+    pw_folder     boolean default false
 );
+
+create index if not exists folders_id_index
+    on folders (id);
 
 create table if not exists sharing
 (
@@ -157,6 +167,15 @@ create table if not exists change_email
         constraint change_email_pk2
             unique,
     date       timestamp
+);
+
+create table if not exists pass_index
+(
+    user_id   text not null
+        constraint pass_index_pk
+            primary key,
+    enc_data  bytea,
+    change_id integer
 );
 
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v3"
@@ -19,6 +20,9 @@ type Paths struct {
 	session       string
 	encPrivateKey string
 	publicKey     string
+
+	longWordlist  string
+	shortWordlist string
 }
 
 type Config struct {
@@ -34,6 +38,8 @@ const gitignoreName = ".gitignore"
 const sessionName = "session"
 const encPrivateKeyName = "enc-priv-key"
 const publicKeyName = "pub-key"
+const longWordlistName = "long-wordlist.json"
+const shortWordlistName = "short-wordlist.json"
 
 //go:embed config.yml
 var defaultConfig string
@@ -69,6 +75,8 @@ func setupConfigDir() (Paths, error) {
 		session:       filepath.Join(localConfig, sessionName),
 		encPrivateKey: filepath.Join(localConfig, encPrivateKeyName),
 		publicKey:     filepath.Join(localConfig, publicKeyName),
+		longWordlist:  filepath.Join(localConfig, longWordlistName),
+		shortWordlist: filepath.Join(localConfig, shortWordlistName),
 	}, nil
 }
 
@@ -87,6 +95,8 @@ func setupTempConfigDir() (Paths, error) {
 		session:       filepath.Join(localConfig, sessionName),
 		encPrivateKey: filepath.Join(localConfig, encPrivateKeyName),
 		publicKey:     filepath.Join(localConfig, publicKeyName),
+		longWordlist:  filepath.Join(localConfig, longWordlistName),
+		shortWordlist: filepath.Join(localConfig, shortWordlistName),
 	}, nil
 }
 
@@ -246,6 +256,55 @@ func (c Config) GetKeys() ([]byte, []byte, error) {
 	}
 
 	return privateKey, publicKey, nil
+}
+
+func (c Config) SetLongWordlist(contents []byte) error {
+	err := utils.CopyBytesToFile(contents, c.Paths.longWordlist)
+	return err
+}
+
+func (c Config) SetShortWordlist(contents []byte) error {
+	err := utils.CopyBytesToFile(contents, c.Paths.shortWordlist)
+	return err
+}
+
+func (c Config) GetWordlists() ([]string, []string, error) {
+	var longWordlist []byte
+	var shortWordlist []byte
+
+	_, longWordlistErr := os.Stat(c.Paths.longWordlist)
+	_, shortWordlistErr := os.Stat(c.Paths.shortWordlist)
+
+	if longWordlistErr != nil || shortWordlistErr != nil {
+		return nil, nil, errors.New("wordlist files do not exist in config dir")
+	}
+
+	longWordlist, longWordlistErr = os.ReadFile(c.Paths.longWordlist)
+	shortWordlist, shortWordlistErr = os.ReadFile(c.Paths.shortWordlist)
+
+	if longWordlistErr != nil || shortWordlistErr != nil {
+		errMsg := fmt.Sprintf("error reading wordlist files:\n"+
+			"long wordlist: %v\n"+
+			"short wordlist: %v", longWordlistErr, shortWordlistErr)
+		return nil, nil, errors.New(errMsg)
+	}
+
+	var (
+		longWordlistStrings  []string
+		shortWordlistStrings []string
+	)
+
+	err := json.Unmarshal(longWordlist, &longWordlistStrings)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = json.Unmarshal(shortWordlist, &shortWordlistStrings)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return longWordlistStrings, shortWordlistStrings, nil
 }
 
 func LoadConfig() *Config {

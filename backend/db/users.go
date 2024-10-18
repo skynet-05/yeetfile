@@ -11,23 +11,24 @@ import (
 	"yeetfile/backend/config"
 	"yeetfile/backend/server/subscriptions"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 type User struct {
-	ID                 string
-	Email              string
-	PasswordHash       []byte
-	ProtectedKey       []byte
-	PublicKey          []byte
-	PasswordHint       []byte
-	Secret             []byte
-	PaymentID          string
-	MemberExp          time.Time
-	StorageAvailable   int64
-	StorageUsed        int64
-	SendAvailable      int64
-	SendUsed           int64
-	SubscriptionMethod string
+	ID                  string
+	Email               string
+	PasswordHash        []byte
+	ProtectedPrivateKey []byte
+	PublicKey           []byte
+	PasswordHint        []byte
+	Secret              []byte
+	PaymentID           string
+	MemberExp           time.Time
+	StorageAvailable    int64
+	StorageUsed         int64
+	SendAvailable       int64
+	SendUsed            int64
+	SubscriptionMethod  string
 }
 
 type UserStorage struct {
@@ -108,9 +109,11 @@ func NewUser(user User) (string, error) {
 		config.YeetFileConfig.DefaultUserStorage,
 		defaultExp,
 		-1,
-		user.ProtectedKey,
+		user.ProtectedPrivateKey,
 		user.PublicKey,
-		config.YeetFileConfig.DefaultUserStorage*3)
+		config.YeetFileConfig.DefaultUserStorage*
+			constants.TotalBandwidthMultiplier*
+			constants.BandwidthMonitorDuration)
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +131,12 @@ func UpdateUser(user User, accountID string) error {
 	s := `UPDATE users 
 	      SET email=$1, pw_hash=$2, protected_key=$3
 	      WHERE id=$4`
-	_, err := db.Exec(s, user.Email, user.PasswordHash, user.ProtectedKey, accountID)
+	_, err := db.Exec(
+		s,
+		user.Email,
+		user.PasswordHash,
+		user.ProtectedPrivateKey,
+		accountID)
 	return err
 }
 
@@ -170,6 +178,36 @@ func CreateUniquePaymentID() string {
 	}
 
 	return paymentID
+}
+
+// GetUserPassCount returns the number of items in the vault are associated
+// with the user and are flagged with `is_pw`.
+func GetUserPassCount(id string) (int, int, error) {
+	var count int
+	maxPassCount := -1
+	if config.YeetFileConfig.BillingEnabled && config.YeetFileConfig.DefaultMaxPasswords > 0 {
+		maxPassCount = config.YeetFileConfig.DefaultMaxPasswords
+	}
+
+	s := `SELECT 
+	    COUNT(
+	        CASE 
+	            WHEN v.pw_data IS NOT NULL AND LENGTH(v.pw_data) > 0 THEN 1 
+	            END
+	        ) AS pw_count,
+	    CASE 
+		WHEN u.member_expiration < CURRENT_DATE THEN $2
+		ELSE 0 
+	    END AS exp_status
+	FROM vault v
+	JOIN users u ON v.owner_id = u.id
+	WHERE v.owner_id = $1 GROUP BY u.member_expiration`
+	err := db.QueryRow(s, id, maxPassCount).Scan(&count, &maxPassCount)
+	if err == sql.ErrNoRows {
+		return 0, maxPassCount, nil
+	}
+
+	return count, maxPassCount, err
 }
 
 // GetUserStorage returns UserStorage and UserSend struct containing the user's
@@ -216,12 +254,12 @@ func UpdateStorageUsed(userID string, amount int64) error {
 	                           WHEN storage_used + $1 < 0 THEN 0
 	                           ELSE storage_used + $1
 	                         END
-	      WHERE id=$2
+	      WHERE id=$2 AND storage_available > 0
 	      RETURNING storage_used, storage_available`
 	err := db.QueryRow(s, amount, userID).Scan(&storageUsed, &storageAvailable)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return err
-	} else if storageUsed > storageAvailable && amount > 0 {
+	} else if storageUsed > storageAvailable && amount > 0 && config.YeetFileConfig.DefaultUserStorage > 0 {
 		return UserStorageExceeded
 	}
 
@@ -231,6 +269,11 @@ func UpdateStorageUsed(userID string, amount int64) error {
 // UpdateBandwidth subtracts bandwidth from the user's bandwidth column, returning
 // an error if the value goes below 0.
 func UpdateBandwidth(userID string, amount int64) error {
+	// Skip db update if send limits aren't configured
+	if config.YeetFileConfig.DefaultUserStorage < 0 {
+		return nil
+	}
+
 	s := `UPDATE users SET bandwidth=bandwidth-$2 WHERE id=$1`
 	_, err := db.Exec(s, userID, amount)
 	return err
@@ -270,34 +313,6 @@ func RotateUserPaymentID(paymentID string) error {
 	      WHERE id=$2`
 
 	_, err = db.Exec(s, newID, accountID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func SetNewPassword(email string, pwHash []byte) error {
-	rows, err := db.Query(`SELECT id from users WHERE email = $1`, email)
-	if err != nil {
-		return err
-	} else if !rows.Next() {
-		errorStr := fmt.Sprintf("unable to find user with email '%s'", email)
-		return errors.New(errorStr)
-	}
-
-	defer rows.Close()
-
-	// Read in account ID for the user
-	var accountID string
-	err = rows.Scan(&accountID)
-
-	// Replace payment ID
-	s := `UPDATE users
-	      SET pw_hash=$1
-	      WHERE id=$2`
-
-	_, err = db.Exec(s, pwHash, accountID)
 	if err != nil {
 		return err
 	}
@@ -722,18 +737,23 @@ func SetUserSubscription(
 		return err
 	}
 
+	totalWeeklyBandwidth := storage *
+		constants.TotalBandwidthMultiplier *
+		constants.BandwidthMonitorDuration
+
 	s := `UPDATE users
               SET member_expiration=$1,
                   storage_available=$2, send_available=$3,
                   sub_duration=$4, sub_type=$5, sub_method=$6,
-                  last_upgraded_month=$7
+                  last_upgraded_month=$7, bandwidth=$8
               WHERE payment_id=$7`
 
 	_, err = db.Exec(s,
 		exp,
 		storage, send,
 		subDuration, subType, subMethod,
-		time.Now().Month(), paymentID)
+		time.Now().Month(), paymentID,
+		totalWeeklyBandwidth)
 	if err != nil {
 		return err
 	}
@@ -749,19 +769,30 @@ func UpdateUserSendUsed(id string, size int) error {
 	                           WHEN send_used + $1 < 0 THEN 0
 	                           ELSE send_used + $1
 	                         END
-	      WHERE id=$2
+	      WHERE id=$2 AND send_available > 0
 	      RETURNING send_used, send_available`
 
 	var sendUsed int
 	var sendAvailable int
 	err := db.QueryRow(s, size, id).Scan(&sendUsed, &sendAvailable)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return err
 	} else if sendUsed > sendAvailable {
 		return UserSendExceeded
 	}
 
 	return nil
+}
+
+func CheckBandwidth() {
+	bandwidthUpdate := `UPDATE users SET bandwidth = storage_available * $1 * $2;`
+	_, err := db.Exec(
+		bandwidthUpdate,
+		constants.TotalBandwidthMultiplier,
+		constants.BandwidthMonitorDuration)
+	if err != nil {
+		log.Printf("Failed to update user bandwidths")
+	}
 }
 
 // CheckMemberships inspects each user's membership and updates their available
@@ -867,12 +898,6 @@ func CheckMemberships() {
 		subscriptions.StorageAmountMap[subscriptions.TypeAdvanced])
 	if err != nil {
 		log.Printf("Error updating novice member storage/send")
-	}
-
-	bandwidthUpdate := `UPDATE users SET bandwidth = storage_available * 3;`
-	_, err = db.Exec(bandwidthUpdate)
-	if err != nil {
-		log.Printf("Failed to update user bandwidths")
 	}
 }
 

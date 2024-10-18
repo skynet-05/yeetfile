@@ -6,15 +6,18 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"log"
 	"os"
 	"yeetfile/cli/commands/vault/internal"
+	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
 )
 
 var docStyle = lipgloss.NewStyle().Margin(0, 0)
 var fpStyle = filepicker.New().Styles
 var seenBackspaceUp bool
+
+var width int
+var height int
 
 type item struct {
 	name  string
@@ -32,6 +35,7 @@ type Model struct {
 
 	selected    item
 	currentDir  string
+	items       []list.Item
 	gotoTopNext bool
 }
 
@@ -46,10 +50,8 @@ func (i item) Title() string {
 }
 
 func (i item) Description() string {
-	itemType := fpStyle.DisabledFile.Render("File")
 	if i.isDir {
-		itemType = fpStyle.Directory.Render("Directory")
-		return fmt.Sprintf("└─ %s", itemType)
+		return "└─ Directory"
 	}
 
 	return fmt.Sprintf("└─ %s", i.size)
@@ -96,21 +98,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "backspace":
 			if m.list.FilterState() == list.Unfiltered {
-				m.currentDir = goUpDir(m.currentDir)
-				items, err := getItemsFromDir(m.currentDir)
-				if err != nil {
-					log.Println(err)
-				}
-
-				m.list.SetItems(items)
-				m.list.Select(0)
-
-				idx, ok := cursorPos[m.currentDir]
-				if ok {
-					m.list.Select(idx)
-				}
-
-				return m.showNewDirStatus(), nil
+				newDir := goUpDir(m.currentDir)
+				return NewModel(newDir).showNewDirStatus(), tea.ClearScreen
 			}
 		case "enter":
 			if m.list.FilterState() == list.Filtering {
@@ -130,7 +119,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v)
+		width = msg.Width - h
+		height = msg.Height - v
+		m.list.SetSize(width, height)
 	}
 
 	var cmd tea.Cmd
@@ -141,22 +132,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Check if the user has selected a file
 	if m.selected != (item{}) {
 		if m.selected.isDir {
-			m.currentDir = appendDir(m.currentDir, m.selected.name)
-			items, err := getItemsFromDir(m.currentDir)
-			if err != nil {
-				log.Println(err)
-			}
-
-			m.list.SetItems(items)
-			m.list.Select(0)
-			m.selected = item{}
-
-			idx, ok := cursorPos[m.currentDir]
-			if ok {
-				m.list.Select(idx)
-			}
-
-			return m.showNewDirStatus(), nil
+			newDir := appendDir(m.currentDir, m.selected.name)
+			return NewModel(newDir).showNewDirStatus(), tea.ClearScreen
 		} else {
 			m.quitting = true
 			m.Event = internal.Event{
@@ -167,6 +144,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
+
+	m.list.SetSize(width, height)
 
 	return m, cmd
 }
@@ -181,6 +160,10 @@ func (m Model) View() string {
 }
 
 func (m Model) showNewDirStatus() Model {
+	if len(m.items) == 0 {
+		return m
+	}
+
 	var backspaceNote string
 	if !seenBackspaceUp {
 		backspaceNote = "\n[Backspace -> Navigate Up]"
@@ -193,28 +176,48 @@ func (m Model) showNewDirStatus() Model {
 	return m
 }
 
-func NewModel() *Model {
+func NewModel(dir string) *Model {
 	m := Model{}
 
-	currentDir, _ := os.Getwd()
-	items, err := getItemsFromDir(currentDir)
+	items, err := getItemsFromDir(dir)
 	if err != nil {
 		m.err = err
 	}
 
+	m.items = items
+
 	listDelegate := list.NewDefaultDelegate()
 	listDelegate.SetSpacing(0)
-	m.currentDir = currentDir
+	listDelegate.Styles.SelectedDesc = listDelegate.Styles.SelectedDesc.
+		Foreground(styles.Black).
+		Background(styles.White).
+		BorderForeground(styles.Accent).
+		Bold(true)
+	listDelegate.Styles.SelectedTitle = listDelegate.Styles.SelectedTitle.
+		Foreground(styles.Black).
+		Background(styles.White).
+		BorderForeground(styles.Accent).
+		Bold(true)
+	listDelegate.Styles.NormalTitle = listDelegate.Styles.NormalTitle.
+		Foreground(styles.White)
+
+	m.currentDir = dir
 	m.list = list.New(items, listDelegate, 0, 0)
 	m.list.Styles.Title = lipgloss.NewStyle()
 	m.list.Title = utils.GenerateTitle("Upload")
-	m.list.SetStatusBarItemName("ball", "balls")
+
+	pos, ok := cursorPos[dir]
+	if ok {
+		m.list.Select(pos)
+	}
 
 	return &m
 }
 
 func RunModel() (internal.Event, error) {
-	m := NewModel().showNewDirStatus()
+	currentDir, _ := os.Getwd()
+
+	m := NewModel(currentDir).showNewDirStatus()
 	p := tea.NewProgram(m)
 
 	model, err := p.Run()
@@ -223,4 +226,7 @@ func RunModel() (internal.Event, error) {
 
 func init() {
 	cursorPos = make(map[string]int)
+
+	fpStyle.Directory = fpStyle.Directory.Foreground(styles.AccentLight)
+	fpStyle.File = fpStyle.File.Foreground(styles.White)
 }

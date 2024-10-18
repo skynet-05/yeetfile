@@ -8,7 +8,7 @@ lipsum-big.txt
 session*
 !session.go
 !backend/server/session
-*.env
+*.env*
 !.tests.env
 *.swp
 tags

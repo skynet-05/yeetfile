@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/session"
 )
@@ -13,6 +14,11 @@ var OutOfSpaceError = errors.New("not enough space to upload")
 // UserCanSend fetches the user ID associated with the request and checks to
 // see if they have enough remaining send space to send a file
 func UserCanSend(size int64, req *http.Request) (bool, error) {
+	// Skip if send limits aren't configured
+	if config.YeetFileConfig.DefaultUserSend < 0 {
+		return true, nil
+	}
+
 	// Validate that the user has enough space to upload this file
 	s, err := session.GetSession(req)
 	if err != nil {

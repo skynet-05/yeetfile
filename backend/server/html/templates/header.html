@@ -4,16 +4,22 @@
   </div>
   <div class="right">
     {{ if .Base.LoggedIn }}
-      {{ if eq .Base.Page "send" }}
-      <a class="selected-page" href="{{.Base.Endpoints.Send}}">Send</a>
+      {{ if eq .Base.Page "pass" }}
+      <a class="selected-page" href="{{.Base.Endpoints.Pass}}">Pass</a>
       {{ else }}
-      <a href="{{.Base.Endpoints.Send}}">Send</a>
+      <a href="{{.Base.Endpoints.Pass}}">Pass</a>
       {{ end }}
 
       {{ if eq .Base.Page "vault" }}
       <a class="selected-page" href="{{.Base.Endpoints.Vault}}">Vault</a>
       {{ else }}
       <a href="{{.Base.Endpoints.Vault}}">Vault</a>
+      {{ end }}
+
+      {{ if eq .Base.Page "send" }}
+      <a class="selected-page" href="{{.Base.Endpoints.Send}}">Send</a>
+      {{ else }}
+      <a href="{{.Base.Endpoints.Send}}">Send</a>
       {{ end }}
 
       {{ if eq .Base.Page "account" }}

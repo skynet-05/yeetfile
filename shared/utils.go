@@ -104,6 +104,12 @@ func EscapeString(s string) string {
 	return s
 }
 
+func UnescapeString(s string) string {
+	s = strings.ReplaceAll(s, "\\*", "*")
+	s = strings.ReplaceAll(s, "\\_", "_")
+	return s
+}
+
 func CalculateNumChunks(fileSize int64) int {
 	return int(math.Ceil(float64(fileSize) / float64(constants.ChunkSize)))
 }
@@ -180,4 +186,13 @@ func CreateNewSaveName(filename string) string {
 	}
 
 	return strings.Join([]string{newName, ext}, ".")
+}
+
+func ArrayContains(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
+			return true
+		}
+	}
+	return false
 }

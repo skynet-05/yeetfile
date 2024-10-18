@@ -36,10 +36,12 @@ type VaultUpload struct {
 	Chunks       int    `json:"chunks"`
 	FolderID     string `json:"folderID"`
 	ProtectedKey []byte `json:"protectedKey"`
+	PasswordData []byte `json:"passwordData"`
 }
 
 type ModifyVaultItem struct {
-	Name string `json:"name"`
+	Name         string `json:"name"`
+	PasswordData []byte `json:"passwordData" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type MetadataUploadResponse struct {
@@ -62,6 +64,7 @@ type VaultItem struct {
 	CanModify    bool      `json:"canModify"`
 	IsOwner      bool      `json:"isOwner"`
 	RefID        string    `json:"refID"`
+	PasswordData []byte    `json:"passwordData" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type VaultItemInfo struct {
@@ -89,17 +92,18 @@ type NewPublicVaultFolder struct {
 }
 
 type VaultFolder struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Modified     time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
-	ParentID     string    `json:"parentID"`
-	ProtectedKey []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	SharedWith   int       `json:"sharedWith"`
-	SharedBy     string    `json:"sharedBy"`
-	LinkTag      string    `json:"linkTag"`
-	CanModify    bool      `json:"canModify"`
-	RefID        string    `json:"refID"`
-	IsOwner      bool      `json:"isOwner"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Modified       time.Time `json:"modified" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
+	ParentID       string    `json:"parentID"`
+	ProtectedKey   []byte    `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	SharedWith     int       `json:"sharedWith"`
+	SharedBy       string    `json:"sharedBy"`
+	LinkTag        string    `json:"linkTag"`
+	CanModify      bool      `json:"canModify"`
+	RefID          string    `json:"refID"`
+	IsOwner        bool      `json:"isOwner"`
+	PasswordFolder bool      `json:"passwordFolder"`
 }
 
 type VaultFolderResponse struct {
@@ -115,6 +119,7 @@ type VaultDownloadResponse struct {
 	Size         int64  `json:"size"`
 	Chunks       int    `json:"chunks"`
 	ProtectedKey []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PasswordData []byte `json:"passwordData" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type PlaintextUpload struct {
@@ -135,13 +140,13 @@ type DownloadResponse struct {
 }
 
 type Signup struct {
-	Identifier     string `json:"identifier"`
-	LoginKeyHash   []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	PublicKey      []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	ProtectedKey   []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	RootFolderKey  []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	PasswordHint   string `json:"passwordHint"`
-	ServerPassword string `json:"serverPassword"`
+	Identifier              string `json:"identifier"`
+	LoginKeyHash            []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PublicKey               []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedPrivateKey     []byte `json:"protectedPrivateKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedVaultFolderKey []byte `json:"protectedVaultFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PasswordHint            string `json:"passwordHint"`
+	ServerPassword          string `json:"serverPassword"`
 }
 
 type SignupResponse struct {
@@ -151,12 +156,12 @@ type SignupResponse struct {
 }
 
 type VerifyAccount struct {
-	ID            string `json:"id"`
-	Code          string `json:"code"`
-	LoginKeyHash  []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	ProtectedKey  []byte `json:"protectedKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	PublicKey     []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
-	RootFolderKey []byte `json:"rootFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ID                      string `json:"id"`
+	Code                    string `json:"code"`
+	LoginKeyHash            []byte `json:"loginKeyHash" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	PublicKey               []byte `json:"publicKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedPrivateKey     []byte `json:"protectedPrivateKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
+	ProtectedVaultFolderKey []byte `json:"protectedVaultFolderKey" ts_type:"Uint8Array" ts_transform:"__VALUE__ ? base64ToArray(__VALUE__) : new Uint8Array()"`
 }
 
 type Login struct {
@@ -290,4 +295,19 @@ type ServerInfo struct {
 	BTCPayEnabled      bool   `json:"btcPayEnabled"`
 	DefaultStorage     int64  `json:"defaultStorage"`
 	DefaultSend        int64  `json:"defaultSend"`
+}
+
+type PassEntry struct {
+	Username        string   `json:"username"`
+	Password        string   `json:"password"`
+	PasswordHistory []string `json:"passwordHistory"`
+	URLs            []string `json:"urls"`
+	Notes           string   `json:"notes"`
+}
+
+type ItemIndex struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Folder string   `json:"folder"`
+	URIs   []string `json:"uris"`
 }

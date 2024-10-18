@@ -1,7 +1,6 @@
 import {Endpoints} from "./endpoints.js";
 import {NewTOTP, SetTOTP, SetTOTPResponse} from "./interfaces.js";
 
-
 const init = () => {
     let loadingDiv = document.getElementById("loading-div");
     fetch(Endpoints.TwoFactor.path)
@@ -82,10 +81,10 @@ const showRecovery = (response: SetTOTPResponse) => {
     }
 }
 
-if (document.readyState !== 'loading') {
+if (document.readyState !== "loading") {
     init();
 } else {
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener("DOMContentLoaded", () => {
         init();
     });
 }

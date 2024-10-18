@@ -7,3 +7,5 @@ BEGIN
       PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE yeetfile');
    END IF;
 END $$;
+
+set statement_timeout to '10s'

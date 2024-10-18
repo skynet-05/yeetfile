@@ -1,12 +1,19 @@
 {{ template "head.html" . }}
 <body>
 {{ template "header.html" . }}
+{{ if not .IsPasswordVault }}
 <script src="/StreamSaver.js"></script>
+{{ end }}
 <div id="center-div">
-    <h1>Vault</h1>
+    <h1>{{ .VaultName }}</h1>
     <hr class="accent-hr">
+    {{ if .IsPasswordVault }}
+    <button class="accent-btn" data-testid="add-entry" id="add-entry">Add</button>
+    <button data-testid="generate-new-password" id="generate-new-password">Generate Password</button>
+    {{ else }}
     <input data-testid="file-input" id="file-input" type="file" class="hidden" multiple>
     <button class="accent-btn" id="vault-upload">Upload</button>
+    {{ end }}
     <button data-testid="new-vault-folder" id="new-vault-folder">Create Folder</button>
     <p id="vault-status">Home</p>
     <div class="visible" id="vault-items-div">
@@ -22,7 +29,11 @@
             <thead class="hidden" id="table-header">
                 <tr>
                     <th>Name</th>
+                    {{ if .IsPasswordVault }}
+                    <th></th>
+                    {{ else }}
                     <th>Size</th>
+                    {{ end }}
                     <th>Modified</th>
                     <th class="centered-text">Actions</th>
                 </tr>
@@ -55,6 +66,132 @@
     </div>
 </dialog>
 
+<dialog data-testid="password-dialog" id="password-dialog">
+    <h3>Password Entry</h3>
+    <hr>
+    <table data-testid="new-password-table" id="new-password-table">
+        <tr>
+            <td><label for="entry-name">Name:</label></td>
+            <td><input data-testid="entry-name" id="entry-name" type="text"></td>
+        </tr>
+        <tr>
+            <td><label for="entry-username">Username / Email:</label></td>
+            <td><input data-testid="entry-username" id="entry-username" type="text"></td>
+        </tr>
+        <tr>
+            <td><label for="entry-password">Password:</label></td>
+            <td><input data-testid="entry-password" id="entry-password" type="password"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td class="align-items-right"><label for="show-password">Show Password:</label><input id="show-password" type="checkbox"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td class="align-items-right"><a href="#" data-testid="generate-password" id="generate-password">Generate Password</a></td>
+        </tr>
+        <tr id="url-row">
+            <td><label for="entry-url">URL(s):</label></td>
+            <td><input data-testid="entry-url" id="entry-url" type="text" placeholder="https://..."></td>
+        </tr>
+        <tr id="url-template" class="hidden">
+            <td></td>
+            <td><input type="text" placeholder="https://..."><a class="red-link">x</a></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td class="align-items-right"><a id="add-url" href="#">Add URL</a></td>
+        </tr>
+        <tr>
+            <td><label for="entry-notes">Notes:</label></td>
+            <td></td>
+        </tr>
+    </table>
+
+    <textarea class="full-width" id="entry-notes" placeholder="Max 400 characters" maxlength="400"></textarea>
+    <br><br>
+    <div class="align-items-right">
+        <button id="cancel-password">Cancel</button>
+        <button data-testid="submit-password" id="submit-password" class="accent-btn">Add</button>
+    </div>
+    <span class="red-text right-aligned-text padding-top-5 full-width display-block" id="new-password-error"></span>
+</dialog>
+
+<dialog data-testid="password-generator-dialog" id="password-generator-dialog">
+    <h3>Generate Password</h3>
+    <hr>
+    <span id="password-len" class="small-text"></span>
+    <pre><code data-testid="generated-password" id="generated-password"></code></pre>
+
+    <table>
+        <tr>
+            <td><label for="password-type">Password</label></td>
+            <td class="align-items-right"><input type="radio" data-testid="password-type" id="password-type" checked></td>
+        </tr>
+        <tr>
+            <td><label for="passphrase-type">Passphrase</label></td>
+            <td class="align-items-right"><input type="radio" data-testid="passphrase-type" id="passphrase-type"></td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <table data-testid="password-table" id="password-table">
+        <tr>
+            <td><label for="password-length">Length:</label></td>
+            <td class="align-items-right"><input data-testid="password-length" id="password-length" type="number" min="4" value="16"></td>
+        </tr>
+        <tr>
+            <td><label for="password-capital-az">A-Z:</label></td>
+            <td class="align-items-right"><input data-testid="password-capital-az" id="password-capital-az" type="checkbox" checked></td>
+        </tr>
+        <tr>
+            <td><label for="password-lowercase-az">a-z:</label></td>
+            <td class="align-items-right"><input data-testid="password-lowercase-az" id="password-lowercase-az" type="checkbox" checked></td>
+        </tr>
+        <tr>
+            <td><label for="password-numbers">0-9:</label></td>
+            <td class="align-items-right"><input data-testid="password-numbers" id="password-numbers" type="checkbox" checked></td>
+        </tr>
+        <tr>
+            <td><label for="password-symbols">Symbols:</label></td>
+            <td class="align-items-right">
+                <input data-testid="password-symbols-string" id="password-symbols-string" type="text" value="!@#$%^&*">
+                <input data-testid="password-symbols" id="password-symbols" type="checkbox" checked>
+            </td>
+        </tr>
+    </table>
+
+    <table data-testid="passphrase-table" id="passphrase-table">
+        <tr>
+            <td><label for="passphrase-words"># of words:</label></td>
+            <td class="align-items-right"><input data-testid="passphrase-words" id="passphrase-words" type="number" min="2" max="40" value="3"></td>
+        </tr>
+        <tr>
+            <td><label for="passphrase-separator">Separator:</label></td>
+            <td class="align-items-right"><input data-testid="passphrase-separator" id="passphrase-separator" type="text" maxlength="15" value="-"></td>
+        </tr>
+        <tr>
+            <td><label for="passphrase-shorter-words">Short words:</label></td>
+            <td class="align-items-right"><input data-testid="passphrase-shorter-words" id="passphrase-shorter-words" type="checkbox"></td>
+        </tr>
+        <tr>
+            <td><label for="passphrase-capitalize">Capitalize:</label></td>
+            <td class="align-items-right"><input data-testid="passphrase-capitalize" id="passphrase-capitalize" type="checkbox" checked></td>
+        </tr>
+        <tr>
+            <td><label for="passphrase-number">Include number:</label></td>
+            <td class="align-items-right"><input data-testid="passphrase-number" id="passphrase-number" type="checkbox" checked></td>
+        </tr>
+    </table>
+
+    <div class="align-items-right">
+        <button id="cancel-generator">Close</button>
+        <button id="regenerate-password">Regenerate</button>
+        <button class="accent-btn" data-testid="confirm-password" id="confirm-password">Confirm</button>
+    </div>
+</dialog>
+
 <dialog data-dynamic="true" data-testid="actions-dialog" id="actions-dialog">
     <h3 id="actions-dialog-title"></h3>
     <hr>
@@ -66,7 +203,7 @@
         <img src="/static/icons/{{ .Base.Config.Version }}/rename.svg">
         <span>Rename</span>
     </div>
-    <div id="action-send" class="edit-row">
+    <div id="action-send" class="hidden edit-row">
         <img src="/static/icons/{{ .Base.Config.Version }}/send.svg">
         <span>Send</span>
     </div>
@@ -74,7 +211,7 @@
         <img src="/static/icons/{{ .Base.Config.Version }}/share.svg">
         <span>Share</span>
     </div>
-    <div id="action-link" class="edit-row">
+    <div id="action-link" class="hidden edit-row">
         <img src="/static/icons/{{ .Base.Config.Version }}/link.svg">
         <span>Link</span>
     </div>

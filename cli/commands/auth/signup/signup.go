@@ -21,24 +21,24 @@ func CreateSignupRequest(identifier, password, hint, serverPw string) shared.Sig
 	}
 
 	return shared.Signup{
-		Identifier:     identifier,
-		LoginKeyHash:   signupKeys.LoginKeyHash,
-		PublicKey:      signupKeys.PublicKey,
-		ProtectedKey:   signupKeys.ProtectedPrivateKey,
-		RootFolderKey:  signupKeys.ProtectedRootFolderKey,
-		ServerPassword: serverPw,
-		PasswordHint:   hint,
+		Identifier:              identifier,
+		LoginKeyHash:            signupKeys.LoginKeyHash,
+		PublicKey:               signupKeys.PublicKey,
+		ProtectedPrivateKey:     signupKeys.ProtectedPrivateKey,
+		ProtectedVaultFolderKey: signupKeys.ProtectedRootFolderKey,
+		ServerPassword:          serverPw,
+		PasswordHint:            hint,
 	}
 }
 
 func CreateVerificationRequest(identifier, password, code string) shared.VerifyAccount {
 	signup := CreateSignupRequest(identifier, password, "", "")
 	return shared.VerifyAccount{
-		ID:            signup.Identifier,
-		Code:          code,
-		LoginKeyHash:  signup.LoginKeyHash,
-		ProtectedKey:  signup.ProtectedKey,
-		PublicKey:     signup.PublicKey,
-		RootFolderKey: signup.RootFolderKey,
+		ID:                      signup.Identifier,
+		Code:                    code,
+		LoginKeyHash:            signup.LoginKeyHash,
+		PublicKey:               signup.PublicKey,
+		ProtectedPrivateKey:     signup.ProtectedPrivateKey,
+		ProtectedVaultFolderKey: signup.ProtectedVaultFolderKey,
 	}
 }

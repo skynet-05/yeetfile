@@ -17,10 +17,10 @@ var MissingField = errors.New("missing required signup fields")
 func SignupWithEmail(signup shared.Signup) error {
 	// When signing up with email, no part of the signup struct can be empty
 	isMissingByteSlices := utils.IsAnyByteSliceMissing(
-		signup.ProtectedKey,
+		signup.ProtectedPrivateKey,
 		signup.PublicKey,
 		signup.LoginKeyHash,
-		signup.RootFolderKey)
+		signup.ProtectedVaultFolderKey)
 	isMissingStrings := utils.IsAnyStringMissing(signup.Identifier)
 	if isMissingStrings || isMissingByteSlices {
 		return MissingField

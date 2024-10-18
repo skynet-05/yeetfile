@@ -47,7 +47,7 @@ const submitVerificationCode = () => {
 
 const resetKeys = async () => {
     let db = new YeetFileDB();
-    await db.getVaultKeyPair("", true, async (privKey: Uint8Array, pubKey: Uint8Array) => {
+    db.getVaultKeyPair("", true).then(async ([privKey, pubKey]) => {
         await db.removeKeys(async success => {
             if (!success) {
                 alert("Error resetting vault keys!");
@@ -57,15 +57,19 @@ const resetKeys = async () => {
             // Re-insert with new auth-based db file
             const dbModule = await import("./db.js?_=" + Date.now());
             let db = new dbModule.YeetFileDB();
+            privKey = privKey as Uint8Array;
+            pubKey = pubKey as Uint8Array;
+
             await db.insertVaultKeyPair(privKey, pubKey, "", success => {
                 if (!success) {
                     alert("Error setting vault keys!");
                     return;
                 }
             });
-        })
-    }, () => {
-        alert("Error retrieving vault key pair!");
+        });
+    }).catch(e => {
+        console.error(e);
+        alert(e);
     });
 }
 

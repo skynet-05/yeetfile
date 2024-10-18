@@ -12,13 +12,13 @@ import (
 var VerificationCodeExistsError = errors.New("verification code already sent")
 
 type VerifiedAccountValues struct {
-	AccountID     string
-	Email         string
-	PasswordHash  []byte
-	ProtectedKey  []byte
-	PublicKey     []byte
-	RootFolderKey []byte
-	PasswordHint  []byte
+	AccountID               string
+	Email                   string
+	PasswordHash            []byte
+	ProtectedPrivateKey     []byte
+	PublicKey               []byte
+	ProtectedVaultFolderKey []byte
+	PasswordHint            []byte
 }
 
 // NewVerification creates a new verification entry for a user. Account ID can
@@ -76,17 +76,17 @@ func NewVerification(
 			// (in case the password changed)
 			s := `UPDATE verify
 			      SET pw_hash=$1, 
-			          protected_key=$2, 
-			          public_key=$3, 
-			          root_folder_key=$4,
+			          public_key=$2, 
+			          protected_private_key=$3, 
+			          protected_vault_folder_key=$4, 
 			          pw_hint=$5,
 			          account_id=$6
 			      WHERE identity=$7`
 			_, err = db.Exec(s,
 				pwHash,
-				signupData.ProtectedKey,
 				signupData.PublicKey,
-				signupData.RootFolderKey,
+				signupData.ProtectedPrivateKey,
+				signupData.ProtectedVaultFolderKey,
 				pwHintEncrypted,
 				accountID,
 				signupData.Identifier)
@@ -103,9 +103,9 @@ func NewVerification(
 			          code=$1,
 			          pw_hash=$2,
 			          date=$3,
-			          protected_key=$4,
-			          public_key=$5,
-			          root_folder_key=$6,
+			          public_key=$4,
+			          protected_private_key=$5,
+			          protected_vault_folder_key=$6,
 			          pw_hint=$7,
 			          account_id=$8
 			      WHERE identity=$9`
@@ -113,9 +113,9 @@ func NewVerification(
 				code,
 				pwHash,
 				time.Now().Add(5*time.Minute).UTC(),
-				signupData.ProtectedKey,
 				signupData.PublicKey,
-				signupData.RootFolderKey,
+				signupData.ProtectedPrivateKey,
+				signupData.ProtectedVaultFolderKey,
 				pwHintEncrypted,
 				accountID,
 				signupData.Identifier)
@@ -131,9 +131,9 @@ func NewVerification(
                     code,
                     date,
                     pw_hash,
-                    protected_key,
                     public_key,
-                    root_folder_key,
+                    protected_private_key,
+                    protected_vault_folder_key,
                     account_id,
                     pw_hint) 
 		      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
@@ -143,9 +143,9 @@ func NewVerification(
 			code,
 			time.Now().Add(5*time.Minute).UTC(),
 			pwHash,
-			signupData.ProtectedKey,
 			signupData.PublicKey,
-			signupData.RootFolderKey,
+			signupData.ProtectedPrivateKey,
+			signupData.ProtectedVaultFolderKey,
 			accountID,
 			pwHintEncrypted)
 		if err != nil {
@@ -161,20 +161,20 @@ func NewVerification(
 // returned so that a new user can be added to the `users` table.
 func VerifyUser(identity string, code string) (VerifiedAccountValues, error) {
 	var (
-		accountID     string
-		pwHash        []byte
-		protectedKey  []byte
-		publicKey     []byte
-		rootFolderKey []byte
-		encPwHint     []byte
+		accountID               string
+		pwHash                  []byte
+		publicKey               []byte
+		protectedPrivateKey     []byte
+		protectedVaultFolderKey []byte
+		encPwHint               []byte
 	)
 
 	s := `SELECT 
 	          account_id,
 	          pw_hash, 
-	          protected_key, 
 	          public_key, 
-	          root_folder_key, 
+	          protected_private_key, 
+	          protected_vault_folder_key, 
 	          pw_hint 
 	      FROM verify WHERE identity = $1`
 
@@ -191,9 +191,9 @@ func VerifyUser(identity string, code string) (VerifiedAccountValues, error) {
 	err := row.Scan(
 		&accountID,
 		&pwHash,
-		&protectedKey,
 		&publicKey,
-		&rootFolderKey,
+		&protectedPrivateKey,
+		&protectedVaultFolderKey,
 		&encPwHint)
 
 	if err != nil {
@@ -201,13 +201,13 @@ func VerifyUser(identity string, code string) (VerifiedAccountValues, error) {
 	}
 
 	return VerifiedAccountValues{
-		Email:         identity,
-		AccountID:     accountID,
-		PasswordHash:  pwHash,
-		ProtectedKey:  protectedKey,
-		PublicKey:     publicKey,
-		RootFolderKey: rootFolderKey,
-		PasswordHint:  encPwHint,
+		Email:                   identity,
+		AccountID:               accountID,
+		PasswordHash:            pwHash,
+		PublicKey:               publicKey,
+		ProtectedPrivateKey:     protectedPrivateKey,
+		ProtectedVaultFolderKey: protectedVaultFolderKey,
+		PasswordHint:            encPwHint,
 	}, nil
 }
 
