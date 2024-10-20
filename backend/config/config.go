@@ -32,6 +32,9 @@ var fallbackWebSecret = utils.GetEnvVarBytesB64(
 	"YEETFILE_FALLBACK_WEB_SECRET",
 	securecookie.GenerateRandomKey(32))
 
+var TLSCert = utils.GetEnvVar("YEETFILE_TLS_CERT", "")
+var TLSKey = utils.GetEnvVar("YEETFILE_TLS_KEY", "")
+
 var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 
 // =============================================================================

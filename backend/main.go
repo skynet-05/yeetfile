@@ -102,7 +102,5 @@ func main() {
 	host := utils.GetEnvVar("YEETFILE_HOST", "localhost")
 	port := utils.GetEnvVar("YEETFILE_PORT", "8090")
 
-	addr := fmt.Sprintf("%s:%s", host, port)
-
-	server.Run(addr)
+	server.Run(host, port)
 }

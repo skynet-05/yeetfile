@@ -49,6 +49,8 @@ var (
 	ChangeHint       = Endpoint("/api/change/hint")
 	ServerInfo       = Endpoint("/api/info")
 
+	Up = Endpoint("/up")
+
 	PassRoot     = Endpoint("/api/pass")
 	PassFolder   = Endpoint("/api/pass/folder/*")
 	PassEntry    = Endpoint("/api/pass/entry/*")

@@ -2,11 +2,14 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
+	"yeetfile/backend/config"
 	"yeetfile/backend/server/auth"
 	"yeetfile/backend/server/html"
 	"yeetfile/backend/server/misc"
@@ -37,7 +40,7 @@ var MethodMap = map[HttpMethod]string{
 
 // Run maps URL paths to handlers for the server and begins listening on the
 // configured port.
-func Run(addr string) {
+func Run(host, port string) {
 	r := &router{
 		routes: make(map[Route]http.HandlerFunc),
 	}
@@ -123,7 +126,7 @@ func Run(addr string) {
 			"/static/*/?/*/*",
 			misc.FileHandler("/static/", "", static.StaticFiles),
 		},
-		{GET, "/up", misc.UpHandler},
+		{GET, endpoints.Up, misc.UpHandler},
 		{GET, endpoints.ServerInfo, misc.InfoHandler},
 
 		// StreamSaver.js
@@ -151,13 +154,44 @@ func Run(addr string) {
 		syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		log.Printf("Running on http://%s\n", addr)
-		if err := http.ListenAndServe(addr, r); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("listen and serve returned err: %v", err)
-		}
-	}()
-
+	go serve(r, host, port)
 	<-ctx.Done()
+
 	log.Println("Shutting down...")
+}
+
+func serve(r *router, host, port string) {
+	var err error
+	var cert tls.Certificate
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+
+	if len(config.TLSCert) > 0 && len(config.TLSKey) > 0 {
+		cert, err = tls.X509KeyPair(
+			[]byte(config.TLSCert),
+			[]byte(config.TLSKey))
+		if err != nil {
+			log.Fatalf("Failed to load key pair: %v", err)
+		}
+
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+
+		server := &http.Server{
+			Addr:      addr,
+			TLSConfig: tlsConfig,
+			Handler:   r,
+		}
+
+		log.Printf("Running on https://%s\n", addr)
+		err = server.ListenAndServeTLS("", "")
+	} else {
+		log.Printf("Running on http://%s\n", addr)
+		err = http.ListenAndServe(addr, r)
+	}
+
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("listen and serve returned err: %v", err)
+	}
 }

@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"errors"
 	"time"
 	"yeetfile/backend/config"
@@ -48,7 +47,12 @@ func NewVerification(
 	}
 
 	// Generate verification code
-	code := shared.GenRandomNumbers(6)
+	var code string
+	if config.IsDebugMode {
+		code = "123456"
+	} else {
+		code = shared.GenRandomNumbers(6)
+	}
 
 	rows, err := db.Query(`SELECT date FROM verify WHERE identity = $1`,
 		signupData.Identifier)
@@ -176,18 +180,9 @@ func VerifyUser(identity string, code string) (VerifiedAccountValues, error) {
 	          protected_private_key, 
 	          protected_vault_folder_key, 
 	          pw_hint 
-	      FROM verify WHERE identity = $1`
+	      FROM verify WHERE identity=$1 AND code=$2`
 
-	var row *sql.Row
-
-	// Add code verification if not in debug mode
-	if !config.IsDebugMode {
-		s += ` AND code=$2`
-		row = db.QueryRow(s, identity, code)
-	} else {
-		row = db.QueryRow(s, identity)
-	}
-
+	row := db.QueryRow(s, identity, code)
 	err := row.Scan(
 		&accountID,
 		&pwHash,
