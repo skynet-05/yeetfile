@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/mdp/qrterminal/v3"
+	"log"
 	"strings"
 	"time"
 	"yeetfile/backend/server/subscriptions"
@@ -28,6 +29,7 @@ const (
 	DeleteTwoFactor
 	ManageSubscription
 	PurchaseSubscription
+	RecyclePaymentID
 	DeleteAccount
 	Exit
 )
@@ -542,6 +544,39 @@ func showDeleteTwoFactorView() {
 	ShowAccountModel()
 }
 
+func showRecyclePaymentIDView() {
+	title := utils.GenerateTitle("Recycle Payment ID")
+	desc := "Recycling your payment ID is a privacy feature that removes " +
+		"the ability for YeetFile to connect your account with an " +
+		"active subscription. This should only be done if you've " +
+		"previously made a payment to YeetFile and want to remove " +
+		"the record of this transaction."
+	desc = utils.GenerateWrappedText(desc)
+
+	var confirmed bool
+	err := huh.NewForm(huh.NewGroup(
+		huh.NewNote().Title(title).Description(desc),
+		huh.NewConfirm().
+			Affirmative("Confirm").
+			Negative("Cancel").Value(&confirmed),
+	)).WithTheme(styles.Theme).Run()
+
+	if err != nil || !confirmed {
+		ShowAccountModel()
+		return
+	}
+
+	_ = spinner.New().Title("Recycling payment ID...").Action(func() {
+		err = globals.API.RecyclePaymentID()
+	}).Run()
+
+	if err != nil {
+		utils.ShowErrorForm(err.Error())
+	}
+
+	ShowAccountModel()
+}
+
 func generateSelectOptions(
 	account shared.AccountResponse,
 ) []huh.Option[Action] {
@@ -587,6 +622,11 @@ func generateSelectOptions(
 	}
 	options = append(options, twoFactorOption)
 
+	log.Println(account.SubscriptionExp)
+	log.Println(time.Now())
+	log.Println(account.SubscriptionExp.After(time.Now()))
+	log.Println(account.SubscriptionMethod)
+
 	if account.SubscriptionExp.After(time.Now()) &&
 		account.SubscriptionMethod == constants.SubMethodStripe {
 		options = append(
@@ -598,9 +638,38 @@ func generateSelectOptions(
 			huh.NewOption("Upgrade Account", PurchaseSubscription))
 	}
 
+	options = append(options, huh.NewOption("Recycle Payment ID", RecyclePaymentID))
 	options = append(options, huh.NewOption("Delete Account", DeleteAccount))
 	options = append(options, huh.NewOption("Exit", Exit))
 	return options
+}
+
+func showManageSubscriptionView() {
+	var (
+		link string
+		err  error
+	)
+	_ = spinner.New().Title("Fetching link...").Action(func() {
+		link, err = globals.API.GetCustomerPortalLink()
+	}).Run()
+
+	if err != nil {
+		utils.ShowErrorForm(err.Error())
+		ShowAccountModel()
+		return
+	}
+
+	title := utils.GenerateTitle("Manage Subscription")
+	desc := fmt.Sprintf("Use the link below to manage your membership.\n\n"+
+		"Do not share this link with anyone.\n\n%s",
+		shared.EscapeString(link))
+
+	_ = huh.NewForm(huh.NewGroup(
+		huh.NewNote().Title(title).Description(desc),
+		huh.NewConfirm().Affirmative("OK").Negative(""),
+	)).WithTheme(styles.Theme).Run()
+
+	ShowAccountModel()
 }
 
 func showSubscriptionView() {
@@ -750,9 +819,10 @@ func init() {
 		ChangePassword:       showChangePasswordView,
 		SetPasswordHint:      showPasswordHintView,
 		SetTwoFactor:         showSetTwoFactorView,
-		ManageSubscription:   showSubscriptionView,
+		ManageSubscription:   showManageSubscriptionView,
 		PurchaseSubscription: showSubscriptionView,
 		DeleteTwoFactor:      showDeleteTwoFactorView,
+		RecyclePaymentID:     showRecyclePaymentIDView,
 		DeleteAccount:        showAccountDeletionView,
 		Exit:                 exitView,
 	}

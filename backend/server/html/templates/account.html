@@ -83,8 +83,7 @@
       <table>
         <tr>
           <td class="slightly-bold-text">Payment ID:</td>
-<!--          <td>{{ .PaymentID }} — <a id="recycle-payment-id" href="#">Recycle</a></td>-->
-          <td>{{ .PaymentID }}</td>
+          <td>{{ .PaymentID }} — <a id="recycle-payment-id" href="#">Recycle</a></td>
         </tr>
       </table>
       <br>
@@ -129,8 +128,8 @@
         {{ if and .IsActive .IsStripeUser }}
         <div class="pricing-box">
           <h3>YeetFile Subscription</h3>
-          <p>You're a subscriber! You can upgrade, downgrade, or cancel your subscription
-            <a href="{{ .BillingEndpoints.StripeManage }}">here</a>.</p>
+          <p>Upgrade, downgrade, or cancel your subscription using the button below.</p>
+          <a href="{{ .BillingEndpoints.StripeManage }}"><button class="accent-btn">Manage Subscription</button></a>
         </div>
         {{ else }}
         <div class="pricing-box col-1">

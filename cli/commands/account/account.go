@@ -141,13 +141,15 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		"Send:  %s\n\n"+
 		"Subscription: %s\n"+
 		"Password Hint: %s\n"+
-		"Two-Factor: %s",
+		"Two-Factor: %s\n"+
+		"Payment ID: %s",
 		shared.EscapeString(emailStr),
 		storageStr,
 		sendStr,
 		subscriptionStr,
 		passwordHintStr,
-		twoFactorStr)
+		twoFactorStr,
+		shared.EscapeString(account.PaymentID))
 
 	return account, accountDetails
 }

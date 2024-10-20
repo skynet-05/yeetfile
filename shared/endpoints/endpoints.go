@@ -33,21 +33,21 @@ var HTMLPageEndpoints HTMLEndpoints
 var BillingPageEndpoints BillingEndpoints
 
 var (
-	Signup         = Endpoint("/api/signup")
-	Login          = Endpoint("/api/login")
-	Logout         = Endpoint("/api/logout")
-	Account        = Endpoint("/api/account")
-	AccountUsage   = Endpoint("/api/account/usage")
-	PaymentID      = Endpoint("/api/account/paymentID")
-	Forgot         = Endpoint("/api/forgot")
-	Session        = Endpoint("/api/session")
-	TwoFactor      = Endpoint("/api/2fa")
-	VerifyAccount  = Endpoint("/api/verify/account")
-	VerifyEmail    = Endpoint("/api/verify/email")
-	ChangeEmail    = Endpoint("/api/change/email/*")
-	ChangePassword = Endpoint("/api/change/password")
-	ChangeHint     = Endpoint("/api/change/hint")
-	ServerInfo     = Endpoint("/api/info")
+	Signup           = Endpoint("/api/signup")
+	Login            = Endpoint("/api/login")
+	Logout           = Endpoint("/api/logout")
+	Account          = Endpoint("/api/account")
+	AccountUsage     = Endpoint("/api/account/usage")
+	RecyclePaymentID = Endpoint("/api/account/recycle/payment_id")
+	Forgot           = Endpoint("/api/forgot")
+	Session          = Endpoint("/api/session")
+	TwoFactor        = Endpoint("/api/2fa")
+	VerifyAccount    = Endpoint("/api/verify/account")
+	VerifyEmail      = Endpoint("/api/verify/email")
+	ChangeEmail      = Endpoint("/api/change/email/*")
+	ChangePassword   = Endpoint("/api/change/password")
+	ChangeHint       = Endpoint("/api/change/hint")
+	ServerInfo       = Endpoint("/api/info")
 
 	PassRoot     = Endpoint("/api/pass")
 	PassFolder   = Endpoint("/api/pass/folder/*")
@@ -106,21 +106,21 @@ var (
 )
 
 var JSVarNameMap = map[Endpoint]string{
-	Signup:         "Signup",
-	Login:          "Login",
-	Logout:         "Logout",
-	Forgot:         "Forgot",
-	Session:        "Session",
-	Account:        "Account",
-	AccountUsage:   "AccountUsage",
-	PaymentID:      "PaymentID",
-	TwoFactor:      "TwoFactor",
-	VerifyAccount:  "VerifyAccount",
-	VerifyEmail:    "VerifyEmail",
-	ChangeEmail:    "ChangeEmail",
-	ChangePassword: "ChangePassword",
-	ChangeHint:     "ChangeHint",
-	ServerInfo:     "ServerInfo",
+	Signup:           "Signup",
+	Login:            "Login",
+	Logout:           "Logout",
+	Forgot:           "Forgot",
+	Session:          "Session",
+	Account:          "Account",
+	AccountUsage:     "AccountUsage",
+	RecyclePaymentID: "RecyclePaymentID",
+	TwoFactor:        "TwoFactor",
+	VerifyAccount:    "VerifyAccount",
+	VerifyEmail:      "VerifyEmail",
+	ChangeEmail:      "ChangeEmail",
+	ChangePassword:   "ChangePassword",
+	ChangeHint:       "ChangeHint",
+	ServerInfo:       "ServerInfo",
 
 	PassRoot:     "PassRoot",
 	PassFolder:   "PassFolder",

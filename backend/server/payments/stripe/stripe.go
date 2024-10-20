@@ -7,6 +7,8 @@ import (
 	"github.com/stripe/stripe-go/v78"
 	billingsession "github.com/stripe/stripe-go/v78/billingportal/session"
 	"github.com/stripe/stripe-go/v78/checkout/session"
+	"github.com/stripe/stripe-go/v78/customer"
+	"github.com/stripe/stripe-go/v78/subscription"
 	"github.com/stripe/stripe-go/v78/webhook"
 	"log"
 	"os"
@@ -116,23 +118,43 @@ func processInvoiceEvent(event *stripe.EventData) error {
 
 	paymentID, err := db.GetPaymentIDByStripeCustomerID(invoice.Customer.ID)
 	if err != nil {
+		log.Println("Failed to get stripe payment ID using customer ID:", err)
 		return err
 	} else if len(paymentID) == 0 {
 		// Initial checkout hasn't occurred yet
+		log.Println("Payment ID is not populated for invoice")
 		return nil
 	}
 
 	productID, err := FindInvoiceProductID(invoice.Lines.Data)
 	if err != nil {
+		log.Println("Failed to find product ID from invoice:", err)
 		return err
 	}
 
 	err = setUserSubscription(paymentID, productID)
 	if err != nil {
+		log.Println("Failed to set user subscription:", err)
 		return err
 	}
 
 	return nil
+}
+
+// updateSubscriptionID receives an incoming Stripe subscription creation event
+// and updates the sub_id value in the stripe table with the ID from the event.
+// This allows querying the subscription later to determine if it's still active
+// or if renewal is upcoming.
+func updateSubscriptionID(event *stripe.EventData) error {
+	var sub stripe.Subscription
+	err := json.Unmarshal(event.Raw, &sub)
+	if err != nil {
+		log.Printf("Error parsing webhook JSON: %v\n", err)
+		return err
+	}
+
+	err = db.SetSubscriptionID(sub.ID, sub.Customer.ID)
+	return err
 }
 
 // processCheckoutEvent receives an incoming Stripe checkout event and converts the
@@ -167,6 +189,13 @@ func processCheckoutEvent(event *stripe.EventData) error {
 			return err
 		}
 
+		customerParams := &stripe.CustomerParams{}
+		customerParams.AddMetadata("payment_id", checkoutSession.ClientReferenceID)
+		_, err = customer.Update(checkoutSession.Customer.ID, customerParams)
+		if err != nil {
+			log.Printf("Failed to set payment ID for stripe customer")
+		}
+
 		// Send email (if applicable)
 		email, err := db.GetUserEmailByPaymentID(userPaymentID)
 		if err == nil && len(email) != 0 {
@@ -181,6 +210,29 @@ func processCheckoutEvent(event *stripe.EventData) error {
 		}
 	}
 	return nil
+}
+
+// IsActiveSubscription checks to see if the subscription matching the provided
+// subID is active (has not been canceled and is not expired).
+func IsActiveSubscription(subID string) (bool, error) {
+	params := &stripe.SubscriptionParams{}
+	result, err := subscription.Get(subID, params)
+	if err != nil {
+		return true, err
+	}
+
+	// Check for all conditions that qualify as having a canceled sub
+	canceled := result.Status == stripe.SubscriptionStatusCanceled
+	canceled = canceled || result.EndedAt > 0
+	canceled = canceled || result.CanceledAt > 0 || result.CancelAt > 0
+
+	return !canceled, nil
+}
+
+// DeleteCustomer deletes the specified customer from Stripe
+func DeleteCustomer(customerID string) error {
+	_, err := customer.Del(customerID, nil)
+	return err
 }
 
 // GetCustomerPortalLink returns a customer portal for the user matching the
@@ -211,10 +263,13 @@ func GetCustomerPortalLink(id string) (string, error) {
 // user's meter should be updated depending on the product they purchased.
 func ProcessEvent(event stripe.Event) error {
 	// Currently only successful checkouts are handled by the webhook
+	log.Println("Incoming ", event.Type)
 	if event.Type == "invoice.paid" {
 		return processInvoiceEvent(event.Data)
 	} else if event.Type == "checkout.session.completed" {
 		return processCheckoutEvent(event.Data)
+	} else if event.Type == "customer.subscription.created" {
+		return updateSubscriptionID(event.Data)
 	}
 
 	// Unsupported event, ignore...
@@ -261,7 +316,7 @@ func ValidateEvent(payload []byte, sig string) (stripe.Event, error) {
 // purchase and any error encountered.
 func processNewSubscription(paymentID, customerID string, item *stripe.LineItem) (string, error) {
 	productID := item.Price.Product.ID
-	err := db.CreateNewStripeCustomer(customerID, paymentID)
+	err := db.CreateNewStripeCustomer(customerID, paymentID, "")
 	if err != nil {
 		return "", err
 	}

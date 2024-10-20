@@ -8,4 +8,4 @@ BEGIN
    END IF;
 END $$;
 
-set statement_timeout to '10s'
+set statement_timeout to '10s';

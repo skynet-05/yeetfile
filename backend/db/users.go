@@ -285,9 +285,10 @@ func UpdatePasswordHint(userID string, encHint []byte) error {
 	return err
 }
 
-// RotateUserPaymentID overwrites the previous payment ID once a transaction is
-// completed.
-func RotateUserPaymentID(paymentID string) error {
+// RecycleUserPaymentID overwrites the user's previous payment ID. This can be
+// performed whenever a user wants, as long as they don't have an active
+// subscription through Stripe.
+func RecycleUserPaymentID(paymentID string) error {
 	rows, err := db.Query(`SELECT id from users WHERE payment_id = $1`, paymentID)
 	if err != nil {
 		return err
@@ -746,14 +747,14 @@ func SetUserSubscription(
                   storage_available=$2, send_available=$3,
                   sub_duration=$4, sub_type=$5, sub_method=$6,
                   last_upgraded_month=$7, bandwidth=$8
-              WHERE payment_id=$7`
+              WHERE payment_id=$9`
 
 	_, err = db.Exec(s,
 		exp,
 		storage, send,
 		subDuration, subType, subMethod,
-		time.Now().Month(), paymentID,
-		totalWeeklyBandwidth)
+		int(time.Now().Month()), totalWeeklyBandwidth,
+		paymentID)
 	if err != nil {
 		return err
 	}
@@ -825,7 +826,7 @@ func CheckMemberships() {
 			return
 		}
 
-		if exp.Before(time.Now()) {
+		if exp.Add(time.Hour * 72).Before(time.Now()) {
 			// User doesn't have an active membership, set send to
 			// default amount
 			revertIDs = append(revertIDs, id)

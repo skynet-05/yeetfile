@@ -27,8 +27,8 @@ const init = () => {
         disable2FALink.addEventListener("click", disable2FA);
     }
 
-    // let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
-    // recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
+    let recyclePaymentIDBtn = document.getElementById("recycle-payment-id");
+    recyclePaymentIDBtn.addEventListener("click", recyclePaymentID);
 
     let yearlyToggle = document.getElementById("yearly-toggle");
     if (yearlyToggle) {
@@ -182,11 +182,21 @@ const disable2FA = () => {
 const recyclePaymentID = () => {
     let confirmMsg = "Are you sure you want to recycle your payment ID? " +
         "This will remove all records of past payments you've made.";
+
     if (confirm(confirmMsg)) {
-        fetch("/api/recycle-payment-id").then(() => {
-            window.location.assign("/account");
+        fetch(
+            Endpoints.RecyclePaymentID.path, {method: "PUT"}
+        ).then(response => {
+            if (response.ok) {
+                window.location.assign(Endpoints.HTMLAccount.path);
+            } else if (response.status === 400) {
+                alert("Failed to recycle payment ID -- please ensure your " +
+                    "subscription has been canceled before trying again.");
+            } else {
+                alert("Failed to recycle payment ID");
+            }
         }).catch(() => {
-            alert("Error recycling payment id");
+            alert("Error recycling payment ID");
         });
     }
 }
@@ -195,7 +205,7 @@ const changePassword = () => {
     window.location.assign(Endpoints.HTMLChangePassword.path);
 }
 
-if (document.readyState !== 'loading') {
+if (document.readyState !== "loading") {
     init();
 } else {
     document.addEventListener("DOMContentLoaded", () => {

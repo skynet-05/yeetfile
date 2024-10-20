@@ -81,7 +81,7 @@ func Run(addr string) {
 		{POST | PUT, endpoints.ChangeEmail, AuthMiddleware(auth.ChangeEmailHandler)},
 		{PUT, endpoints.ChangePassword, AuthMiddleware(auth.ChangePasswordHandler)},
 		{POST, endpoints.ChangeHint, AuthMiddleware(auth.ChangeHintHandler)},
-		//{PUT, "/api/recycle-payment-id", AuthMiddleware(auth.RecyclePaymentIDHandler)},
+		{PUT, endpoints.RecyclePaymentID, AuthMiddleware(auth.RecyclePaymentIDHandler)},
 
 		// Payments (Stripe, BTCPay)
 		{POST, endpoints.StripeWebhook, payments.StripeWebhook},
