@@ -64,7 +64,9 @@ create table if not exists stripe
             primary key,
     payment_id  text
         constraint stripe_uk
-            unique
+            unique,
+    sub_id      text,
+    created_at  timestamp
 );
 
 create table if not exists verify
@@ -177,5 +179,3 @@ create table if not exists pass_index
     enc_data  bytea,
     change_id integer
 );
-
-

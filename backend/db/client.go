@@ -2,10 +2,15 @@ package db
 
 import (
 	"database/sql"
+	"embed"
 	_ "embed"
 	"fmt"
 	_ "github.com/lib/pq"
+	"io"
 	"log"
+	"sort"
+	"strconv"
+	"strings"
 	"yeetfile/backend/cache"
 	"yeetfile/backend/service"
 	"yeetfile/backend/utils"
@@ -13,8 +18,10 @@ import (
 
 var db *sql.DB
 
-//go:embed scripts/create_tables.sql
-var createTablesSQL string
+//go:embed scripts/migrations/*.sql
+var migrationScripts embed.FS
+
+const migrationDir = "scripts/migrations"
 
 func init() {
 	var (
@@ -42,13 +49,58 @@ func init() {
 			"Error: %v\nPing: %v\n", err, ping)
 	}
 
-	// Init db contents from scripts/init.sql
-	log.Printf("Setting up DB tables...")
-	_, err = db.Exec(createTablesSQL)
+	version, err := getMigrationVersion()
 	if err != nil {
-		log.Fatalf("Unable to initialize database!\n"+
-			"--Error: %v\n", err)
+		version = -1
 	}
+
+	// Init db contents from migration scripts
+	dir, err := migrationScripts.ReadDir(migrationDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sort.Slice(dir, func(i, j int) bool {
+		iName := dir[i].Name()
+		jName := dir[j].Name()
+		return getScriptVersion(iName) < getScriptVersion(jName)
+	})
+
+	for _, file := range dir {
+		scriptVersion := getScriptVersion(file.Name())
+		if scriptVersion <= version {
+			continue
+		}
+
+		log.Println("Running script:", file.Name())
+
+		fullPath := fmt.Sprintf("%s/%s", migrationDir, file.Name())
+		script, err := migrationScripts.Open(fullPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		scriptBytes, err := io.ReadAll(script)
+		_, err = db.Exec(string(scriptBytes))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_ = script.Close()
+
+		err = setMigrationVersion(scriptVersion)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		version = scriptVersion
+	}
+}
+
+func getScriptVersion(name string) int {
+	scriptVersionStr := strings.Split(name, "_")[0]
+	scriptVersion, _ := strconv.Atoi(scriptVersionStr)
+	return scriptVersion
 }
 
 // clearDatabase removes all instances of a file ID from all tables in the database
