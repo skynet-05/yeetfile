@@ -1,4 +1,4 @@
 *.js
 !ponyfill.min.js
 !jszip.min.js
-!argon2-bundled.min.js
+!sodium.js

@@ -21,20 +21,19 @@ func init() {
 	session := Config.ReadSession()
 	if session == nil || len(session) == 0 {
 		API = api.InitContext(Config.Server, "")
-		return
-	}
-
-	cliKey := crypto.ReadCLIKey()
-	if cliKey == nil || len(cliKey) == 0 {
-		log.Println("missing YEETFILE_CLI_KEY to decrypt session")
-		API = api.InitContext(Config.Server, "")
 	} else {
-		sessionVal, err := crypto.DecryptChunk(cliKey, session)
-		if err != nil {
-			log.Println("failed to decrypt session with YEETFILE_CLI_KEY value")
+		cliKey := crypto.ReadCLIKey()
+		if cliKey == nil || len(cliKey) == 0 {
+			log.Println("missing YEETFILE_CLI_KEY to decrypt session")
 			API = api.InitContext(Config.Server, "")
 		} else {
-			API = api.InitContext(Config.Server, string(sessionVal))
+			sessionVal, err := crypto.DecryptChunk(cliKey, session)
+			if err != nil {
+				log.Println("failed to decrypt session with YEETFILE_CLI_KEY value")
+				API = api.InitContext(Config.Server, "")
+			} else {
+				API = api.InitContext(Config.Server, string(sessionVal))
+			}
 		}
 	}
 

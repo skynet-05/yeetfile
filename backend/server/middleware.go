@@ -79,7 +79,7 @@ func LimiterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // handling.
 func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		if session.IsValidSession(req) {
+		if session.IsValidSession(w, req) {
 			// Call the next handler
 			id, err := session.GetSessionAndUserID(req)
 			if err != nil {
@@ -146,7 +146,7 @@ func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func AuthLimiterMiddleware(next session.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {
 		// Skip auth if the app is in debug mode, otherwise validate session
-		if session.IsValidSession(req) {
+		if session.IsValidSession(w, req) {
 			// Call the next handler
 			id, err := session.GetSessionAndUserID(req)
 			if err != nil {

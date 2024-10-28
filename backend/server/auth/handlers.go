@@ -134,7 +134,7 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 
 // AccountHandler handles fetching and returning the user's account information.
 func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
-	if !session.IsValidSession(req) {
+	if !session.IsValidSession(w, req) {
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
 		return
 	}
@@ -247,7 +247,7 @@ func VerifyEmailHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		// User is verifying a new email, need to validate auth too
-		if !session.IsValidSession(req) {
+		if !session.IsValidSession(w, req) {
 			http.Error(w, "You must be logged in", http.StatusUnauthorized)
 			return
 		}

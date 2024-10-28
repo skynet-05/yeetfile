@@ -93,7 +93,7 @@ func GetSessionKeyAndID(req *http.Request) (string, string, error) {
 	return sessionKey, sessionID, nil
 }
 
-func IsValidSession(req *http.Request) bool {
+func IsValidSession(w http.ResponseWriter, req *http.Request) bool {
 	session, err := GetSession(req)
 	if err != nil {
 		return false
@@ -111,7 +111,8 @@ func IsValidSession(req *http.Request) bool {
 
 	dbKey, err := db.GetUserSessionKey(id)
 	if err != nil || sessionKey != dbKey {
-		log.Println("Session key ", sessionKey, " does not match db key ", dbKey)
+		log.Println("Session key", sessionKey, "does not match db key ", dbKey)
+		_ = RemoveSession(w, req)
 		return false
 	}
 

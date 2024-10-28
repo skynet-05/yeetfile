@@ -92,7 +92,7 @@ func SendPageHandler(w http.ResponseWriter, req *http.Request) {
 		templates.SendHTML,
 		templates.LoginTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn: session.IsValidSession(req),
+				LoggedIn: session.IsValidSession(w, req),
 				Title:    "Send",
 				Page:     "send",
 				Javascript: []string{
@@ -114,7 +114,7 @@ func DownloadPageHandler(w http.ResponseWriter, req *http.Request) {
 		w,
 		templates.DownloadHTML,
 		templates.Template{Base: templates.BaseTemplate{
-			LoggedIn: session.IsValidSession(req),
+			LoggedIn: session.IsValidSession(w, req),
 			Title:    "Download",
 			Javascript: []string{
 				"ponyfill.min.js",
@@ -222,7 +222,7 @@ func VerifyPageHandler(w http.ResponseWriter, req *http.Request) {
 		templates.VerificationHTML,
 		templates.VerificationTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:   session.IsValidSession(req),
+				LoggedIn:   session.IsValidSession(w, req),
 				Title:      "Verify",
 				Javascript: []string{"verify.js"},
 				CSS:        nil,
@@ -335,7 +335,7 @@ func ServerInfoPageHandler(w http.ResponseWriter, req *http.Request) {
 		templates.ServerInfoHTML,
 		templates.InfoTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:   session.IsValidSession(req),
+				LoggedIn:   session.IsValidSession(w, req),
 				Title:      "Server Info",
 				Javascript: nil,
 				CSS:        nil,
@@ -397,7 +397,7 @@ func CheckoutCompleteHandler(w http.ResponseWriter, req *http.Request) {
 		templates.CheckoutCompleteHTML,
 		templates.CheckoutCompleteTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn:   session.IsValidSession(req),
+				LoggedIn:   session.IsValidSession(w, req),
 				Title:      "Checkout Complete",
 				Javascript: nil,
 				CSS:        nil,

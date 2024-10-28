@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"golang.org/x/crypto/argon2"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/pbkdf2"
 	"io"
 	"log"
@@ -105,7 +106,7 @@ func DeriveArgon2Key(password, salt []byte) []byte {
 		password,
 		salt,
 		constants.Argon2Iter,
-		constants.Argon2Mem,
+		constants.Argon2Mem*1024,
 		1,
 		uint32(constants.KeySize))
 	return key
@@ -115,19 +116,16 @@ func DeriveArgon2Key(password, salt []byte) []byte {
 // files that are stored in YeetFile, using their identifier (email or acct ID)
 // and their password.
 func GenerateUserKey(identifier []byte, password []byte) []byte {
-	h := sha256.New()
-	h.Write(identifier)
-	identifierHash := h.Sum(nil)
-	hexHash := hex.EncodeToString(identifierHash)
-
-	return DeriveArgon2Key(password, []byte(hexHash))
+	identifierHash := blake2b.Sum256(identifier)
+	return DeriveArgon2Key(password, identifierHash[:16])
 }
 
 // GenerateLoginKeyHash generates a login key using the user's user key and
 // their password, and returns a hex encoded hash of the resulting key.
 func GenerateLoginKeyHash(userKey []byte, password []byte) []byte {
 	hexUserKey := hex.EncodeToString(userKey)
-	loginKey := DeriveArgon2Key([]byte(hexUserKey), password)
+	pwHash := blake2b.Sum256(password)
+	loginKey := DeriveArgon2Key([]byte(hexUserKey), pwHash[:16])
 
 	h := sha256.New()
 	h.Write(loginKey)

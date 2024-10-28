@@ -2,6 +2,7 @@ import * as constants from "./constants.js";
 
 // @ts-ignore;
 export let webcrypto;
+declare const sodium: any;
 
 const HashSize = 32;
 const IVSize = 12;
@@ -192,19 +193,20 @@ export const decryptChunk = async (
  */
 export const generateArgon2Key = async (
     payload: string,
-    salt: string,
+    salt: Uint8Array,
 ): Promise<CryptoKey> => {
-    let key = await argon2.hash({
-        pass: payload,
-        salt: salt,
-        hashLen: constants.KeySize,
-        type: 2,
-        mem: constants.Argon2Mem,
-        time: constants.Argon2Iter,
-        parallelism: 1,
-    });
+    await sodium.ready;
 
-    return await importKey(key.hash);
+    const key = await sodium.crypto_pwhash(
+        constants.KeySize,
+        sodium.from_string(payload),
+        salt,
+        constants.Argon2Iter,
+        constants.Argon2Mem * 1024 * 1024,
+        sodium.crypto_pwhash_ALG_ARGON2ID13
+    );
+
+    return await importKey(key);
 }
 
 /**
@@ -218,11 +220,8 @@ export const generateUserKey = async (
     identifier: string,
     password: string,
 ): Promise<CryptoKey> => {
-    let utf8Identifier = utf8Encode.encode(identifier);
-    let emailBuffer = await crypto.subtle.digest("SHA-256", utf8Identifier);
-    let sha256Identifier = toHexString(new Uint8Array(emailBuffer));
-
-    return await generateArgon2Key(password, sha256Identifier);
+    let emailHash = hashBlake2b(16, identifier);
+    return await generateArgon2Key(password, emailHash);
 }
 
 /**
@@ -239,9 +238,10 @@ export const generateLoginKeyHash = async (
 ): Promise<Uint8Array> => {
     let userKeyExported = await exportKey(userKey, "raw");
     let userKeyHex = toHexString(userKeyExported);
+    let pwHash = hashBlake2b(16, password);
 
-    let loginKey = await generateArgon2Key(userKeyHex, password);
-    let loginKeyBytes = await exportKey(loginKey, "raw")
+    let loginKey = await generateArgon2Key(userKeyHex, new Uint8Array(pwHash));
+    let loginKeyBytes = await exportKey(loginKey, "raw");
     let loginKeyHash = await webcrypto.subtle.digest("SHA-256", loginKeyBytes);
 
     return new Uint8Array(loginKeyHash);
@@ -488,6 +488,18 @@ export const unwindKeys = async (privateKey: CryptoKey, keySequence: Uint8Array[
     return await importKey(parentKey);
 }
 
+export const hashBlake2b = (len: number, input: string): Uint8Array => {
+    if (len > 32) {
+        len = 32;
+    } else if (len < 0) {
+        len = 1;
+    }
+
+    let utf8Input = utf8Encode.encode(input);
+    return sodium.crypto_generichash(32, utf8Input).subarray(0, len);
+
+}
+
 if (typeof window !== "undefined") {
     // Enforce browser variables
     webcrypto = window.crypto;
@@ -496,6 +508,4 @@ if (typeof window !== "undefined") {
 } else {
     // @ts-ignore
     webcrypto = await import("crypto");
-    // @ts-ignore
-    argon2kdf = await import("argon2-browser");
 }

@@ -77,9 +77,11 @@ export class YeetFileDB {
         ) => {
             this.removeKeys(() => {});
 
+            let randHash = crypto.hashBlake2b(16, "JS_SESSION_KEY");
+
             let encKey;
             if (password.length > 0) {
-                encKey = await crypto.generateArgon2Key(password, "JS_SESSION_KEY");
+                encKey = await crypto.generateArgon2Key(password, randHash);
             } else {
                 encKey = await crypto.importKey(hexToBytes("JS_SESSION_KEY"));
             }
@@ -202,9 +204,11 @@ export class YeetFileDB {
                         return;
                     }
 
+                    let randHash = crypto.hashBlake2b(16, "JS_SESSION_KEY");
+
                     let decKey;
                     if (password.length > 0) {
-                        decKey = await crypto.generateArgon2Key(password, "JS_SESSION_KEY");
+                        decKey = await crypto.generateArgon2Key(password, randHash);
                     } else {
                         decKey = await crypto.importKey(hexToBytes("JS_SESSION_KEY"));
                     }

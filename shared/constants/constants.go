@@ -12,7 +12,7 @@ const CLIUserAgent = "yeetfile-cli"
 
 const AuthSessionStore = "auth"
 
-const Argon2Mem uint32 = 64 * 1024 // 64MB
+const Argon2Mem uint32 = 64 // MB
 const Argon2Iter uint32 = 2
 
 const LimiterSeconds = 30
