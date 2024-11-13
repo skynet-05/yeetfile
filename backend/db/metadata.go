@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"time"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
@@ -22,6 +23,8 @@ type FileMetadata struct {
 	PasswordData      []byte
 	OwnsParentFolder  bool
 	ParentFolderOwner string
+	Expiration        time.Time
+	Downloads         int
 }
 
 // InsertMetadata creates a new metadata entry in the db and returns a unique ID for
@@ -67,7 +70,10 @@ func MetadataIDExists(id string) bool {
 }
 
 func RetrieveMetadata(id string) (FileMetadata, error) {
-	s := `SELECT * FROM metadata WHERE id = $1`
+	s := `SELECT m.*, e.downloads, e.date
+	      FROM metadata m
+	      JOIN expiry e on m.id = e.id
+	      WHERE m.id = $1`
 	rows, err := db.Query(s, id)
 	if err != nil {
 		log.Fatalf("Error retrieving metadata: %v", err)
@@ -110,8 +116,10 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 	var name string
 	var b2ID string
 	var length int64
+	var downloads int
+	var date time.Time
 
-	err := rows.Scan(&id, &chunks, &name, &b2ID, &length)
+	err := rows.Scan(&id, &chunks, &name, &b2ID, &length, &downloads, &date)
 
 	if err != nil {
 		panic(err)
@@ -119,11 +127,13 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 	}
 
 	return FileMetadata{
-		ID:     id,
-		Chunks: chunks,
-		Name:   name,
-		B2ID:   b2ID,
-		Length: length,
+		ID:         id,
+		Chunks:     chunks,
+		Name:       name,
+		B2ID:       b2ID,
+		Length:     length,
+		Downloads:  downloads,
+		Expiration: date,
 	}
 }
 

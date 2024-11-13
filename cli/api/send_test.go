@@ -121,7 +121,7 @@ func TestSendFile(t *testing.T) {
 			string(contents))
 	}
 
-	// Wait for file to expire (+1s buffer to avoid race)
+	// Wait for file to expire (+1s buffer)
 	log.Println("Waiting for file to expire...")
 	time.Sleep(6 * time.Second)
 

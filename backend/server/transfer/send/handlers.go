@@ -92,7 +92,7 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 	}
 
 	metadata, err := db.RetrieveMetadata(id)
-	if err != nil {
+	if err != nil || metadata.Expiration.Before(time.Now().UTC()) {
 		log.Printf("[YF Send] Metadata err: %v\n", err)
 		http.Error(w, "No metadata found for file", http.StatusBadRequest)
 		return
@@ -156,7 +156,7 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	metadata, err := db.RetrieveMetadata(id)
-	if err != nil {
+	if err != nil || metadata.Expiration.Before(time.Now().UTC()) {
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}
@@ -177,13 +177,13 @@ func UploadPlaintextHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 // DownloadHandler fetches metadata for downloading a file, such as the name of
-// the file, the number of chunks, and the key for decrypting each chunk.
+// the file, the number of chunks, expiration, etc.
 func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 	segments := strings.Split(req.URL.Path, "/")
 	id := segments[len(segments)-1]
 
 	metadata, err := db.RetrieveMetadata(id)
-	if err != nil {
+	if err != nil || metadata.Expiration.Before(time.Now().UTC()) {
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}
@@ -223,7 +223,7 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	metadata, err := db.RetrieveMetadata(id)
-	if err != nil {
+	if err != nil || metadata.Expiration.Before(time.Now().UTC()) {
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}
