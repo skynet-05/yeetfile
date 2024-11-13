@@ -11,8 +11,6 @@ type FileExpiry struct {
 	Date      time.Time
 }
 
-var expiryLock bool
-
 func SetFileExpiry(id string, downloads int, date time.Time) {
 	s := `INSERT INTO expiry
 	      (id, downloads, date)
@@ -81,21 +79,8 @@ func GetFileExpiry(metadataID string) FileExpiry {
 	return FileExpiry{}
 }
 
-func DeleteExpiry(id string) bool {
-	s := `DELETE FROM expiry
-	      WHERE id = $1`
-	_, err := db.Exec(s, id)
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
 // CheckExpiry inspects each entry in the expiry table to see if a file's
-// expiration date has been surpassed. If it has, the file is deleted. Runs
-// recursively once per second and should be called in a background thread.
-// TODO: Add lock to ensure this isn't ever run simultaneously
+// expiration date has been surpassed. If it has, the file is deleted.
 func CheckExpiry() {
 	s := `SELECT id FROM expiry WHERE date < CURRENT_TIMESTAMP at time zone 'UTC'`
 	rows, err := db.Query(s)
@@ -125,4 +110,15 @@ func CheckExpiry() {
 			DeleteFileByMetadata(metadata)
 		}
 	}
+}
+
+func DeleteExpiry(id string) bool {
+	s := `DELETE FROM expiry
+	      WHERE id = $1`
+	_, err := db.Exec(s, id)
+	if err != nil {
+		return false
+	}
+
+	return true
 }

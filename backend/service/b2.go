@@ -38,7 +38,7 @@ func init() {
 			B2, err = b2.AuthorizeDummyAccount(path)
 		}
 	} else if config.YeetFileConfig.StorageType == config.B2Storage {
-		B2BucketID = os.Getenv("B2_BUCKET_ID")
+		B2BucketID = os.Getenv("YEETFILE_B2_BUCKET_ID")
 
 		if len(B2BucketID) == 0 {
 			log.Fatal("Missing B2_BUCKET_ID environment variable")
@@ -46,8 +46,8 @@ func init() {
 
 		log.Println("Authorizing B2 account...")
 		B2, _, err = b2.AuthorizeAccount(
-			os.Getenv("B2_BUCKET_KEY_ID"),
-			os.Getenv("B2_BUCKET_KEY"))
+			os.Getenv("YEETFILE_B2_BUCKET_KEY_ID"),
+			os.Getenv("YEETFILE_B2_BUCKET_KEY"))
 	} else {
 		log.Fatalf("Invalid storage type '%s', "+
 			"should be either '%s' or '%s'",

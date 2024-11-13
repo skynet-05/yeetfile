@@ -179,3 +179,12 @@ create table if not exists pass_index
     enc_data  bytea,
     change_id integer
 );
+
+create table if not exists cron
+(
+    task_name    varchar(255) not null
+        constraint cron_pk
+            primary key,
+    locked_until timestamp,
+    last_run     timestamp
+);
