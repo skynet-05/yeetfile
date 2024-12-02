@@ -557,6 +557,25 @@ func GetUserIDByEmail(email string) (string, error) {
 	return id, nil
 }
 
+func GetUserSubByPaymentID(paymentID string) (string, time.Time, error) {
+	var (
+		subType string
+		subExp  time.Time
+	)
+
+	err := db.QueryRow(`
+	        SELECT sub_tag, member_expiration 
+	        FROM users 
+	        WHERE payment_id=$1`, paymentID).
+		Scan(&subType, &subExp)
+
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	return subType, subExp, nil
+}
+
 func GetUserPasswordHintByEmail(email string) ([]byte, error) {
 	var hint []byte
 	err := db.QueryRow(`SELECT pw_hint FROM users WHERE email = $1`, email).
@@ -728,16 +747,6 @@ func SetUserSubscription(
 	exp time.Time,
 	storage, send int64,
 ) error {
-	subDuration, err := subscriptions.GetSubscriptionDuration(subTag)
-	if err != nil {
-		return err
-	}
-
-	subType, err := subscriptions.GetSubscriptionType(subTag)
-	if err != nil {
-		return err
-	}
-
 	totalWeeklyBandwidth := storage *
 		constants.TotalBandwidthMultiplier *
 		constants.BandwidthMonitorDuration
@@ -745,14 +754,14 @@ func SetUserSubscription(
 	s := `UPDATE users
               SET member_expiration=$1,
                   storage_available=$2, send_available=$3,
-                  sub_duration=$4, sub_type=$5, sub_method=$6,
-                  last_upgraded_month=$7, bandwidth=$8
-              WHERE payment_id=$9`
+                  sub_tag=$4, sub_method=$5,
+                  last_upgraded_month=$6, bandwidth=$7
+              WHERE payment_id=$8`
 
-	_, err = db.Exec(s,
+	_, err := db.Exec(s,
 		exp,
 		storage, send,
-		subDuration, subType, subMethod,
+		subTag, subMethod,
 		int(time.Now().Month()), totalWeeklyBandwidth,
 		paymentID)
 	if err != nil {
@@ -799,7 +808,7 @@ func CheckBandwidth() {
 // CheckMemberships inspects each user's membership and updates their available
 // transfer if their membership is still valid
 func CheckMemberships() {
-	s := `SELECT id, sub_type, member_expiration FROM users
+	s := `SELECT id, sub_tag, member_expiration FROM users
               WHERE last_upgraded_month != $1`
 	rows, err := db.Query(s, int(time.Now().Month()))
 	if err != nil {
@@ -807,19 +816,19 @@ func CheckMemberships() {
 		return
 	}
 
-	var noviceUpgradeIDs []string
-	var regularUpgradeIDs []string
-	var advancedUpgradeIDs []string
 	var revertIDs []string
 	now := time.Now()
+
+	// Upgrade map matches subscription tags to user IDs
+	upgradeMap := make(map[string][]string)
 
 	defer rows.Close()
 	for rows.Next() {
 		var id string
-		var subType string
+		var subTag string
 		var exp time.Time
 
-		err = rows.Scan(&id, &subType, &exp)
+		err = rows.Scan(&id, &subTag, &exp)
 
 		if err != nil {
 			log.Printf("Error scanning user rows: %v", err)
@@ -833,14 +842,7 @@ func CheckMemberships() {
 			continue
 		} else if now.Day() == exp.Day() || ExpDateRollover(now, exp) {
 			// User has an active membership
-			switch subType {
-			case subscriptions.TypeNovice:
-				noviceUpgradeIDs = append(noviceUpgradeIDs, id)
-			case subscriptions.TypeRegular:
-				regularUpgradeIDs = append(regularUpgradeIDs, id)
-			case subscriptions.TypeAdvanced:
-				advancedUpgradeIDs = append(advancedUpgradeIDs, id)
-			}
+			upgradeMap[subTag] = append(upgradeMap[subTag], id)
 		}
 	}
 
@@ -877,28 +879,17 @@ func CheckMemberships() {
 		log.Printf("Error resetting unpaid user storage/send")
 	}
 
-	err = upgradeFunc(
-		noviceUpgradeIDs,
-		subscriptions.SendAmountMap[subscriptions.TypeNovice],
-		subscriptions.StorageAmountMap[subscriptions.TypeNovice])
-	if err != nil {
-		log.Printf("Error updating novice member storage/send")
-	}
+	for productTag, ids := range upgradeMap {
+		product, err := subscriptions.GetProductByTag(productTag)
+		if err != nil {
+			log.Printf("Error locating product in upgrade cron: %v\n", err)
+			continue
+		}
 
-	err = upgradeFunc(
-		regularUpgradeIDs,
-		subscriptions.SendAmountMap[subscriptions.TypeRegular],
-		subscriptions.StorageAmountMap[subscriptions.TypeRegular])
-	if err != nil {
-		log.Printf("Error updating regular member storage/send")
-	}
-
-	err = upgradeFunc(
-		advancedUpgradeIDs,
-		subscriptions.SendAmountMap[subscriptions.TypeAdvanced],
-		subscriptions.StorageAmountMap[subscriptions.TypeAdvanced])
-	if err != nil {
-		log.Printf("Error updating novice member storage/send")
+		err = upgradeFunc(ids, product.SendGBReal, product.StorageGBReal)
+		if err != nil {
+			log.Printf("Error updating %s user storage/send: %v\n", err)
+		}
 	}
 }
 

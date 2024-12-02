@@ -10,17 +10,18 @@ type StripeCustomerInfo struct {
 	CustomerID string
 	PaymentID  string
 	SubID      string
+	ProductTag string
 	CreatedAt  time.Time
 }
 
 func CreateNewStripeCustomer(customerID, paymentID, subID string) error {
-	existingPaymentID, err := GetPaymentIDByStripeCustomerID(customerID)
+	existingCustomer, err := GetStripeCustomerByCustomerID(customerID)
 	if err == sql.ErrNoRows {
 		s := `INSERT INTO stripe
 	              (customer_id, payment_id, sub_id, created_at)
 	              VALUES ($1, $2, $3, $4)`
 		_, err = db.Exec(s, customerID, paymentID, subID, time.Now().UTC())
-	} else if paymentID != existingPaymentID {
+	} else if paymentID != existingCustomer.PaymentID {
 		if len(subID) > 0 {
 			s := `UPDATE stripe SET payment_id=$1, sub_id=$2 WHERE customer_id=$3`
 			_, err = db.Exec(s, paymentID, subID, customerID)
@@ -28,10 +29,19 @@ func CreateNewStripeCustomer(customerID, paymentID, subID string) error {
 			s := `UPDATE stripe SET payment_id=$1 WHERE customer_id=$2`
 			_, err = db.Exec(s, paymentID, customerID)
 		}
-
 	}
 
 	return err
+}
+
+func SetProductTag(paymentID, customerID, productTag string) error {
+	s := `UPDATE stripe SET product_tag=$1 WHERE customer_id=$2 OR payment_id=$3`
+	_, err := db.Exec(s, productTag, customerID, paymentID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func SetSubscriptionID(subID, customerID string) error {
@@ -82,16 +92,27 @@ func GetStripeCustomerByPaymentID(paymentID string) (StripeCustomerInfo, error) 
 	}, err
 }
 
-func GetPaymentIDByStripeCustomerID(customerID string) (string, error) {
-	var paymentID string
+func GetStripeCustomerByCustomerID(customerID string) (StripeCustomerInfo, error) {
+	var (
+		paymentID  string
+		subID      string
+		createdAt  time.Time
+		productTag string
+	)
 
-	s := `SELECT payment_id FROM stripe WHERE customer_id = $1`
-	err := db.QueryRow(s, customerID).Scan(&paymentID)
+	s := `SELECT payment_id, sub_id, created_at, product_tag FROM stripe WHERE customer_id = $1`
+	err := db.QueryRow(s, customerID).Scan(&paymentID, &subID, &createdAt, &productTag)
 	if err != nil {
-		return "", err
+		return StripeCustomerInfo{}, err
 	}
 
-	return paymentID, nil
+	return StripeCustomerInfo{
+		CustomerID: customerID,
+		PaymentID:  paymentID,
+		SubID:      subID,
+		ProductTag: productTag,
+		CreatedAt:  createdAt,
+	}, nil
 }
 
 func GetStripeCustomerIDByPaymentID(paymentID string) (string, error) {

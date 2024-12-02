@@ -22,15 +22,15 @@ ul {
     margin-top: 5px;
 }
 
-.col-1 {
+.col-0 {
     grid-column-start: 1;
 }
 
-.col-2 {
+.col-1 {
     grid-column-start: 2;
 }
 
-.col-3 {
+.col-2 {
     grid-column-start: 3;
 }
 

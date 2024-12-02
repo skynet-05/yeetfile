@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"yeetfile/backend/server/subscriptions"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
@@ -67,29 +68,26 @@ type StripeBillingConfig struct {
 	WebhookSecret string
 	PortalLink    string
 
-	SubNoviceMonthly     string
-	SubNoviceMonthlyLink string
-	SubNoviceYearly      string
-	SubNoviceYearlyLink  string
+	SubNoviceMonthly              string
+	SubNoviceMonthlyLink          string
+	SubNoviceMonthlySubscribeLink string
+	SubNoviceYearly               string
+	SubNoviceYearlyLink           string
+	SubNoviceYearlySubscribeLink  string
 
-	SubRegularMonthly     string
-	SubRegularMonthlyLink string
-	SubRegularYearly      string
-	SubRegularYearlyLink  string
+	SubRegularMonthly              string
+	SubRegularMonthlyLink          string
+	SubRegularMonthlySubscribeLink string
+	SubRegularYearly               string
+	SubRegularYearlyLink           string
+	SubRegularYearlySubscribeLink  string
 
-	SubAdvancedMonthly     string
-	SubAdvancedMonthlyLink string
-	SubAdvancedYearly      string
-	SubAdvancedYearlyLink  string
-
-	//Add50GBSend     string
-	//Add50GBSendLink string
-	//
-	//Add100GBSend     string
-	//Add100GBSendLink string
-	//
-	//Add250GBSend     string
-	//Add250GBSendLink string
+	SubAdvancedMonthly              string
+	SubAdvancedMonthlyLink          string
+	SubAdvancedMonthlySubscribeLink string
+	SubAdvancedYearly               string
+	SubAdvancedYearlyLink           string
+	SubAdvancedYearlySubscribeLink  string
 }
 
 var stripeBilling = StripeBillingConfig{
@@ -97,20 +95,26 @@ var stripeBilling = StripeBillingConfig{
 	WebhookSecret: os.Getenv("YEETFILE_STRIPE_WEBHOOK_SECRET"),
 	PortalLink:    os.Getenv("YEETFILE_STRIPE_PORTAL_LINK"),
 
-	SubNoviceMonthly:     os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY"),
-	SubNoviceMonthlyLink: os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_LINK"),
-	SubNoviceYearly:      os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY"),
-	SubNoviceYearlyLink:  os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY_LINK"),
+	SubNoviceMonthly:              os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY"),
+	SubNoviceMonthlyLink:          os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_LINK"),
+	SubNoviceMonthlySubscribeLink: os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_SUBSCRIBE_LINK"),
+	SubNoviceYearly:               os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY"),
+	SubNoviceYearlyLink:           os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY_LINK"),
+	SubNoviceYearlySubscribeLink:  os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY_SUBSCRIBE_LINK"),
 
-	SubRegularMonthly:     os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY"),
-	SubRegularMonthlyLink: os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY_LINK"),
-	SubRegularYearly:      os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY"),
-	SubRegularYearlyLink:  os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY_LINK"),
+	SubRegularMonthly:              os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY"),
+	SubRegularMonthlyLink:          os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY_LINK"),
+	SubRegularMonthlySubscribeLink: os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY_SUBSCRIBE_LINK"),
+	SubRegularYearly:               os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY"),
+	SubRegularYearlyLink:           os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY_LINK"),
+	SubRegularYearlySubscribeLink:  os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY_SUBSCRIBE_LINK"),
 
-	SubAdvancedMonthly:     os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY"),
-	SubAdvancedMonthlyLink: os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_LINK"),
-	SubAdvancedYearly:      os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY"),
-	SubAdvancedYearlyLink:  os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_LINK"),
+	SubAdvancedMonthly:              os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY"),
+	SubAdvancedMonthlyLink:          os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_LINK"),
+	SubAdvancedMonthlySubscribeLink: os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_SUBSCRIBE_LINK"),
+	SubAdvancedYearly:               os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY"),
+	SubAdvancedYearlyLink:           os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_LINK"),
+	SubAdvancedYearlySubscribeLink:  os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_SUBSCRIBE_LINK"),
 }
 
 // =============================================================================
@@ -276,5 +280,9 @@ func GetServerInfoStruct() shared.ServerInfo {
 		BTCPayEnabled:      YeetFileConfig.StripeBilling.Configured,
 		DefaultStorage:     YeetFileConfig.DefaultUserStorage,
 		DefaultSend:        YeetFileConfig.DefaultUserSend,
+
+		Upgrades:      subscriptions.GetProducts(""),
+		MonthUpgrades: subscriptions.GetProducts(subscriptions.SubMonth),
+		YearUpgrades:  subscriptions.GetProducts(subscriptions.SubYear),
 	}
 }

@@ -53,7 +53,7 @@ func SetSession(id string, w http.ResponseWriter, req *http.Request) error {
 	session.Values[UserSessionIDKey] = shared.GenRandomNumbers(32)
 	session.Options.SameSite = http.SameSiteStrictMode
 	session.Options.HttpOnly = true
-	if strings.HasPrefix(config.YeetFileConfig.Domain, "https") {
+	if req.TLS != nil {
 		session.Options.Secure = true
 	}
 
@@ -138,10 +138,11 @@ func InvalidateOtherSessions(w http.ResponseWriter, req *http.Request) error {
 }
 
 func RemoveSession(w http.ResponseWriter, req *http.Request) error {
-	session, _ := GetSession(req)
+	session, err := GetSession(req)
 
-	if session.Values[UserIDKey] != nil || session.Values[UserSessionKey] != nil {
+	if err == nil {
 		session.Options.MaxAge = -1
+		session.Values[UserSessionIDKey] = ""
 		session.Values[UserSessionKey] = ""
 		session.Values[UserIDKey] = ""
 		return session.Save(req, w)

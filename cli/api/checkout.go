@@ -10,8 +10,11 @@ import (
 )
 
 // InitStripeCheckout produces a link that the user can use to check out via Stripe
-func (ctx *Context) InitStripeCheckout(subType string) (string, error) {
-	url := fmt.Sprintf("%s?type=%s", endpoints.StripeCheckout.Format(ctx.Server), subType)
+func (ctx *Context) InitStripeCheckout(subType, quantity string) (string, error) {
+	url := fmt.Sprintf("%s?type=%s&quantity=%s",
+		endpoints.StripeCheckout.Format(ctx.Server),
+		subType,
+		quantity)
 	resp, err := requests.GetRequest(ctx.Session, url)
 	if err != nil {
 		return "", err
@@ -28,8 +31,11 @@ func (ctx *Context) InitStripeCheckout(subType string) (string, error) {
 }
 
 // InitBTCPayCheckout produces a link that the user can use to check out via BTCPay
-func (ctx *Context) InitBTCPayCheckout(subType string) (string, error) {
-	url := fmt.Sprintf("%s?type=%s", endpoints.BTCPayCheckout.Format(ctx.Server), subType)
+func (ctx *Context) InitBTCPayCheckout(subType, quantity string) (string, error) {
+	url := fmt.Sprintf("%s?type=%s&quantity=%s",
+		endpoints.BTCPayCheckout.Format(ctx.Server),
+		subType,
+		quantity)
 	resp, err := requests.GetRequest(ctx.Session, url)
 	if err != nil {
 		return "", err

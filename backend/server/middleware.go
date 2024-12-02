@@ -90,9 +90,20 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		redirectURL := fmt.Sprintf("%s?next=%s", endpoints.HTMLLogin, req.URL.Path)
-		redirectCode := http.StatusTemporaryRedirect
-		http.Redirect(w, req, redirectURL, redirectCode)
+		loginURL := fmt.Sprintf("%s?next=%s", endpoints.HTMLLogin, req.URL.Path)
+		redirect := fmt.Sprintf(`
+<html>
+<head>
+<meta http-equiv="refresh" content="0;URL='%[1]s'"/>
+</head>
+<body><p>Moved to <a href="%[1]s">%[1]s</a>.</p></body>
+</html>`, loginURL)
+
+		w.Write([]byte(redirect))
+
+		//redirectURL := fmt.Sprintf("%s?next=%s", endpoints.HTMLLogin, req.URL.Path)
+		//redirectCode := http.StatusTemporaryRedirect
+		//http.Redirect(w, req, redirectURL, redirectCode)
 		return
 	}
 

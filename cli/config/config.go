@@ -28,6 +28,7 @@ type Paths struct {
 type Config struct {
 	Server      string `yaml:"server,omitempty"`
 	DefaultView string `yaml:"default_view,omitempty"`
+	DebugFile   string `yaml:"debug_file,omitempty"`
 	Paths       Paths
 }
 

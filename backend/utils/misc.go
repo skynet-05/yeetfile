@@ -142,9 +142,16 @@ func GenChecksum(data []byte) ([]byte, string) {
 	return checksum, fmt.Sprintf("%x", checksum)
 }
 
-func PrettyPrintStruct(v any) {
+func LogStruct(v any) {
 	s, _ := json.MarshalIndent(v, "", "\t")
-	fmt.Println(string(s))
+	log.Println(string(s))
+}
+
+// DayDiff returns the number of days between two dates
+func DayDiff(begin, end time.Time) int {
+	duration := end.Sub(begin)
+	days := int(duration.Hours() / 24)
+	return days
 }
 
 // IsStructMissingAnyField checks to see if any generic struct is missing a

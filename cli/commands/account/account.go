@@ -154,35 +154,17 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 	return account, accountDetails
 }
 
-func generateSubDesc(subType string, isYearly bool) string {
+func generateSubDesc(product subscriptions.Product) string {
 	var duration string
-	var price int
-	if isYearly {
+	if product.Duration == subscriptions.SubYear {
 		duration = "year"
-
-		switch subType {
-		case subscriptions.TypeNovice:
-			price = subscriptions.PriceMapping[subscriptions.YearlyNovice]
-		case subscriptions.TypeRegular:
-			price = subscriptions.PriceMapping[subscriptions.YearlyRegular]
-		case subscriptions.TypeAdvanced:
-			price = subscriptions.PriceMapping[subscriptions.YearlyAdvanced]
-		}
 	} else {
 		duration = "month"
-
-		switch subType {
-		case subscriptions.TypeNovice:
-			price = subscriptions.PriceMapping[subscriptions.MonthlyNovice]
-		case subscriptions.TypeRegular:
-			price = subscriptions.PriceMapping[subscriptions.MonthlyRegular]
-		case subscriptions.TypeAdvanced:
-			price = subscriptions.PriceMapping[subscriptions.MonthlyAdvanced]
-		}
 	}
 
-	storage := shared.ReadableFileSize(subscriptions.StorageAmountMap[subType])
-	send := shared.ReadableFileSize(subscriptions.SendAmountMap[subType])
+	price := product.Price
+	storage := shared.ReadableFileSize(int64(product.StorageGB))
+	send := shared.ReadableFileSize(int64(product.SendGB))
 
 	return shared.EscapeString(fmt.Sprintf(`- %s Vault Storage
 - Send %s/month

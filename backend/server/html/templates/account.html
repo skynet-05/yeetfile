@@ -39,11 +39,13 @@
       {{ if .Base.Config.BillingEnabled }}
       <tr>
         <td>
-          <label class="slightly-bold-text">Subscription:</label>
+          <label class="slightly-bold-text">Upgrades:</label>
         </td>
         <td>
           {{ if .IsActive }}
           <span>Active (expires {{ .ExpString }})</span>
+          {{ else if .IsPrevSubscriber }}
+          <span>Inactive (expired {{ .ExpString }})</span>
           {{ else }}
           <span>Inactive</span>
           {{ end }}
@@ -113,8 +115,8 @@
   {{ if or .Base.Config.StripeEnabled .Base.Config.BTCPayEnabled }}
     <hr>
     <div class="subscription-container">
-      <h1>Subscriptions</h1>
-      {{ if not .IsStripeUser }}
+      <h1>Upgrades</h1>
+      {{ if not .IsStripeSubscriber }}
         <div class="radio-group">
           <input type="radio" id="monthly-option" name="options" {{ if not .IsYearly }}checked{{ end }}>
           <label id="monthly-toggle" for="monthly-option"><a href="{{ .Base.Endpoints.Account }}">Monthly</a></label>
@@ -125,116 +127,58 @@
     </div>
     {{ if .Base.Config.BillingEnabled }}
       <div id="subscription-div">
-        {{ if and .IsActive .IsStripeUser }}
+        {{ if and .IsActive .IsStripeSubscriber }}
         <div class="pricing-box">
           <h3>YeetFile Subscription</h3>
           <p>Upgrade, downgrade, or cancel your subscription using the button below.</p>
           <a href="{{ .BillingEndpoints.StripeManage }}"><button class="accent-btn">Manage Subscription</button></a>
         </div>
+        </div>
         {{ else }}
-        <div class="pricing-box col-1">
-          <h3>Novice Yeeter</h3>
-          <ul>
-            <li>{{ .SubscriptionTemplate.NoviceStorage }}GB vault storage</li>
-            <li>{{ .SubscriptionTemplate.NoviceSend }}GB/month send</li>
-          </ul>
-          {{ if .IsYearly }}
-          <span><b>${{ .SubscriptionTemplate.YearlyNovicePrice }}/year</b></span><br>
-            {{ if .Base.Config.StripeEnabled }}
-            <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.YearlyNovice }}">
-              <button class="stripe-btn payment-btn">Purchase</button>
-            </a><br class="mobile-only">
-            {{ end }}
-            {{ if .Base.Config.BTCPayEnabled }}
-            <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.YearlyNovice }}">
-              {{ template "btcpay-button.html" }}
-            </a>
-            {{ end }}
-          {{ else }}
-          <span><b>${{ .SubscriptionTemplate.MonthlyNovicePrice }}/month</b></span><br>
+          {{ range $i, $prod := .Products }}
+            <div class="pricing-box col-{{$i}}">
+              <h3>{{ $prod.Name }}</h3>
+              <ul>
+                <li>{{ $prod.StorageGB }}GB vault storage</li>
+                <li>{{ $prod.SendGB }}GB/month send</li>
+                <li>Unlimited password storage</li>
+              </ul>
 
-            {{ if .Base.Config.StripeEnabled }}
-            <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.MonthlyNovice }}">
-              <button class="stripe-btn payment-btn">Purchase</button>
-            </a><br class="mobile-only">
-            {{ end }}
-            {{ if .Base.Config.BTCPayEnabled }}
-            <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.MonthlyNovice }}">
-              {{ template "btcpay-button.html" }}
-            </a>
-            {{ end }}
-          {{ end }}
-        </div>
-        <div class="pricing-box col-2">
-          <h3>Regular Yeeter</h3>
-          <ul>
-            <li>{{ .SubscriptionTemplate.RegularStorage}}GB storage</li>
-            <li>{{ .SubscriptionTemplate.RegularSend }}GB/month send</li>
-          </ul>
-          {{ if .IsYearly }}
-          <span><b>${{ .SubscriptionTemplate.YearlyRegularPrice }}/year</b></span><br>
-            {{ if .Base.Config.StripeEnabled }}
-            <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.YearlyRegular }}">
-              <button class="stripe-btn payment-btn">Purchase</button>
-            </a><br class="mobile-only">
-            {{ end }}
-            {{ if .Base.Config.BTCPayEnabled }}
-            <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.YearlyRegular }}">
-              {{ template "btcpay-button.html" }}
-            </a>
-            {{ end }}
-          {{ else }}
-          <span><b>${{ .SubscriptionTemplate.MonthlyRegularPrice }}/month</b></span><br>
-            {{ if .Base.Config.StripeEnabled }}
-            <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.MonthlyRegular }}">
-              <button class="stripe-btn payment-btn">Purchase</button>
-            </a><br class="mobile-only">
-            {{ end }}
-            {{ if .Base.Config.BTCPayEnabled }}
-            <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.MonthlyRegular }}">
-              {{ template "btcpay-button.html" }}
-            </a>
-            {{ end }}
-          {{ end }}
-        </div>
-        <div class="pricing-box col-3">
-          <h3>Advanced Yeeter</h3>
-          <ul>
-            <li>{{ .SubscriptionTemplate.AdvancedStorage }}GB storage</li>
-            <li>{{ .SubscriptionTemplate.AdvancedSend }}GB/month transfer</li>
-          </ul>
-          {{ if .IsYearly }}
-          <span><b>${{ .SubscriptionTemplate.YearlyAdvancedPrice }}/year</b></span><br>
-            {{ if .Base.Config.StripeEnabled }}
-            <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.YearlyAdvanced }}">
-              <button class="stripe-btn payment-btn">Purchase</button>
-            </a><br class="mobile-only">
-            {{ end }}
-            {{ if .Base.Config.BTCPayEnabled }}
-            <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.YearlyAdvanced }}">
-              {{ template "btcpay-button.html" }}
-            </a>
-            {{ end }}
-          {{ else }}
-          <span><b>${{ .SubscriptionTemplate.MonthlyAdvancedPrice }}/month</b></span><br>
-            {{ if .Base.Config.StripeEnabled }}
-            <a href="{{ .BillingEndpoints.StripeCheckout }}?type={{ .SubscriptionTemplate.MonthlyAdvanced }}">
-              <button class="stripe-btn payment-btn">Purchase</button>
-            </a><br class="mobile-only">
-            {{ end }}
-            {{ if .Base.Config.BTCPayEnabled }}
-            <a href="{{ .BillingEndpoints.BTCPayCheckout }}?type={{ .SubscriptionTemplate.MonthlyAdvanced }}">
-              {{ template "btcpay-button.html" }}
-            </a>
-            {{ end }}
+              {{ if $.IsYearly }}
+              <span><b>${{ $prod.Price }} per year</b></span>
+              {{ else }}
+              <span><b>${{ $prod.Price }} per month</b></span>
+              {{ end }}
+              <br>
+
+              {{ if $.IsYearly }}
+              <label for="quantity">Years:</label>
+              {{ else }}
+              <label for="quantity">Months:</label>
+              {{ end }}
+              <input class="quantity-input" type="number" id="quantity" value="1" max="12" min="1">
+
+              {{ if $.Base.Config.StripeEnabled }}
+              <a href="{{ $.BillingEndpoints.StripeCheckout }}?type={{ $prod.Tag }}&quantity=1">
+                <button class="stripe-btn payment-btn">Purchase</button>
+              </a><br>
+<!--              <a href="{{ $.BillingEndpoints.StripeCheckout }}?type={{ $prod.Tag }}&autorenew=1">-->
+<!--                <button class="stripe-btn payment-btn">Subscribe</button>-->
+<!--              </a><br>-->
+              {{ end }}
+              {{ if $.Base.Config.BTCPayEnabled }}
+                {{ if ne $prod.BTCPayLink "" }}
+                  <a href="{{ $.BillingEndpoints.BTCPayCheckout }}?type={{ $prod.Tag }}&quantity">
+                    {{ template "btcpay-button.html" }}
+                  </a>
+                {{ end }}
+              {{ end }}
+            </div>
           {{ end }}
         </div>
         {{ end }}
-      </div>
     <br>
-      {{ if not .IsStripeUser }}
-        <span class="italic">Note: BTCPay subscriptions do not auto-renew, and can take up to 10-15 minutes to settle.</span>
-      {{ end }}
+    <span class="italic">Note: Payments are one-time payments and do not auto-renew.</span>
     {{ end }}
   {{ end }}
 </div>

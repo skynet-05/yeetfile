@@ -98,12 +98,13 @@ type AccountTemplate struct {
 	IsActive             bool
 	PaymentID            string
 	ExpString            string
+	IsPrevSubscriber     bool
 	StorageAvailable     string
 	StorageUsed          string
 	SendAvailable        string
 	SendUsed             string
 	IsYearly             bool
-	IsStripeUser         bool
+	IsStripeSubscriber   bool
 	StripeConfigured     bool
 	BTCPayConfigured     bool
 	BillingConfigured    bool
@@ -113,6 +114,7 @@ type AccountTemplate struct {
 	SuccessMessage       string
 	BillingEndpoints     endpoints.BillingEndpoints
 	SubscriptionTemplate subscriptions.SubscriptionTemplateValues
+	Products             []subscriptions.Product
 }
 
 type VerificationTemplate struct {

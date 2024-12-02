@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/mdp/qrterminal/v3"
-	"log"
+	"strconv"
 	"strings"
-	"time"
 	"yeetfile/backend/server/subscriptions"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
@@ -27,7 +26,6 @@ const (
 	SetPasswordHint
 	SetTwoFactor
 	DeleteTwoFactor
-	ManageSubscription
 	PurchaseSubscription
 	RecyclePaymentID
 	DeleteAccount
@@ -620,19 +618,10 @@ func generateSelectOptions(
 	} else {
 		twoFactorOption = huh.NewOption("Enable 2FA", SetTwoFactor)
 	}
+
 	options = append(options, twoFactorOption)
 
-	log.Println(account.SubscriptionExp)
-	log.Println(time.Now())
-	log.Println(account.SubscriptionExp.After(time.Now()))
-	log.Println(account.SubscriptionMethod)
-
-	if account.SubscriptionExp.After(time.Now()) &&
-		account.SubscriptionMethod == constants.SubMethodStripe {
-		options = append(
-			options,
-			huh.NewOption("Manage Subscription", ManageSubscription))
-	} else if globals.ServerInfo.BillingEnabled {
+	if globals.ServerInfo.BillingEnabled && len(globals.ServerInfo.Upgrades) > 0 {
 		options = append(
 			options,
 			huh.NewOption("Upgrade Account", PurchaseSubscription))
@@ -644,51 +633,15 @@ func generateSelectOptions(
 	return options
 }
 
-func showManageSubscriptionView() {
-	var (
-		link string
-		err  error
-	)
-	_ = spinner.New().Title("Fetching link...").Action(func() {
-		link, err = globals.API.GetCustomerPortalLink()
-	}).Run()
-
-	if err != nil {
-		utils.ShowErrorForm(err.Error())
-		ShowAccountModel()
-		return
-	}
-
-	title := utils.GenerateTitle("Manage Subscription")
-	desc := fmt.Sprintf("Use the link below to manage your membership.\n\n"+
-		"Do not share this link with anyone.\n\n%s",
-		shared.EscapeString(link))
-
-	_ = huh.NewForm(huh.NewGroup(
-		huh.NewNote().Title(title).Description(desc),
-		huh.NewConfirm().Affirmative("OK").Negative(""),
-	)).WithTheme(styles.Theme).Run()
-
-	ShowAccountModel()
-}
-
 func showSubscriptionView() {
 	const (
-		switchYearlyMonthly int = iota
-		novSub
-		regSub
-		advSub
-		cancel
+		switchYearlyMonthly = -1
+		cancel              = -2
 	)
 
-	subMap := map[int]string{
-		novSub: subscriptions.TypeNovice,
-		regSub: subscriptions.TypeRegular,
-		advSub: subscriptions.TypeAdvanced,
-	}
-
-	var subscriptionFunc func(bool) (int, bool, error)
-	subscriptionFunc = func(isYearly bool) (int, bool, error) {
+	var products []subscriptions.Product
+	var subscriptionFunc func(bool) (int, error)
+	subscriptionFunc = func(isYearly bool) (int, error) {
 		var switchOption huh.Option[int]
 		var selected int
 		if isYearly {
@@ -700,67 +653,75 @@ func showSubscriptionView() {
 				"Switch to yearly (2 months free)",
 				switchYearlyMonthly)
 		}
-		noviceName := subscriptions.NameMap[subscriptions.TypeNovice]
-		regularName := subscriptions.NameMap[subscriptions.TypeRegular]
-		advancedName := subscriptions.NameMap[subscriptions.TypeAdvanced]
 
-		options := []huh.Option[int]{
-			switchOption,
-			huh.NewOption(noviceName+" ->", novSub),
-			huh.NewOption(regularName+" ->", regSub),
-			huh.NewOption(advancedName+" ->", advSub),
-			huh.NewOption("Cancel", cancel),
+		if isYearly {
+			products = globals.ServerInfo.YearUpgrades
+		} else {
+			products = globals.ServerInfo.MonthUpgrades
 		}
 
-		basicSubStr := generateSubDesc(subscriptions.TypeNovice, isYearly)
-		regSubStr := generateSubDesc(subscriptions.TypeRegular, isYearly)
-		advSubStr := generateSubDesc(subscriptions.TypeAdvanced, isYearly)
+		options := []huh.Option[int]{
+			huh.NewOption("Cancel", cancel),
+			switchOption,
+		}
 
-		err := huh.NewForm(huh.NewGroup(
-			huh.NewNote().Title(utils.GenerateTitle("Subscriptions")),
+		fields := []huh.Field{
 			huh.NewNote().
-				Title(noviceName).
-				Description(utils.GenerateDescription(basicSubStr, 25)),
-			huh.NewNote().
-				Title(regularName).
-				Description(utils.GenerateDescription(regSubStr, 25)),
-			huh.NewNote().
-				Title(advancedName).
-				Description(utils.GenerateDescription(advSubStr, 25)),
-			huh.NewSelect[int]().Options(options...).Value(&selected),
-		)).WithTheme(styles.Theme).Run()
+				Title(utils.GenerateTitle("Upgrade Account")).
+				Description("Note: All upgrades are one-time purchases and do not auto-renew."),
+		}
+
+		for i, product := range products {
+			prodOption := huh.NewOption(product.Name+" ->", i)
+			prodDesc := utils.GenerateDescription(generateSubDesc(product), 25)
+			prodNote := huh.NewNote().
+				Title(product.Name).
+				Description(prodDesc)
+			options = append(options, prodOption)
+			fields = append(fields, prodNote)
+		}
+
+		fields = append(fields, huh.NewSelect[int]().Options(options...).Value(&selected))
+		err := huh.NewForm(huh.NewGroup(fields...)).WithTheme(styles.Theme).Run()
 
 		if err == nil && selected == switchYearlyMonthly {
 			return subscriptionFunc(!isYearly)
 		}
 
-		return selected, isYearly, err
+		return selected, err
 	}
 
-	selected, isYearly, err := subscriptionFunc(false)
+	selected, err := subscriptionFunc(false)
 	if err == huh.ErrUserAborted || selected == cancel {
 		ShowAccountModel()
 	} else {
-		showCheckoutModel(isYearly, subMap[selected])
+		showCheckoutModel(products[selected])
 	}
 }
 
-func showCheckoutModel(isYearly bool, subType string) {
+func showCheckoutModel(product subscriptions.Product) {
 	const (
 		stripe int = iota
 		btcpay
 		back
 	)
 
-	var selected int
-	subName := subscriptions.NameMap[subType]
-	if isYearly {
-		subName += " (Yearly)"
+	var (
+		selected int
+		duration string
+	)
+
+	quantity := "1"
+	subName := product.Name
+	if product.Duration == subscriptions.SubYear {
+		subName += " (Year)"
+		duration = "years"
 	} else {
-		subName += " (Monthly)"
+		subName += " (Month)"
+		duration = "months"
 	}
 
-	subDesc := generateSubDesc(subType, isYearly)
+	subDesc := generateSubDesc(product)
 	subDesc += "\n\n" + utils.GenerateWrappedText(
 		"Select a checkout option below. This will provide a link "+
 			"to complete your purchase on the web.") + "\n\n" +
@@ -777,23 +738,44 @@ func showCheckoutModel(isYearly bool, subType string) {
 		huh.NewNote().
 			Title(utils.GenerateTitle("Subscription")).
 			Description(utils.GenerateDescriptionSection(subName, subDesc, 30)),
+		huh.NewInput().
+			Title("Quantity").
+			Description("Number of "+duration).
+			Value(&quantity).Validate(
+			func(s string) error {
+				intVal, err := strconv.Atoi(s)
+				if err != nil {
+					return err
+				} else if intVal < 1 {
+					return errors.New("quantity must be > 1")
+				} else if intVal > 12 {
+					return errors.New("quantity must be < 12")
+				}
+
+				return nil
+			}),
 		huh.NewSelect[int]().Options(options...).Value(&selected),
 	)).WithTheme(styles.Theme).Run()
 
-	subTag := subscriptions.GetSubTagName(subType, isYearly)
-
+	var link string
 	if err == huh.ErrUserAborted || selected == back {
 		showSubscriptionView()
+		return
 	} else if selected == stripe {
-		link, err := globals.API.InitStripeCheckout(subTag)
+		link, err = globals.API.InitStripeCheckout(product.Tag, quantity)
 		if err == nil {
 			showCheckoutLinkModel(link)
 		}
 	} else if selected == btcpay {
-		link, err := globals.API.InitBTCPayCheckout(subTag)
+		link, err = globals.API.InitBTCPayCheckout(product.Tag, quantity)
 		if err == nil {
 			showCheckoutLinkModel(link)
 		}
+	}
+
+	if err != nil {
+		utils.ShowErrorForm("Error generating checkout link")
+		showSubscriptionView()
 	}
 }
 
@@ -819,7 +801,6 @@ func init() {
 		ChangePassword:       showChangePasswordView,
 		SetPasswordHint:      showPasswordHintView,
 		SetTwoFactor:         showSetTwoFactorView,
-		ManageSubscription:   showManageSubscriptionView,
 		PurchaseSubscription: showSubscriptionView,
 		DeleteTwoFactor:      showDeleteTwoFactorView,
 		RecyclePaymentID:     showRecyclePaymentIDView,

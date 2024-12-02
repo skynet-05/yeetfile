@@ -5,23 +5,28 @@ package api
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"yeetfile/backend/server/subscriptions"
 )
 
 func TestCheckoutInit(t *testing.T) {
 	info, err := UserA.context.GetServerInfo()
 	assert.Nil(t, err)
 
-	if info.BillingEnabled {
+	if info.BillingEnabled && len(info.Upgrades) > 0 {
 		account, err := UserA.context.GetAccountInfo()
 		assert.Nil(t, err)
 
-		link, err := UserA.context.InitStripeCheckout(subscriptions.MonthlyNovice)
-		assert.Nil(t, err)
-		assert.Contains(t, link, account.PaymentID)
+		if info.StripeEnabled {
+			link, err := UserA.context.InitStripeCheckout(
+				info.Upgrades[0].Tag, "1")
+			assert.Nil(t, err)
+			assert.Contains(t, link, account.PaymentID)
+		}
 
-		link, err = UserA.context.InitBTCPayCheckout(subscriptions.MonthlyRegular)
-		assert.Nil(t, err)
-		assert.Contains(t, link, account.PaymentID)
+		if info.BTCPayEnabled {
+			link, err := UserA.context.InitBTCPayCheckout(
+				info.Upgrades[0].Tag, "1")
+			assert.Nil(t, err)
+			assert.Contains(t, link, account.PaymentID)
+		}
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -160,7 +162,15 @@ func Entrypoint(args []string) {
 	}
 
 	// Set up logging output (can't log to stdout while bubbletea is running)
-	f, err := tea.LogToFile("debug.log", "debug")
+	var debugFile string
+	if len(globals.Config.DebugFile) > 0 {
+		homeDir, _ := os.UserHomeDir()
+		debugFile = strings.Replace(globals.Config.DebugFile, "~", homeDir, 1)
+	} else {
+		debugFile = os.DevNull
+	}
+
+	f, err := tea.LogToFile(debugFile, "debug")
 	if err != nil {
 		panic(err)
 	}

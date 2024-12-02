@@ -7,9 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/payments/btcpay"
 	"yeetfile/backend/server/payments/stripe"
+	"yeetfile/backend/server/subscriptions"
 )
 
 // StripeWebhook handles relevant incoming webhook events from Stripe related
@@ -63,25 +65,51 @@ func StripeCustomerPortal(w http.ResponseWriter, req *http.Request, id string) {
 // using Stripe Checkout
 func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
+	product, err := subscriptions.GetProductByTag(itemType)
+	if err != nil {
+		http.Error(w, "Invalid product tag", http.StatusBadRequest)
+		return
+	}
+
 	paymentID, err := db.GetPaymentIDByUserID(id)
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	if len(itemType) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
+	// TODO: Need to decide if auto-renew is worth supporting (probably not)
+	//autoRenew := false
+	//if len(req.URL.Query().Get("autorenew")) > 0 {
+	//	autoRenew = true
+	//}
+
+	quantity := 1
+	if len(req.URL.Query().Get("quantity")) > 0 {
+		quantityInt, err := strconv.Atoi(req.URL.Query().Get("quantity"))
+		if err == nil && quantityInt > 0 && quantityInt < 12 {
+			quantity = quantityInt
+		}
+	}
+
+	scheme := "http"
+	if req.TLS != nil {
+		scheme = "https"
+	}
+
+	baseURL := fmt.Sprintf("%s://%s", scheme, req.Host)
+
+	checkoutLink, err := stripe.GenerateCheckoutLink(
+		product,
+		paymentID,
+		quantity,
+		baseURL)
+
+	if err != nil {
+		http.Error(w, "Error generating checkout link", http.StatusInternalServerError)
 		return
 	}
 
-	checkoutLink, ok := stripe.LinkMapping[itemType]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	checkoutParams := fmt.Sprintf("?client_reference_id=%s", paymentID)
-	http.Redirect(w, req, checkoutLink+checkoutParams, http.StatusTemporaryRedirect)
+	http.Redirect(w, req, checkoutLink, http.StatusTemporaryRedirect)
 }
 
 // BTCPayWebhook handles relevant incoming webhook events from BTCPay
@@ -98,7 +126,7 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 	var settledInvoice btcpay.Invoice
 	err := decoder.Decode(&settledInvoice)
 	if err != nil {
-		log.Printf("Error decoding BTCPay webhook request body")
+		log.Printf("Error decoding BTCPay webhook request body: %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -116,23 +144,23 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 // BTCPayCheckout generates an invoice for the requested product/upgrade
 func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
+	product, err := subscriptions.GetProductByTag(itemType)
+	if err != nil {
+		http.Error(w, "Invalid product tag", http.StatusBadRequest)
+		return
+	}
+
 	paymentID, err := db.GetPaymentIDByUserID(id)
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	if len(itemType) == 0 {
+	if len(product.BTCPayLink) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	checkoutLink, ok := btcpay.LinkMapping[itemType]
-	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	checkoutParams := fmt.Sprintf("?orderId=%s", paymentID)
-	http.Redirect(w, req, checkoutLink+checkoutParams, http.StatusTemporaryRedirect)
+	checkoutLink := fmt.Sprintf("%s?orderId=%s", product.BTCPayLink, paymentID)
+	http.Redirect(w, req, checkoutLink, http.StatusTemporaryRedirect)
 }

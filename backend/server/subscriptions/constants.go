@@ -2,8 +2,6 @@ package subscriptions
 
 import (
 	"fmt"
-	"time"
-	"yeetfile/shared"
 )
 
 const monthly = "monthly"
@@ -22,8 +20,6 @@ const AdvancedStorage = 500
 const NoviceSend = 10
 const RegularSend = 25
 const AdvancedSend = 50
-
-const NonMemberPassMax = 100
 
 var MonthlyNovice = fmt.Sprintf("%s-%s", monthly, TypeNovice)
 var MonthlyRegular = fmt.Sprintf("%s-%s", monthly, TypeRegular)
@@ -101,36 +97,6 @@ var NameMap = map[string]string{
 	TypeNovice:   "Novice Yeeter",
 	TypeRegular:  "Regular Yeeter",
 	TypeAdvanced: "Advanced Yeeter",
-}
-
-// DescriptionMap maps subscription tags to a description of what the subscription
-// actually provides
-var DescriptionMap = map[string]string{
-	MonthlyNovice: "1 Month YeetFile Novice Membership " +
-		fmt.Sprintf("(%dGB vault storage + %dGB/month send)",
-			NoviceStorage, NoviceSend),
-	MonthlyRegular: "1 Month YeetFile Regular Membership " +
-		fmt.Sprintf("(%dGB vault storage + %dGB/month send)",
-			RegularStorage, RegularSend),
-	MonthlyAdvanced: "1 Month YeetFile Advanced Membership " +
-		fmt.Sprintf("(%dGB vault storage + %dGB/month send)",
-			AdvancedStorage, AdvancedSend),
-	YearlyNovice: "1 Year YeetFile Novice Membership " +
-		fmt.Sprintf("(%dGB vault storage + %dGB/month send)",
-			NoviceStorage, NoviceSend),
-	YearlyRegular: "1 Year YeetFile Regular Membership " +
-		fmt.Sprintf("(%dGB vault storage + %dGB/month send)",
-			RegularStorage, RegularSend),
-	YearlyAdvanced: "1 Year YeetFile Advanced Membership " +
-		fmt.Sprintf("(%dGB vault storage + %dGB/month send)",
-			AdvancedStorage, AdvancedSend),
-}
-
-// membershipDurationFunctionMap maps membership order types to a function for
-// generating the correct end date for the user's membership
-var membershipDurationFunctionMap = map[string]func() time.Time{
-	monthly: func() time.Time { return shared.AddDate(0, 1) },
-	yearly:  func() time.Time { return shared.AddDate(1, 0) },
 }
 
 // StorageAmountMap maps subscription types to an amount of vault storage that

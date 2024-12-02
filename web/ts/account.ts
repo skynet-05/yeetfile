@@ -43,6 +43,21 @@ const init = () => {
             window.location.assign("/account");
         });
     }
+
+    document.querySelectorAll(".pricing-box").forEach(container => {
+        const input = container.querySelector(".quantity-input") as HTMLInputElement;
+        const links = container.querySelectorAll("a") as NodeListOf<HTMLAnchorElement>;
+
+        // Listen for changes to the quantity input
+        input.addEventListener("input", () => {
+            const value = input.value;
+
+            links.forEach(link => {
+                const baseUrl = link.href.split("&")[0];
+                link.href = `${baseUrl}&quantity=${encodeURIComponent(value)}`;
+            });
+        });
+    });
 }
 
 const logout = () => {

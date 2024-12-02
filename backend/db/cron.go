@@ -55,12 +55,12 @@ var tasks = []CronTask{
 		TaskFn:         CheckBandwidth,
 	},
 	{
+		// Only enable if billing through BTCPay or Stripe is set up
 		Name:           MembershipTask,
 		Interval:       time.Hour,
 		IntervalAmount: 24,
-		// Only enable if billing through BTCPay or Stripe is setup
-		Enabled: config.YeetFileConfig.BillingEnabled,
-		TaskFn:  CheckMemberships,
+		Enabled:        config.YeetFileConfig.BillingEnabled,
+		TaskFn:         CheckMemberships,
 	},
 	{
 		Name:           DownloadsTask,
@@ -148,7 +148,7 @@ func (task CronTask) runCronTask() {
 	if err != nil {
 		log.Printf("Error releasing advisory lock: %v\n", err)
 	} else {
-		log.Printf("'%s' task completed at %v\n", task.Name, time.Now().Format(time.RFC822))
+		log.Printf("'%s' task completed at %v\n", task.Name, time.Now().Format(time.RFC1123))
 	}
 }
 
@@ -172,8 +172,10 @@ func InitCronTasks(limiterFn func()) {
 
 		task.runCronTask()
 		_, err := c.AddFunc(task.getCronString(), task.runCronTask)
-		if err != nil {
+		if err == nil {
 			log.Printf("Added cron task '%s'\n", task.Name)
+		} else {
+			log.Printf("Error adding cron task: %v\n", err)
 		}
 	}
 

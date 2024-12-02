@@ -12,98 +12,20 @@ import (
 	"github.com/stripe/stripe-go/v78/webhook"
 	"log"
 	"os"
+	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/mail"
 	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/utils"
 	"yeetfile/shared/constants"
+	"yeetfile/shared/endpoints"
 )
 
-var LinkMapping = map[string]string{
-	subscriptions.MonthlyNovice: config.YeetFileConfig.StripeBilling.
-		SubNoviceMonthlyLink,
-	subscriptions.MonthlyRegular: config.YeetFileConfig.StripeBilling.
-		SubRegularMonthlyLink,
-	subscriptions.MonthlyAdvanced: config.YeetFileConfig.StripeBilling.
-		SubAdvancedMonthlyLink,
-
-	subscriptions.YearlyNovice: config.YeetFileConfig.StripeBilling.
-		SubNoviceYearlyLink,
-	subscriptions.YearlyRegular: config.YeetFileConfig.StripeBilling.
-		SubRegularYearlyLink,
-	subscriptions.YearlyAdvanced: config.YeetFileConfig.StripeBilling.
-		SubAdvancedYearlyLink,
-}
-
-var stripeDescMap = map[string]string{
-	config.YeetFileConfig.StripeBilling.SubNoviceMonthly: subscriptions.
-		DescriptionMap[subscriptions.MonthlyNovice],
-	config.YeetFileConfig.StripeBilling.SubRegularMonthly: subscriptions.
-		DescriptionMap[subscriptions.MonthlyRegular],
-	config.YeetFileConfig.StripeBilling.SubAdvancedMonthly: subscriptions.
-		DescriptionMap[subscriptions.MonthlyAdvanced],
-
-	config.YeetFileConfig.StripeBilling.SubNoviceYearly: subscriptions.
-		DescriptionMap[subscriptions.YearlyNovice],
-	config.YeetFileConfig.StripeBilling.SubRegularYearly: subscriptions.
-		DescriptionMap[subscriptions.YearlyRegular],
-	config.YeetFileConfig.StripeBilling.SubAdvancedYearly: subscriptions.
-		DescriptionMap[subscriptions.YearlyAdvanced],
-}
-
-var stripeOrderTypeMap = map[string]string{
-	config.YeetFileConfig.StripeBilling.SubNoviceMonthly: subscriptions.
-		MonthlyNovice,
-	config.YeetFileConfig.StripeBilling.SubRegularMonthly: subscriptions.
-		MonthlyRegular,
-	config.YeetFileConfig.StripeBilling.SubAdvancedMonthly: subscriptions.
-		MonthlyAdvanced,
-
-	config.YeetFileConfig.StripeBilling.SubNoviceYearly: subscriptions.
-		YearlyNovice,
-	config.YeetFileConfig.StripeBilling.SubRegularYearly: subscriptions.
-		YearlyRegular,
-	config.YeetFileConfig.StripeBilling.SubAdvancedYearly: subscriptions.
-		YearlyAdvanced,
-}
-
-// stripeProductStorage maps product IDs to their respective amounts of storage
-// that they grant a user
-var stripeProductStorage = map[string]int64{
-	config.YeetFileConfig.StripeBilling.SubNoviceMonthly: subscriptions.
-		StorageAmountMap[subscriptions.TypeNovice],
-	config.YeetFileConfig.StripeBilling.SubNoviceYearly: subscriptions.
-		StorageAmountMap[subscriptions.TypeNovice],
-
-	config.YeetFileConfig.StripeBilling.SubRegularMonthly: subscriptions.
-		StorageAmountMap[subscriptions.TypeRegular],
-	config.YeetFileConfig.StripeBilling.SubRegularYearly: subscriptions.
-		StorageAmountMap[subscriptions.TypeRegular],
-
-	config.YeetFileConfig.StripeBilling.SubAdvancedMonthly: subscriptions.
-		StorageAmountMap[subscriptions.TypeAdvanced],
-	config.YeetFileConfig.StripeBilling.SubAdvancedYearly: subscriptions.
-		StorageAmountMap[subscriptions.TypeAdvanced],
-}
-
-// stripeProductSend maps product IDs to their respective amounts of storage
-// that they grant a user
-var stripeProductSend = map[string]int64{
-	config.YeetFileConfig.StripeBilling.SubNoviceMonthly: subscriptions.
-		SendAmountMap[subscriptions.TypeNovice],
-	config.YeetFileConfig.StripeBilling.SubNoviceYearly: subscriptions.
-		SendAmountMap[subscriptions.TypeNovice],
-
-	config.YeetFileConfig.StripeBilling.SubRegularMonthly: subscriptions.
-		SendAmountMap[subscriptions.TypeRegular],
-	config.YeetFileConfig.StripeBilling.SubRegularYearly: subscriptions.
-		SendAmountMap[subscriptions.TypeRegular],
-
-	config.YeetFileConfig.StripeBilling.SubAdvancedMonthly: subscriptions.
-		SendAmountMap[subscriptions.TypeAdvanced],
-	config.YeetFileConfig.StripeBilling.SubAdvancedYearly: subscriptions.
-		SendAmountMap[subscriptions.TypeAdvanced],
-}
+const (
+	paymentIDKey  = "paymentID"
+	productTagKey = "productTag"
+)
 
 // processInvoiceEvent receives an incoming Stripe "invoice.paid" event and
 // updates the user's subscription expiration and monthly transfer limit
@@ -116,23 +38,28 @@ func processInvoiceEvent(event *stripe.EventData) error {
 		return err
 	}
 
-	paymentID, err := db.GetPaymentIDByStripeCustomerID(invoice.Customer.ID)
+	utils.LogStruct(invoice)
+
+	stripeCustomer, err := db.GetStripeCustomerByCustomerID(invoice.Customer.ID)
 	if err != nil {
-		log.Println("Failed to get stripe payment ID using customer ID:", err)
+		log.Println("Failed to get stripe customer by ID:", err)
 		return err
-	} else if len(paymentID) == 0 {
+	} else if len(stripeCustomer.PaymentID) == 0 || len(stripeCustomer.ProductTag) == 0 {
 		// Initial checkout hasn't occurred yet
 		log.Println("Payment ID is not populated for invoice")
 		return nil
 	}
 
-	productID, err := FindInvoiceProductID(invoice.Lines.Data)
+	quantity, err := findInvoiceQuantity(invoice.Lines.Data)
 	if err != nil {
 		log.Println("Failed to find product ID from invoice:", err)
 		return err
 	}
 
-	err = setUserSubscription(paymentID, productID)
+	err = setUserSubscription(
+		stripeCustomer.PaymentID,
+		stripeCustomer.ProductTag,
+		quantity)
 	if err != nil {
 		log.Println("Failed to set user subscription:", err)
 		return err
@@ -172,6 +99,18 @@ func processCheckoutEvent(event *stripe.EventData) error {
 		Session: stripe.String(checkoutSession.ID),
 	}
 
+	productTag, ok := checkoutSession.Metadata[productTagKey]
+	if !ok {
+		log.Printf("Stripe checkout missing product tag!")
+		return errors.New("missing product tag")
+	}
+
+	product, err := subscriptions.GetProductByTag(productTag)
+	if err != nil {
+		log.Printf("Error fetching product ID for stripe order: %v\n", err)
+		return err
+	}
+
 	result := session.ListLineItems(params)
 	for result.Next() {
 		if result.LineItem().Price.UnitAmount < 0 {
@@ -179,28 +118,52 @@ func processCheckoutEvent(event *stripe.EventData) error {
 		}
 
 		userPaymentID := checkoutSession.ClientReferenceID
-		productID, err := processNewSubscription(
-			checkoutSession.ClientReferenceID,
-			checkoutSession.Customer.ID,
-			result.LineItem())
 
-		if err != nil {
-			log.Printf("Error w/ stripe order: %v\n", err)
-			return err
+		if checkoutSession.Customer != nil {
+			err = processNewSubscription(
+				checkoutSession.ClientReferenceID,
+				checkoutSession.Customer.ID)
+
+			if err != nil {
+				log.Printf("Error creating sub: %v\n", err)
+				return err
+			}
+
+			err = db.SetProductTag(
+				checkoutSession.ClientReferenceID,
+				checkoutSession.Customer.ID,
+				productTag)
+
+			if err != nil {
+				log.Printf("Error setting stripe product tag: %v\n", err)
+				return err
+			}
+
+			customerParams := &stripe.CustomerParams{}
+			customerParams.AddMetadata(
+				"paymentID",
+				checkoutSession.ClientReferenceID)
+			_, err = customer.Update(
+				checkoutSession.Customer.ID,
+				customerParams)
+			if err != nil {
+				log.Printf("Failed to set payment ID for stripe customer")
+			}
 		}
 
-		customerParams := &stripe.CustomerParams{}
-		customerParams.AddMetadata("payment_id", checkoutSession.ClientReferenceID)
-		_, err = customer.Update(checkoutSession.Customer.ID, customerParams)
+		err = setUserSubscription(
+			userPaymentID,
+			product.Tag,
+			int(result.LineItem().Quantity))
 		if err != nil {
-			log.Printf("Failed to set payment ID for stripe customer")
+			return err
 		}
 
 		// Send email (if applicable)
 		email, err := db.GetUserEmailByPaymentID(userPaymentID)
 		if err == nil && len(email) != 0 {
 			err = mail.CreateOrderEmail(
-				stripeDescMap[productID],
+				product.Description,
 				email,
 			).Send()
 
@@ -262,6 +225,8 @@ func GetCustomerPortalLink(id string) (string, error) {
 // ProcessEvent receives an input stripe.Event and determines if/how a
 // user's meter should be updated depending on the product they purchased.
 func ProcessEvent(event stripe.Event) error {
+	utils.LogStruct(event)
+
 	// Currently only successful checkouts are handled by the webhook
 	log.Println("Incoming ", event.Type)
 	if event.Type == "invoice.paid" {
@@ -276,20 +241,19 @@ func ProcessEvent(event stripe.Event) error {
 	return nil
 }
 
-// FindInvoiceProductID takes a list of invoice line items and retrieves the
-// ID of the product that the user has paid for, ignoring prorated prior items
-// that can appear in the item list.
-func FindInvoiceProductID(items []*stripe.InvoiceLineItem) (string, error) {
+// findInvoiceQuantity takes a list of invoice line items and retrieves the
+// quantity of the product ordered
+func findInvoiceQuantity(items []*stripe.InvoiceLineItem) (int, error) {
 	for _, item := range items {
 		// Skip previous purchases that have been prorated
 		if item.Amount < 0 {
 			continue
 		}
 
-		return item.Price.Product.ID, nil
+		return int(item.Quantity), nil
 	}
 
-	return "", errors.New("no items in invoice")
+	return 0, errors.New("no items in invoice")
 }
 
 // ValidateEvent reads the request body and validates the contents of the
@@ -314,56 +278,127 @@ func ValidateEvent(payload []byte, sig string) (stripe.Event, error) {
 // an item purchased and updates the user's storage amount using the
 // stripeProductStorage mapping. Returns the product ID associated with the
 // purchase and any error encountered.
-func processNewSubscription(paymentID, customerID string, item *stripe.LineItem) (string, error) {
-	productID := item.Price.Product.ID
+func processNewSubscription(paymentID, customerID string) error {
 	err := db.CreateNewStripeCustomer(customerID, paymentID, "")
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = setUserSubscription(paymentID, productID)
-	if err != nil {
-		return "", err
-	}
-
-	return productID, nil
+	return nil
 }
 
 // setUserSubscription retrieves values from storage/send/type maps and uses those
 // to update the user's database entry
-func setUserSubscription(paymentID, productID string) error {
-	storage, storageOK := stripeProductStorage[productID]
-	send, sendOK := stripeProductSend[productID]
-	tag, tagOK := stripeOrderTypeMap[productID]
-	if storageOK && sendOK && tagOK {
-		exp, err := subscriptions.GetSubscriptionExpiration(tag)
-		if err != nil {
-			return err
-		}
+func setUserSubscription(paymentID, productID string, quantity int) error {
+	product, err := subscriptions.GetProductByTag(productID)
+	if err != nil {
+		log.Printf("Error getting user subscription product '%s': %v\n", productID, err)
+		return err
+	}
 
-		err = db.SetUserSubscription(
-			paymentID,
-			tag,
-			constants.SubMethodStripe,
-			exp,
-			storage,
-			send)
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Printf("Error matching product %s storage/send/tag:\n"+
-			"storage: %d (%v)\n"+
-			"send: %d (%v)\n"+
-			"tag: %s (%v)\n",
-			productID,
-			storage, storageOK,
-			send, sendOK,
-			tag, tagOK)
-		return errors.New("missing required fields to update user subscription")
+	exp, err := subscriptions.GetSubscriptionExpiration(product.Duration, quantity)
+	if err != nil {
+		return err
+	}
+
+	err = db.SetUserSubscription(
+		paymentID,
+		productID,
+		constants.SubMethodStripe,
+		exp,
+		int64(product.StorageGB*1000*1000*1000),
+		int64(product.SendGB*1000*1000*1000))
+	if err != nil {
+		log.Printf("Error setting user subscription: %v\n", err)
+		return err
 	}
 
 	return nil
+}
+
+func generateProrationAmount(paymentID string) (int64, error) {
+	subType, subExp, err := db.GetUserSubByPaymentID(paymentID)
+	if err != nil {
+		return 0, err
+	}
+
+	prevSubProration := float64(0)
+	if len(subType) > 0 && subExp.After(time.Now()) {
+		prevSub, err := subscriptions.GetProductByTag(subType)
+		if err != nil {
+			return 0, nil
+		}
+
+		prevSubProration = (float64(prevSub.Price) / float64(30)) *
+			float64(utils.DayDiff(time.Now().UTC(), subExp))
+	} else {
+		return 0, nil
+	}
+
+	if prevSubProration <= 0 {
+		return 0, nil
+	}
+
+	return int64(prevSubProration * 100), nil
+}
+
+func GenerateCheckoutLink(
+	product subscriptions.Product,
+	paymentID string,
+	quantity int,
+	baseURL string,
+) (string, error) {
+	successURL := endpoints.HTMLCheckoutComplete.Format(baseURL)
+	cancelURL := endpoints.HTMLAccount.Format(baseURL)
+	paymentMode := stripe.CheckoutSessionModePayment
+
+	// Prorate previous subscriptions if applicable
+	finalPrice := product.Price * 100 * int64(quantity)
+	proratedAmount, err := generateProrationAmount(paymentID)
+	if proratedAmount > 0 {
+		proratedAmountPerItem := proratedAmount / int64(quantity)
+		adjustedItemPrice := max((product.Price*100)-proratedAmountPerItem, 0)
+		finalPrice = adjustedItemPrice
+		product.Description += fmt.Sprintf(" [CREDITED $%.2f]", float64(proratedAmount/100))
+	}
+
+	priceData := &stripe.CheckoutSessionLineItemPriceDataParams{
+		Currency: stripe.String("usd"),
+		ProductData: &stripe.CheckoutSessionLineItemPriceDataProductDataParams{
+			Name:        stripe.String(product.Name),
+			Description: stripe.String(product.Description),
+		},
+		UnitAmount: stripe.Int64(finalPrice),
+	}
+
+	lineItems := []*stripe.CheckoutSessionLineItemParams{{
+		PriceData: priceData,
+		Quantity:  stripe.Int64(int64(quantity)),
+	}}
+
+	params := &stripe.CheckoutSessionParams{
+		Mode: stripe.String(string(paymentMode)),
+
+		LineItems:  lineItems,
+		SuccessURL: stripe.String(successURL),
+		CancelURL:  stripe.String(cancelURL),
+		Metadata: map[string]string{
+			productTagKey: product.Tag,
+			paymentIDKey:  paymentID,
+		},
+		ConsentCollection: &stripe.CheckoutSessionConsentCollectionParams{
+			TermsOfService: stripe.String("required"),
+		},
+		ClientReferenceID:   stripe.String(paymentID),
+		AllowPromotionCodes: stripe.Bool(true),
+	}
+
+	s, err := session.New(params)
+	if err != nil {
+		return "", err
+	}
+
+	return s.URL, nil
 }
 
 func init() {

@@ -70,7 +70,7 @@ var (
 	SharedStyle  = lipgloss.NewStyle().Foreground(Green)
 	BoldStyle    = lipgloss.NewStyle().Bold(true).Foreground(Theme.Focused.NoteTitle.GetForeground())
 	TitleStyle   = lipgloss.NewStyle().Bold(true).Foreground(White)
-	ErrStyle     = lipgloss.NewStyle().Foreground(Theme.Focused.ErrorMessage.GetForeground())
+	ErrStyle     = lipgloss.NewStyle().Foreground(Red)
 	SuccessStyle = lipgloss.NewStyle().Foreground(Green)
 )
 

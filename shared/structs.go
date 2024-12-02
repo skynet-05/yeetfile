@@ -1,6 +1,9 @@
 package shared
 
-import "time"
+import (
+	"time"
+	"yeetfile/backend/server/subscriptions"
+)
 
 type AccountResponse struct {
 	Email              string    `json:"email"`
@@ -295,6 +298,10 @@ type ServerInfo struct {
 	BTCPayEnabled      bool   `json:"btcPayEnabled"`
 	DefaultStorage     int64  `json:"defaultStorage"`
 	DefaultSend        int64  `json:"defaultSend"`
+
+	Upgrades      []subscriptions.Product `json:"upgrades"`
+	MonthUpgrades []subscriptions.Product `json:"monthUpgrades"`
+	YearUpgrades  []subscriptions.Product `json:"yearUpgrades"`
 }
 
 type PassEntry struct {

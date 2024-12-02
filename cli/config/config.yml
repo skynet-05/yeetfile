@@ -1,2 +1,8 @@
 server: https://yeetfile.com
-default_view: "vault" # Can be set to "vault" or "send"
+
+# Configure the default view to enter when running the "yeetfile" command with
+# no arguments. Can be set to "vault", "send", or "pass"
+default_view: "vault"
+
+# Enable debug logging to a specific file
+# debug_file: "~/.config/yeetfile/debug.log"

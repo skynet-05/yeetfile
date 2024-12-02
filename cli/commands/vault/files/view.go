@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/huh"
 	huhSpinner "github.com/charmbracelet/huh/spinner"
 	"github.com/charmbracelet/lipgloss"
+	"log"
 	"os"
 	"strings"
 	"unicode"
@@ -760,6 +761,7 @@ func unlockVaultKeys() (crypto.KeyPair, error) {
 
 		err = cliKeyFunc()
 		if err != nil {
+			log.Printf("Error loading vault keys: %v\n", err)
 			return crypto.KeyPair{}, err
 		}
 	}

@@ -1,4 +1,2 @@
-session
-enc-priv-key
-pub-key
-*.json
+*
+!config.yml
