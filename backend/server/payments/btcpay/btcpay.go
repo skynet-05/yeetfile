@@ -1,7 +1,6 @@
 package btcpay
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,30 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"yeetfile/backend/config"
-	"yeetfile/backend/server/subscriptions"
 	"yeetfile/backend/utils"
 )
-
-var apiKey = os.Getenv("YEETFILE_BTCPAY_API_KEY")
-var storeID = os.Getenv("YEETFILE_BTCPAY_STORE_ID")
-var serverURL = os.Getenv("YEETFILE_BTCPAY_SERVER_URL")
-
-var LinkMapping = map[string]string{
-	subscriptions.MonthlyNovice: config.YeetFileConfig.BTCPayBilling.
-		SubNoviceMonthlyLink,
-	subscriptions.MonthlyRegular: config.YeetFileConfig.BTCPayBilling.
-		SubRegularMonthlyLink,
-	subscriptions.MonthlyAdvanced: config.YeetFileConfig.BTCPayBilling.
-		SubAdvancedMonthlyLink,
-
-	subscriptions.YearlyNovice: config.YeetFileConfig.BTCPayBilling.
-		SubNoviceYearlyLink,
-	subscriptions.YearlyRegular: config.YeetFileConfig.BTCPayBilling.
-		SubRegularYearlyLink,
-	subscriptions.YearlyAdvanced: config.YeetFileConfig.BTCPayBilling.
-		SubAdvancedYearlyLink,
-}
 
 // IsValidRequest validates incoming webhook events from BTCPay Server
 func IsValidRequest(w http.ResponseWriter, req *http.Request) ([]byte, bool) {
@@ -52,24 +29,4 @@ func IsValidRequest(w http.ResponseWriter, req *http.Request) ([]byte, bool) {
 	mac.Write(reqBody)
 	expectedMAC := fmt.Sprintf("sha256=%s", hex.EncodeToString(mac.Sum(nil)))
 	return reqBody, sig == expectedMAC
-}
-
-// sendRequest sends a request to BTCPay Server with the correct authentication
-// headers set up.
-func sendRequest(method string, path string, data []byte) (*http.Response, error) {
-	fullURL := fmt.Sprintf("%s/%s", serverURL, path)
-	req, err := http.NewRequest(method, fullURL, bytes.NewBuffer(data))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", apiKey))
-
-	resp, err := new(http.Transport).RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
 }
