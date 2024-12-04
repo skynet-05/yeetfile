@@ -91,6 +91,7 @@ func (ctx *VaultContext) UploadFile(path string, progress func(int, int)) (int64
 	totalSize := stat.Size() + int64(constants.TotalOverhead*pending.NumChunks)
 	ctx.InsertItem(models.VaultItem{
 		ID:           result,
+		RefID:        result,
 		Name:         utils.GetFilenameFromPath(path),
 		IsFolder:     false,
 		Size:         totalSize,
@@ -143,6 +144,7 @@ func (ctx *VaultContext) UploadPassEntry(item models.VaultItem) error {
 
 	ctx.InsertItem(models.VaultItem{
 		ID:           meta.ID,
+		RefID:        meta.ID,
 		Name:         item.Name,
 		IsFolder:     false,
 		Size:         1,

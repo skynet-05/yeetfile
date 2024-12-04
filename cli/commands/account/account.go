@@ -31,7 +31,7 @@ func getSubscriptionString(exp time.Time) string {
 func getStorageString(used, available int64, isSend bool) string {
 	if available == 0 && used == 0 {
 		return "None (requires subscription)"
-	} else if available == 0 && used > 0 {
+	} else if available <= 0 && used >= 0 {
 		return fmt.Sprintf("%s used", shared.ReadableFileSize(used))
 	} else {
 		var monthIndicator string
@@ -139,10 +139,10 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		"Email: %s\n"+
 		"Vault: %s\n"+
 		"Send:  %s\n\n"+
-		"Subscription: %s\n"+
+		"Upgrades:      %s\n"+
 		"Password Hint: %s\n"+
-		"Two-Factor: %s\n"+
-		"Payment ID: %s",
+		"Two-Factor:    %s\n"+
+		"Payment ID:    %s",
 		shared.EscapeString(emailStr),
 		storageStr,
 		sendStr,

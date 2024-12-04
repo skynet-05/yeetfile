@@ -8,7 +8,7 @@ import (
 )
 
 func RunModel(item models.VaultItem) (internal.Event, error) {
-	var newName string
+	newName := item.Name
 	var confirmed bool
 
 	title := "Rename File"

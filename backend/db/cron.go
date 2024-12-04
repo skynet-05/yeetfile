@@ -16,6 +16,7 @@ const (
 	BandwidthTask  = "bandwidth"
 	DownloadsTask  = "downloads"
 	MembershipTask = "membership"
+	UpgradeExpTask = "upgrade-expiration"
 )
 
 type CronTask struct {
@@ -61,6 +62,13 @@ var tasks = []CronTask{
 		IntervalAmount: 24,
 		Enabled:        config.YeetFileConfig.BillingEnabled,
 		TaskFn:         CheckMemberships,
+	},
+	{
+		Name:           UpgradeExpTask,
+		Interval:       time.Hour,
+		IntervalAmount: 24,
+		Enabled:        config.YeetFileConfig.BillingEnabled,
+		TaskFn:         CheckUpgradeExpiration,
 	},
 	{
 		Name:           DownloadsTask,

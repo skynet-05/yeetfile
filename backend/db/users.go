@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"yeetfile/backend/config"
+	"yeetfile/backend/mail"
 	"yeetfile/backend/server/subscriptions"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
@@ -888,8 +889,59 @@ func CheckMemberships() {
 
 		err = upgradeFunc(ids, product.SendGBReal, product.StorageGBReal)
 		if err != nil {
-			log.Printf("Error updating %s user storage/send: %v\n", err)
+			log.Printf("Error updating user storage/send: %v\n", err)
 		}
+	}
+}
+
+// CheckUpgradeExpiration checks for users who are a week away from having their
+// purchased upgrade expire.
+func CheckUpgradeExpiration() {
+	s := `SELECT email, member_expiration
+	      FROM users
+	      WHERE email != ''
+	        AND member_expiration < current_date + interval '8' day
+	        AND member_expiration > current_date;`
+
+	rows, err := db.Query(s)
+	if err != nil {
+		log.Printf("Error retrieving upcoming user upgrade expirations: %v", err)
+		return
+	}
+
+	var notifyEmails []string
+
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			email            string
+			memberExpiration time.Time
+		)
+
+		err = rows.Scan(&email, &memberExpiration)
+		if err != nil {
+			log.Printf("Error reading rows in user upgrade expirations: %v\n", err)
+			return
+		}
+
+		oneWeekExp := time.Now().UTC().AddDate(0, 0, 7)
+		if len(email) == 0 ||
+			oneWeekExp.Day() != memberExpiration.Day() ||
+			oneWeekExp.Month() != memberExpiration.Month() ||
+			oneWeekExp.Year() != memberExpiration.Year() {
+			continue
+		}
+
+		notifyEmails = append(notifyEmails, email)
+	}
+
+	if len(notifyEmails) == 0 {
+		return
+	}
+
+	err = mail.SendUpgradeExpirationEmail(notifyEmails)
+	if err != nil {
+		log.Printf("Error sending upgrade expiration emails: %v\n", err)
 	}
 }
 

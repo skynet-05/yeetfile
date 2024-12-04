@@ -14,10 +14,11 @@ var smtpConfig SMTPConfig
 
 type SMTPConfig struct {
 	From           string
-	Address        string
+	User           string
 	Host           string
 	Port           int
 	Password       string
+	NoReply        string
 	CallbackDomain string
 }
 
@@ -31,18 +32,48 @@ func sendEmail(to string, subject string, body string) {
 	}
 
 	m := gomail.NewMessage()
-	m.SetHeader("From", smtpConfig.From)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/plain", body)
 
-	d := gomail.NewDialer(smtpConfig.Host, smtpConfig.Port, smtpConfig.Address, smtpConfig.Password)
+	send(m)
+}
+
+// sendBccEmail sends an email to the configured From address, but with the
+// provided recipients included as Bcc recipients. This can be used to notify
+// multiple users with the same message.
+func sendBccEmail(subject, body string, recipients []string) {
+	if smtpConfig == (SMTPConfig{}) {
+		// SMTP hasn't been configured, ignore this request
+		log.Println("Attempted to send email, but SMTP hasn't been configured")
+		return
+	}
+
+	m := gomail.NewMessage()
+	m.SetHeader("To", smtpConfig.NoReply)
+	m.SetHeader("Subject", subject)
+	m.SetHeader("Bcc", recipients...)
+	m.SetBody("text/plain", body)
+
+	send(m)
+}
+
+func send(message *gomail.Message) {
+	message.SetHeader("From", smtpConfig.From)
+
+	d := gomail.NewDialer(
+		smtpConfig.Host,
+		smtpConfig.Port,
+		smtpConfig.User,
+		smtpConfig.Password)
 	d.TLSConfig = &tls.Config{ServerName: smtpConfig.Host}
 
-	err := d.DialAndSend(m)
+	err := d.DialAndSend(message)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		log.Println("Failed to send email")
+	} else {
+		log.Println("Email sent!")
 	}
 }
 
@@ -62,10 +93,11 @@ func init() {
 
 	smtpConfig = SMTPConfig{
 		From:           from,
-		Address:        config.YeetFileConfig.Email.Address,
+		User:           config.YeetFileConfig.Email.User,
 		Host:           config.YeetFileConfig.Email.Host,
 		Port:           port,
 		Password:       config.YeetFileConfig.Email.Password,
+		NoReply:        config.YeetFileConfig.Email.NoReplyAddress,
 		CallbackDomain: config.YeetFileConfig.Domain,
 	}
 }

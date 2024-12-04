@@ -43,19 +43,23 @@ var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 // =============================================================================
 
 type EmailConfig struct {
-	Configured bool
-	Address    string
-	Host       string
-	Port       string
-	Password   string
+	Configured     bool
+	Address        string
+	Host           string
+	User           string
+	Port           string
+	Password       string
+	NoReplyAddress string
 }
 
 var email = EmailConfig{
-	Configured: false,
-	Address:    os.Getenv("YEETFILE_EMAIL_ADDR"),
-	Host:       os.Getenv("YEETFILE_EMAIL_HOST"),
-	Port:       os.Getenv("YEETFILE_EMAIL_PORT"),
-	Password:   os.Getenv("YEETFILE_EMAIL_PASSWORD"),
+	Configured:     false,
+	Address:        os.Getenv("YEETFILE_EMAIL_ADDR"),
+	Host:           os.Getenv("YEETFILE_EMAIL_HOST"),
+	User:           os.Getenv("YEETFILE_EMAIL_USER"),
+	Port:           os.Getenv("YEETFILE_EMAIL_PORT"),
+	Password:       os.Getenv("YEETFILE_EMAIL_PASSWORD"),
+	NoReplyAddress: os.Getenv("YEETFILE_EMAIL_NO_REPLY"),
 }
 
 // =============================================================================
