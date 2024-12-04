@@ -1,4 +1,4 @@
-package subscriptions
+package upgrades
 
 import (
 	"time"

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"yeetfile/backend/config"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/shared/endpoints"
 )
 
@@ -81,7 +81,7 @@ type InfoTemplate struct {
 	BTCPayEnabled      bool
 	DefaultStorage     string
 	DefaultSend        string
-	Products           []subscriptions.Product
+	Products           []upgrades.Upgrade
 }
 
 type CheckoutCompleteTemplate struct {
@@ -92,29 +92,28 @@ type CheckoutCompleteTemplate struct {
 }
 
 type AccountTemplate struct {
-	Base               BaseTemplate
-	Email              string
-	EmailConfigured    bool
-	Meter              int
-	IsActive           bool
-	PaymentID          string
-	ExpString          string
-	IsPrevSubscriber   bool
-	StorageAvailable   string
-	StorageUsed        string
-	SendAvailable      string
-	SendUsed           string
-	IsYearly           bool
-	IsStripeSubscriber bool
-	StripeConfigured   bool
-	BTCPayConfigured   bool
-	BillingConfigured  bool
-	HasPasswordHint    bool
-	Has2FA             bool
-	ErrorMessage       string
-	SuccessMessage     string
-	BillingEndpoints   endpoints.BillingEndpoints
-	Products           []subscriptions.Product
+	Base              BaseTemplate
+	Email             string
+	EmailConfigured   bool
+	Meter             int
+	IsActive          bool
+	PaymentID         string
+	ExpString         string
+	IsPrevUpgraded    bool
+	StorageAvailable  string
+	StorageUsed       string
+	SendAvailable     string
+	SendUsed          string
+	IsYearly          bool
+	StripeConfigured  bool
+	BTCPayConfigured  bool
+	BillingConfigured bool
+	HasPasswordHint   bool
+	Has2FA            bool
+	ErrorMessage      string
+	SuccessMessage    string
+	BillingEndpoints  endpoints.BillingEndpoints
+	Products          []upgrades.Upgrade
 }
 
 type VerificationTemplate struct {

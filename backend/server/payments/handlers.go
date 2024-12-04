@@ -11,7 +11,7 @@ import (
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/payments/btcpay"
 	"yeetfile/backend/server/payments/stripe"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 )
 
 // StripeWebhook handles relevant incoming webhook events from Stripe related
@@ -44,28 +44,29 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 }
 
 // StripeCustomerPortal redirects users to the Stripe customer portal, which
-// allows existing subscribers to manage their subscription.
-func StripeCustomerPortal(w http.ResponseWriter, req *http.Request, id string) {
-	paymentID, err := db.GetPaymentIDByUserID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	link, err := stripe.GetCustomerPortalLink(paymentID)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	http.Redirect(w, req, link, http.StatusTemporaryRedirect)
-}
+// allows existing subscribers to manage their account.
+// TODO: Not currently used, should probably be removed in the future
+//func StripeCustomerPortal(w http.ResponseWriter, req *http.Request, id string) {
+//	paymentID, err := db.GetPaymentIDByUserID(id)
+//	if err != nil {
+//		w.WriteHeader(http.StatusForbidden)
+//		return
+//	}
+//
+//	link, err := stripe.GetCustomerPortalLink(paymentID)
+//	if err != nil {
+//		w.WriteHeader(http.StatusBadRequest)
+//		return
+//	}
+//
+//	http.Redirect(w, req, link, http.StatusTemporaryRedirect)
+//}
 
 // StripeCheckout initiates the process for a user adding to their meter
 // using Stripe Checkout
 func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
-	product, err := subscriptions.GetProductByTag(itemType)
+	product, err := upgrades.GetUpgradeByTag(itemType)
 	if err != nil {
 		http.Error(w, "Invalid product tag", http.StatusBadRequest)
 		return
@@ -144,7 +145,8 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 // BTCPayCheckout generates an invoice for the requested product/upgrade
 func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
-	product, err := subscriptions.GetProductByTag(itemType)
+	quantity := req.URL.Query().Get("quantity")
+	product, err := upgrades.GetUpgradeByTag(itemType)
 	if err != nil {
 		http.Error(w, "Invalid product tag", http.StatusBadRequest)
 		return
@@ -161,6 +163,6 @@ func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	checkoutLink := fmt.Sprintf("%s?orderId=%s", product.BTCPayLink, paymentID)
+	checkoutLink := fmt.Sprintf("%s?orderId=%s&quantity=%s", product.BTCPayLink, paymentID, quantity)
 	http.Redirect(w, req, checkoutLink, http.StatusTemporaryRedirect)
 }

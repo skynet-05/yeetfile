@@ -3,9 +3,8 @@ package btcpay
 import (
 	"strconv"
 	"yeetfile/backend/db"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
-	"yeetfile/shared/constants"
 )
 
 type Invoice struct {
@@ -45,20 +44,19 @@ func FinalizeInvoice(invoice Invoice) error {
 
 	utils.LogStruct(invoice)
 
-	product, err := subscriptions.GetProductByTag(orderType)
+	product, err := upgrades.GetUpgradeByTag(orderType)
 	if err != nil {
 		return err
 	}
 
-	exp, err := subscriptions.GetSubscriptionExpiration(product.Duration, quantity)
+	exp, err := upgrades.GetUpgradeExpiration(product.Duration, quantity)
 	if err != nil {
 		return err
 	}
 
-	err = db.SetUserSubscription(
+	err = db.SetUserUpgrade(
 		invoice.Metadata.OrderID,
 		orderType,
-		constants.SubMethodBTCPay,
 		exp,
 		product.StorageGBReal,
 		product.SendGBReal)

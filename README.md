@@ -191,7 +191,6 @@ in the official YeetFile instance (https://yeetfile.com).
 | `YEETFILE_BTCPAY_SERVER_URL` | The URL of the BTCPay instance |
 | `YEETFILE_STRIPE_KEY` | The Stripe secret key |
 | `YEETFILE_STRIPE_WEBHOOK_SECRET` | The Stripe webhook secret |
-| `YEETFILE_STRIPE_PORTAL_LINK` | The link for users to manage their Stripe subscription |
 
 ## Support
 

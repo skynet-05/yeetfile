@@ -44,8 +44,8 @@
         <td>
           {{ if .IsActive }}
           <span>Active (expires {{ .ExpString }})</span>
-          {{ else if .IsPrevSubscriber }}
-          <span>Inactive (expired {{ .ExpString }})</span>
+          {{ else if .IsPrevUpgraded }}
+          <span>Expired {{ .ExpString }}</span>
           {{ else }}
           <span>Inactive</span>
           {{ end }}
@@ -114,27 +114,17 @@
   {{ end }}
   {{ if or .Base.Config.StripeEnabled .Base.Config.BTCPayEnabled }}
     <hr>
-    <div class="subscription-container">
+    <div class="upgrade-container">
       <h1>Upgrades</h1>
-      {{ if not .IsStripeSubscriber }}
-        <div class="radio-group">
-          <input type="radio" id="monthly-option" name="options" {{ if not .IsYearly }}checked{{ end }}>
-          <label id="monthly-toggle" for="monthly-option"><a href="{{ .Base.Endpoints.Account }}">Monthly</a></label>
-          <input type="radio" id="yearly-option" name="options" {{ if .IsYearly }}checked{{ end }}>
-          <label id="yearly-toggle" for="yearly-option"><a href="{{ .Base.Endpoints.Account }}?yearly=1">Yearly (2 months free)</a></label>
-        </div>
-      {{ end }}
+      <div class="radio-group">
+        <input type="radio" id="monthly-option" name="options" {{ if not .IsYearly }}checked{{ end }}>
+        <label id="monthly-toggle" for="monthly-option"><a href="{{ .Base.Endpoints.Account }}">Monthly</a></label>
+        <input type="radio" id="yearly-option" name="options" {{ if .IsYearly }}checked{{ end }}>
+        <label id="yearly-toggle" for="yearly-option"><a href="{{ .Base.Endpoints.Account }}?yearly=1">Yearly (2 months free)</a></label>
+      </div>
     </div>
     {{ if .Base.Config.BillingEnabled }}
-      <div id="subscription-div">
-        {{ if and .IsActive .IsStripeSubscriber }}
-        <div class="pricing-box">
-          <h3>YeetFile Subscription</h3>
-          <p>Upgrade, downgrade, or cancel your subscription using the button below.</p>
-          <a href="{{ .BillingEndpoints.StripeManage }}"><button class="accent-btn">Manage Subscription</button></a>
-        </div>
-        </div>
-        {{ else }}
+      <div id="upgrade-div">
           {{ range $i, $prod := .Products }}
             <div class="pricing-box col-{{$i}}">
               <h3>{{ $prod.Name }}</h3>
@@ -168,7 +158,7 @@
               {{ end }}
               {{ if $.Base.Config.BTCPayEnabled }}
                 {{ if ne $prod.BTCPayLink "" }}
-                  <a href="{{ $.BillingEndpoints.BTCPayCheckout }}?type={{ $prod.Tag }}&quantity">
+                  <a href="{{ $.BillingEndpoints.BTCPayCheckout }}?type={{ $prod.Tag }}&quantity=1">
                     {{ template "btcpay-button.html" }}
                   </a>
                 {{ end }}
@@ -180,7 +170,6 @@
     <br>
     <span class="italic">Note: Payments are one-time payments and do not auto-renew.</span>
     {{ end }}
-  {{ end }}
 </div>
 
 {{ template "two-factor-dialog.html" }}

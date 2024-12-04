@@ -7,7 +7,7 @@ import (
 	"os"
 	"slices"
 	"strings"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
@@ -227,8 +227,8 @@ func GetServerInfoStruct() shared.ServerInfo {
 		DefaultStorage:     YeetFileConfig.DefaultUserStorage,
 		DefaultSend:        YeetFileConfig.DefaultUserSend,
 
-		Upgrades:      subscriptions.GetProducts(""),
-		MonthUpgrades: subscriptions.GetProducts(subscriptions.SubMonth),
-		YearUpgrades:  subscriptions.GetProducts(subscriptions.SubYear),
+		Upgrades:      upgrades.GetUpgrades(""),
+		MonthUpgrades: upgrades.GetUpgrades(upgrades.DurationMonth),
+		YearUpgrades:  upgrades.GetUpgrades(upgrades.DurationYear),
 	}
 }

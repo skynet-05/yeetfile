@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/utils"
@@ -17,7 +17,7 @@ type ChangePasswordForm struct {
 	NewPassword string
 }
 
-func getSubscriptionString(exp time.Time) string {
+func getUpgradeString(exp time.Time) string {
 	if exp.Year() < 2024 {
 		return "Inactive"
 	} else if exp.Before(time.Now()) {
@@ -30,7 +30,7 @@ func getSubscriptionString(exp time.Time) string {
 
 func getStorageString(used, available int64, isSend bool) string {
 	if available == 0 && used == 0 {
-		return "None (requires subscription)"
+		return "None (requires upgraded account)"
 	} else if available <= 0 && used >= 0 {
 		return fmt.Sprintf("%s used", shared.ReadableFileSize(used))
 	} else {
@@ -116,7 +116,7 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		return account, msg
 	}
 
-	subscriptionStr := getSubscriptionString(account.SubscriptionExp)
+	upgradeStr := getUpgradeString(account.UpgradeExp)
 	storageStr := getStorageString(account.StorageUsed, account.StorageAvailable, false)
 	sendStr := getStorageString(account.SendUsed, account.SendAvailable, true)
 
@@ -146,7 +146,7 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 		shared.EscapeString(emailStr),
 		storageStr,
 		sendStr,
-		subscriptionStr,
+		upgradeStr,
 		passwordHintStr,
 		twoFactorStr,
 		shared.EscapeString(account.PaymentID))
@@ -154,17 +154,17 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 	return account, accountDetails
 }
 
-func generateSubDesc(product subscriptions.Product) string {
+func generateUpgradeDesc(upgrade upgrades.Upgrade) string {
 	var duration string
-	if product.Duration == subscriptions.SubYear {
+	if upgrade.Duration == upgrades.DurationYear {
 		duration = "year"
 	} else {
 		duration = "month"
 	}
 
-	price := product.Price
-	storage := shared.ReadableFileSize(int64(product.StorageGB))
-	send := shared.ReadableFileSize(int64(product.SendGB))
+	price := upgrade.Price
+	storage := shared.ReadableFileSize(upgrade.StorageGBReal)
+	send := shared.ReadableFileSize(upgrade.SendGBReal)
 
 	return shared.EscapeString(fmt.Sprintf(`- %s Vault Storage
 - Send %s/month

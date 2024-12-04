@@ -76,7 +76,7 @@ details::after {
     border: 0;
 }
 
-.subscription-container {
+.upgrade-container, .subscription-container {
     display: flex;
     align-items: center;
 }
@@ -118,7 +118,7 @@ label a {
         border: 1px solid var(--light-border) !important;
     }
 
-    .subscription-container {
+    .upgrade-container, .subscription-container {
         display: block;
     }
 
@@ -126,7 +126,7 @@ label a {
         margin: 0 0 10px 5px;
     }
 
-    #subscription-div {
+    #upgrade-div, #subscription-div {
         grid-auto-flow: row;
         grid-template-columns: 1fr;
         grid-template-rows: auto;

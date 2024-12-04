@@ -88,7 +88,7 @@ func Run(host, port string) {
 
 		// Payments (Stripe, BTCPay)
 		{POST, endpoints.StripeWebhook, payments.StripeWebhook},
-		{GET, endpoints.StripeManage, StripeMiddleware(AuthMiddleware(payments.StripeCustomerPortal))},
+		//{GET, endpoints.StripeManage, StripeMiddleware(AuthMiddleware(payments.StripeCustomerPortal))},
 		{GET, endpoints.StripeCheckout, StripeMiddleware(AuthMiddleware(payments.StripeCheckout))},
 		{POST, endpoints.BTCPayWebhook, payments.BTCPayWebhook},
 		{GET, endpoints.BTCPayCheckout, BTCPayMiddleware(AuthMiddleware(payments.BTCPayCheckout))},

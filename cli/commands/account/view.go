@@ -7,7 +7,7 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"strconv"
 	"strings"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
@@ -26,7 +26,7 @@ const (
 	SetPasswordHint
 	SetTwoFactor
 	DeleteTwoFactor
-	PurchaseSubscription
+	PurchaseUpgrade
 	RecyclePaymentID
 	DeleteAccount
 	Exit
@@ -545,9 +545,9 @@ func showDeleteTwoFactorView() {
 func showRecyclePaymentIDView() {
 	title := utils.GenerateTitle("Recycle Payment ID")
 	desc := "Recycling your payment ID is a privacy feature that removes " +
-		"the ability for YeetFile to connect your account with an " +
-		"active subscription. This should only be done if you've " +
-		"previously made a payment to YeetFile and want to remove " +
+		"the ability for YeetFile to connect your account with past " +
+		"payments to upgrade your account. This should only be done if " +
+		"you've previously made a payment to YeetFile and want to remove " +
 		"the record of this transaction."
 	desc = utils.GenerateWrappedText(desc)
 
@@ -624,7 +624,7 @@ func generateSelectOptions(
 	if globals.ServerInfo.BillingEnabled && len(globals.ServerInfo.Upgrades) > 0 {
 		options = append(
 			options,
-			huh.NewOption("Upgrade Account", PurchaseSubscription))
+			huh.NewOption("Upgrade Account", PurchaseUpgrade))
 	}
 
 	options = append(options, huh.NewOption("Recycle Payment ID", RecyclePaymentID))
@@ -633,15 +633,15 @@ func generateSelectOptions(
 	return options
 }
 
-func showSubscriptionView() {
+func showUpgradeView() {
 	const (
 		switchYearlyMonthly = -1
 		cancel              = -2
 	)
 
-	var products []subscriptions.Product
-	var subscriptionFunc func(bool) (int, error)
-	subscriptionFunc = func(isYearly bool) (int, error) {
+	var availableUpgrades []upgrades.Upgrade
+	var upgradeFunc func(bool) (int, error)
+	upgradeFunc = func(isYearly bool) (int, error) {
 		var switchOption huh.Option[int]
 		var selected int
 		if isYearly {
@@ -655,9 +655,9 @@ func showSubscriptionView() {
 		}
 
 		if isYearly {
-			products = globals.ServerInfo.YearUpgrades
+			availableUpgrades = globals.ServerInfo.YearUpgrades
 		} else {
-			products = globals.ServerInfo.MonthUpgrades
+			availableUpgrades = globals.ServerInfo.MonthUpgrades
 		}
 
 		options := []huh.Option[int]{
@@ -668,38 +668,40 @@ func showSubscriptionView() {
 		fields := []huh.Field{
 			huh.NewNote().
 				Title(utils.GenerateTitle("Upgrade Account")).
-				Description("Note: All upgrades are one-time purchases and do not auto-renew."),
+				Description("Note: All upgrades are one-time " +
+					"purchases and do not auto-renew."),
 		}
 
-		for i, product := range products {
-			prodOption := huh.NewOption(product.Name+" ->", i)
-			prodDesc := utils.GenerateDescription(generateSubDesc(product), 25)
-			prodNote := huh.NewNote().
-				Title(product.Name).
-				Description(prodDesc)
-			options = append(options, prodOption)
-			fields = append(fields, prodNote)
+		for i, upgrade := range availableUpgrades {
+			upgradeOption := huh.NewOption(upgrade.Name+" ->", i)
+			upgradeDesc := utils.GenerateDescription(
+				generateUpgradeDesc(upgrade), 25)
+			upgradeNote := huh.NewNote().
+				Title(upgrade.Name).
+				Description(upgradeDesc)
+			options = append(options, upgradeOption)
+			fields = append(fields, upgradeNote)
 		}
 
 		fields = append(fields, huh.NewSelect[int]().Options(options...).Value(&selected))
 		err := huh.NewForm(huh.NewGroup(fields...)).WithTheme(styles.Theme).Run()
 
 		if err == nil && selected == switchYearlyMonthly {
-			return subscriptionFunc(!isYearly)
+			return upgradeFunc(!isYearly)
 		}
 
 		return selected, err
 	}
 
-	selected, err := subscriptionFunc(false)
+	selected, err := upgradeFunc(false)
 	if err == huh.ErrUserAborted || selected == cancel {
 		ShowAccountModel()
 	} else {
-		showCheckoutModel(products[selected])
+		showCheckoutModel(availableUpgrades[selected])
 	}
 }
 
-func showCheckoutModel(product subscriptions.Product) {
+func showCheckoutModel(upgrade upgrades.Upgrade) {
 	const (
 		stripe int = iota
 		btcpay
@@ -712,16 +714,16 @@ func showCheckoutModel(product subscriptions.Product) {
 	)
 
 	quantity := "1"
-	subName := product.Name
-	if product.Duration == subscriptions.SubYear {
-		subName += " (Year)"
+	upgradeName := upgrade.Name
+	if upgrade.Duration == upgrades.DurationYear {
+		upgradeName += " (Year)"
 		duration = "years"
 	} else {
-		subName += " (Month)"
+		upgradeName += " (Month)"
 		duration = "months"
 	}
 
-	subDesc := generateSubDesc(product)
+	subDesc := generateUpgradeDesc(upgrade)
 	subDesc += "\n\n" + utils.GenerateWrappedText(
 		"Select a checkout option below. This will provide a link "+
 			"to complete your purchase on the web.") + "\n\n" +
@@ -736,8 +738,11 @@ func showCheckoutModel(product subscriptions.Product) {
 
 	err := huh.NewForm(huh.NewGroup(
 		huh.NewNote().
-			Title(utils.GenerateTitle("Subscription")).
-			Description(utils.GenerateDescriptionSection(subName, subDesc, 30)),
+			Title(utils.GenerateTitle("Upgrade")).
+			Description(utils.GenerateDescriptionSection(
+				upgradeName,
+				subDesc,
+				30)),
 		huh.NewInput().
 			Title("Quantity").
 			Description("Number of "+duration).
@@ -759,15 +764,15 @@ func showCheckoutModel(product subscriptions.Product) {
 
 	var link string
 	if err == huh.ErrUserAborted || selected == back {
-		showSubscriptionView()
+		showUpgradeView()
 		return
 	} else if selected == stripe {
-		link, err = globals.API.InitStripeCheckout(product.Tag, quantity)
+		link, err = globals.API.InitStripeCheckout(upgrade.Tag, quantity)
 		if err == nil {
 			showCheckoutLinkModel(link)
 		}
 	} else if selected == btcpay {
-		link, err = globals.API.InitBTCPayCheckout(product.Tag, quantity)
+		link, err = globals.API.InitBTCPayCheckout(upgrade.Tag, quantity)
 		if err == nil {
 			showCheckoutLinkModel(link)
 		}
@@ -775,7 +780,7 @@ func showCheckoutModel(product subscriptions.Product) {
 
 	if err != nil {
 		utils.ShowErrorForm("Error generating checkout link")
-		showSubscriptionView()
+		showUpgradeView()
 	}
 }
 
@@ -796,15 +801,15 @@ func exitView() {}
 
 func init() {
 	actionMap = map[Action]func(){
-		SetEmail:             showChangeEmailView,
-		ChangeEmail:          showChangeEmailWarning,
-		ChangePassword:       showChangePasswordView,
-		SetPasswordHint:      showPasswordHintView,
-		SetTwoFactor:         showSetTwoFactorView,
-		PurchaseSubscription: showSubscriptionView,
-		DeleteTwoFactor:      showDeleteTwoFactorView,
-		RecyclePaymentID:     showRecyclePaymentIDView,
-		DeleteAccount:        showAccountDeletionView,
-		Exit:                 exitView,
+		SetEmail:         showChangeEmailView,
+		ChangeEmail:      showChangeEmailWarning,
+		ChangePassword:   showChangePasswordView,
+		SetPasswordHint:  showPasswordHintView,
+		SetTwoFactor:     showSetTwoFactorView,
+		PurchaseUpgrade:  showUpgradeView,
+		DeleteTwoFactor:  showDeleteTwoFactorView,
+		RecyclePaymentID: showRecyclePaymentIDView,
+		DeleteAccount:    showAccountDeletionView,
+		Exit:             exitView,
 	}
 }

@@ -15,7 +15,7 @@ const (
 	LimiterTask    = "limiter"
 	BandwidthTask  = "bandwidth"
 	DownloadsTask  = "downloads"
-	MembershipTask = "membership"
+	UpgradeTask    = "upgrade"
 	UpgradeExpTask = "upgrade-expiration"
 )
 
@@ -31,7 +31,7 @@ type CronTask struct {
 // - an expiry task that handles expired content from YeetFile Send
 // - a limiter task for preventing N requests within a specific time frame
 // - a bandwidth task for resetting user bandwidth every N days
-// - a membership task for instances with billing enabled
+// - an upgrade monitoring task for instances with billing enabled
 // - a downloads cleanup task that removes abandoned in-progress downloads
 var tasks = []CronTask{
 	{
@@ -57,11 +57,11 @@ var tasks = []CronTask{
 	},
 	{
 		// Only enable if billing through BTCPay or Stripe is set up
-		Name:           MembershipTask,
+		Name:           UpgradeTask,
 		Interval:       time.Hour,
 		IntervalAmount: 24,
 		Enabled:        config.YeetFileConfig.BillingEnabled,
-		TaskFn:         CheckMemberships,
+		TaskFn:         CheckActiveUpgrades,
 	},
 	{
 		Name:           UpgradeExpTask,
@@ -155,7 +155,7 @@ func (task CronTask) runCronTask() {
 	_, err = db.Exec("SELECT pg_advisory_unlock($1)", lockID)
 	if err != nil {
 		log.Printf("Error releasing advisory lock: %v\n", err)
-	} else {
+	} else if config.IsDebugMode {
 		log.Printf("'%s' task completed at %v\n", task.Name, time.Now().Format(time.RFC1123))
 	}
 }

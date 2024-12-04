@@ -2,20 +2,19 @@ package shared
 
 import (
 	"time"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 )
 
 type AccountResponse struct {
-	Email              string    `json:"email"`
-	PaymentID          string    `json:"paymentID"`
-	HasPasswordHint    bool      `json:"hasPasswordHint"`
-	Has2FA             bool      `json:"has2FA"`
-	StorageAvailable   int64     `json:"storageAvailable"`
-	StorageUsed        int64     `json:"storageUsed"`
-	SendAvailable      int64     `json:"sendAvailable"`
-	SendUsed           int64     `json:"sendUsed"`
-	SubscriptionExp    time.Time `json:"subscriptionExp" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
-	SubscriptionMethod string    `json:"subscriptionMethod"`
+	Email            string    `json:"email"`
+	PaymentID        string    `json:"paymentID"`
+	HasPasswordHint  bool      `json:"hasPasswordHint"`
+	Has2FA           bool      `json:"has2FA"`
+	StorageAvailable int64     `json:"storageAvailable"`
+	StorageUsed      int64     `json:"storageUsed"`
+	SendAvailable    int64     `json:"sendAvailable"`
+	SendUsed         int64     `json:"sendUsed"`
+	UpgradeExp       time.Time `json:"upgradeExp" ts_type:"Date" ts_transform:"new Date(__VALUE__)"`
 }
 
 type UsageResponse struct {
@@ -299,9 +298,9 @@ type ServerInfo struct {
 	DefaultStorage     int64  `json:"defaultStorage"`
 	DefaultSend        int64  `json:"defaultSend"`
 
-	Upgrades      []subscriptions.Product `json:"upgrades"`
-	MonthUpgrades []subscriptions.Product `json:"monthUpgrades"`
-	YearUpgrades  []subscriptions.Product `json:"yearUpgrades"`
+	Upgrades      []upgrades.Upgrade `json:"upgrades"`
+	MonthUpgrades []upgrades.Upgrade `json:"monthUpgrades"`
+	YearUpgrades  []upgrades.Upgrade `json:"yearUpgrades"`
 }
 
 type PassEntry struct {

@@ -16,9 +16,8 @@ import (
 	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/mail"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
-	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
 
@@ -105,7 +104,7 @@ func processCheckoutEvent(event *stripe.EventData) error {
 		return errors.New("missing product tag")
 	}
 
-	product, err := subscriptions.GetProductByTag(productTag)
+	product, err := upgrades.GetUpgradeByTag(productTag)
 	if err != nil {
 		log.Printf("Error fetching product ID for stripe order: %v\n", err)
 		return err
@@ -290,21 +289,20 @@ func processNewSubscription(paymentID, customerID string) error {
 // setUserSubscription retrieves values from storage/send/type maps and uses those
 // to update the user's database entry
 func setUserSubscription(paymentID, productID string, quantity int) error {
-	product, err := subscriptions.GetProductByTag(productID)
+	product, err := upgrades.GetUpgradeByTag(productID)
 	if err != nil {
 		log.Printf("Error getting user subscription product '%s': %v\n", productID, err)
 		return err
 	}
 
-	exp, err := subscriptions.GetSubscriptionExpiration(product.Duration, quantity)
+	exp, err := upgrades.GetUpgradeExpiration(product.Duration, quantity)
 	if err != nil {
 		return err
 	}
 
-	err = db.SetUserSubscription(
+	err = db.SetUserUpgrade(
 		paymentID,
 		productID,
-		constants.SubMethodStripe,
 		exp,
 		int64(product.StorageGB*1000*1000*1000),
 		int64(product.SendGB*1000*1000*1000))
@@ -324,7 +322,7 @@ func generateProrationAmount(paymentID string) (int64, error) {
 
 	prevSubProration := float64(0)
 	if len(subType) > 0 && subExp.After(time.Now()) {
-		prevSub, err := subscriptions.GetProductByTag(subType)
+		prevSub, err := upgrades.GetUpgradeByTag(subType)
 		if err != nil {
 			return 0, nil
 		}
@@ -343,7 +341,7 @@ func generateProrationAmount(paymentID string) (int64, error) {
 }
 
 func GenerateCheckoutLink(
-	product subscriptions.Product,
+	product upgrades.Upgrade,
 	paymentID string,
 	quantity int,
 	baseURL string,

@@ -188,16 +188,15 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 
 		obscuredEmail, _ := utils.ObscureEmail(user.Email)
 		_ = json.NewEncoder(w).Encode(shared.AccountResponse{
-			Email:              obscuredEmail,
-			PaymentID:          user.PaymentID,
-			StorageAvailable:   user.StorageAvailable,
-			StorageUsed:        user.StorageUsed,
-			SendAvailable:      user.SendAvailable,
-			SendUsed:           user.SendUsed,
-			SubscriptionExp:    user.MemberExp,
-			SubscriptionMethod: user.SubscriptionMethod,
-			HasPasswordHint:    len(user.PasswordHint) > 0,
-			Has2FA:             len(user.Secret) > 0,
+			Email:            obscuredEmail,
+			PaymentID:        user.PaymentID,
+			StorageAvailable: user.StorageAvailable,
+			StorageUsed:      user.StorageUsed,
+			SendAvailable:    user.SendAvailable,
+			SendUsed:         user.SendUsed,
+			UpgradeExp:       user.UpgradeExp,
+			HasPasswordHint:  len(user.PasswordHint) > 0,
+			Has2FA:           len(user.Secret) > 0,
 		})
 	}
 }

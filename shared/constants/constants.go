@@ -35,5 +35,3 @@ const MaxTransferThreads = 3
 const MaxSendAgeDays = 30 //days
 const MaxPassNoteLen = 500
 const RecoveryCodeLen = 8
-const SubMethodStripe = "stripe"
-const SubMethodBTCPay = "btcpay"

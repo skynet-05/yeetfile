@@ -122,7 +122,6 @@ func ParseMetadata(rows *sql.Rows) FileMetadata {
 	err := rows.Scan(&id, &chunks, &name, &b2ID, &length, &downloads, &date)
 
 	if err != nil {
-		panic(err)
 		return FileMetadata{}
 	}
 

@@ -10,10 +10,9 @@ import (
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/html/templates"
 	"yeetfile/backend/server/session"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
-	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
 
@@ -177,22 +176,16 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 	isYearly := req.URL.Query().Has("yearly")
 	hasHint := user.PasswordHint != nil && len(user.PasswordHint) > 0
 	obscuredEmail, _ := utils.ObscureEmail(user.Email)
-	isPrevSubscriber := user.MemberExp.Year() >= 2024
+	isPrevUpgraded := user.UpgradeExp.Year() >= 2024
 
-	var durationFilter subscriptions.SubDuration
+	var durationFilter upgrades.UpgradeDuration
 	if isYearly {
-		durationFilter = subscriptions.SubYear
+		durationFilter = upgrades.DurationYear
 	} else {
-		durationFilter = subscriptions.SubMonth
+		durationFilter = upgrades.DurationMonth
 	}
 
-	products := subscriptions.GetProducts(durationFilter)
-
-	isStripeSubscriber := false
-	if user.SubscriptionMethod == constants.SubMethodStripe {
-		subID, _ := db.GetSubIDByPaymentID(user.PaymentID)
-		isStripeSubscriber = len(subID) > 0
-	}
+	products := upgrades.GetUpgrades(durationFilter)
 
 	_ = templates.ServeTemplate(
 		w,
@@ -207,24 +200,23 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 				Config:     config.HTMLConfig,
 				Endpoints:  endpoints.HTMLPageEndpoints,
 			},
-			Email:              obscuredEmail,
-			EmailConfigured:    config.YeetFileConfig.Email.Configured,
-			PaymentID:          user.PaymentID,
-			ExpString:          user.MemberExp.Format("2 Jan 2006"),
-			IsActive:           time.Now().Before(user.MemberExp),
-			IsPrevSubscriber:   isPrevSubscriber,
-			SendAvailable:      shared.ReadableFileSize(user.SendAvailable),
-			SendUsed:           shared.ReadableFileSize(user.SendUsed),
-			StorageAvailable:   shared.ReadableFileSize(user.StorageAvailable),
-			StorageUsed:        shared.ReadableFileSize(user.StorageUsed),
-			IsYearly:           isYearly,
-			IsStripeSubscriber: isStripeSubscriber,
-			BillingEndpoints:   endpoints.BillingPageEndpoints,
-			HasPasswordHint:    hasHint,
-			Has2FA:             user.Secret != nil && len(user.Secret) > 0,
-			ErrorMessage:       errorMsg,
-			SuccessMessage:     successMsg,
-			Products:           products,
+			Email:            obscuredEmail,
+			EmailConfigured:  config.YeetFileConfig.Email.Configured,
+			PaymentID:        user.PaymentID,
+			ExpString:        user.UpgradeExp.Format("2 Jan 2006"),
+			IsActive:         time.Now().Before(user.UpgradeExp),
+			IsPrevUpgraded:   isPrevUpgraded,
+			SendAvailable:    shared.ReadableFileSize(user.SendAvailable),
+			SendUsed:         shared.ReadableFileSize(user.SendUsed),
+			StorageAvailable: shared.ReadableFileSize(user.StorageAvailable),
+			StorageUsed:      shared.ReadableFileSize(user.StorageUsed),
+			IsYearly:         isYearly,
+			BillingEndpoints: endpoints.BillingPageEndpoints,
+			HasPasswordHint:  hasHint,
+			Has2FA:           user.Secret != nil && len(user.Secret) > 0,
+			ErrorMessage:     errorMsg,
+			SuccessMessage:   successMsg,
+			Products:         products,
 		},
 	)
 }

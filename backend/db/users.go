@@ -10,7 +10,7 @@ import (
 	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/mail"
-	"yeetfile/backend/server/subscriptions"
+	"yeetfile/backend/server/upgrades"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
@@ -24,12 +24,11 @@ type User struct {
 	PasswordHint        []byte
 	Secret              []byte
 	PaymentID           string
-	MemberExp           time.Time
+	UpgradeExp          time.Time
 	StorageAvailable    int64
 	StorageUsed         int64
 	SendAvailable       int64
 	SendUsed            int64
-	SubscriptionMethod  string
 }
 
 type UserStorage struct {
@@ -92,7 +91,7 @@ func NewUser(user User) (string, error) {
                    payment_id,
                    send_available,
                    storage_available,
-                   member_expiration,
+                   upgrade_exp,
                    last_upgraded_month,
                    protected_key,
                    public_key,
@@ -197,12 +196,12 @@ func GetUserPassCount(id string) (int, int, error) {
 	            END
 	        ) AS pw_count,
 	    CASE 
-		WHEN u.member_expiration < CURRENT_DATE THEN $2
+		WHEN u.upgrade_exp < CURRENT_DATE THEN $2
 		ELSE 0 
 	    END AS exp_status
 	FROM vault v
 	JOIN users u ON v.owner_id = u.id
-	WHERE v.owner_id = $1 GROUP BY u.member_expiration`
+	WHERE v.owner_id = $1 GROUP BY u.upgrade_exp`
 	err := db.QueryRow(s, id, maxPassCount).Scan(&count, &maxPassCount)
 	if err == sql.ErrNoRows {
 		return 0, maxPassCount, nil
@@ -287,8 +286,7 @@ func UpdatePasswordHint(userID string, encHint []byte) error {
 }
 
 // RecycleUserPaymentID overwrites the user's previous payment ID. This can be
-// performed whenever a user wants, as long as they don't have an active
-// subscription through Stripe.
+// performed whenever a user wants.
 func RecycleUserPaymentID(paymentID string) error {
 	rows, err := db.Query(`SELECT id from users WHERE payment_id = $1`, paymentID)
 	if err != nil {
@@ -431,21 +429,20 @@ func GetUserByID(id string) (User, error) {
 		sendUsed         int64
 		storageAvailable int64
 		storageUsed      int64
-		subMethod        string
 		pwHint           []byte
 		secret           []byte
 	)
-	s := `SELECT email, payment_id, member_expiration,
+	s := `SELECT email, payment_id, upgrade_exp,
 	             send_available, send_used, 
 		     storage_available, storage_used,
-		     sub_method, pw_hint, secret
+		     pw_hint, secret
 	      FROM users
 	      WHERE id = $1`
 	err := db.QueryRow(s, id).Scan(
 		&email, &paymentID, &expiration,
 		&sendAvailable, &sendUsed,
 		&storageAvailable, &storageUsed,
-		&subMethod, &pwHint, &secret,
+		&pwHint, &secret,
 	)
 
 	if err != nil {
@@ -454,17 +451,16 @@ func GetUserByID(id string) (User, error) {
 	}
 
 	return User{
-		ID:                 id,
-		Email:              email,
-		PaymentID:          paymentID,
-		MemberExp:          expiration,
-		SendAvailable:      sendAvailable,
-		SendUsed:           sendUsed,
-		StorageAvailable:   storageAvailable,
-		StorageUsed:        storageUsed,
-		SubscriptionMethod: subMethod,
-		PasswordHint:       pwHint,
-		Secret:             secret,
+		ID:               id,
+		Email:            email,
+		PaymentID:        paymentID,
+		UpgradeExp:       expiration,
+		SendAvailable:    sendAvailable,
+		SendUsed:         sendUsed,
+		StorageAvailable: storageAvailable,
+		StorageUsed:      storageUsed,
+		PasswordHint:     pwHint,
+		Secret:           secret,
 	}, nil
 }
 
@@ -565,7 +561,7 @@ func GetUserSubByPaymentID(paymentID string) (string, time.Time, error) {
 	)
 
 	err := db.QueryRow(`
-	        SELECT sub_tag, member_expiration 
+	        SELECT upgrade_tag, upgrade_exp 
 	        FROM users 
 	        WHERE payment_id=$1`, paymentID).
 		Scan(&subType, &subExp)
@@ -741,10 +737,10 @@ func GetUserEmailByPaymentID(paymentID string) (string, error) {
 	return "", errors.New("unable to find user by payment id")
 }
 
-// SetUserSubscription updates a user's subscription to have the correct amount
+// SetUserUpgrade updates a user's upgrade to have the correct amount
 // of storage and sending available
-func SetUserSubscription(
-	paymentID, subTag, subMethod string,
+func SetUserUpgrade(
+	paymentID, subTag string,
 	exp time.Time,
 	storage, send int64,
 ) error {
@@ -753,18 +749,17 @@ func SetUserSubscription(
 		constants.BandwidthMonitorDuration
 
 	s := `UPDATE users
-              SET member_expiration=$1,
+              SET upgrade_exp=$1,
                   storage_available=$2, send_available=$3,
-                  sub_tag=$4, sub_method=$5,
-                  last_upgraded_month=$6, bandwidth=$7
-              WHERE payment_id=$8`
+                  upgrade_tag=$4,
+                  last_upgraded_month=$5, bandwidth=$6
+              WHERE payment_id=$7`
 
 	_, err := db.Exec(s,
 		exp,
 		storage, send,
-		subTag, subMethod,
-		int(time.Now().Month()), totalWeeklyBandwidth,
-		paymentID)
+		subTag, int(time.Now().Month()),
+		totalWeeklyBandwidth, paymentID)
 	if err != nil {
 		return err
 	}
@@ -806,48 +801,48 @@ func CheckBandwidth() {
 	}
 }
 
-// CheckMemberships inspects each user's membership and updates their available
-// transfer if their membership is still valid
-func CheckMemberships() {
-	s := `SELECT id, sub_tag, member_expiration FROM users
+// CheckActiveUpgrades inspects each user's upgraded account and updates their
+// available transfer if their upgrade is still valid
+func CheckActiveUpgrades() {
+	s := `SELECT id, upgrade_tag, upgrade_exp FROM users
               WHERE last_upgraded_month != $1`
 	rows, err := db.Query(s, int(time.Now().Month()))
 	if err != nil {
-		log.Printf("Error retrieving user memberships: %v", err)
+		log.Printf("Error retrieving user upgrades: %v", err)
 		return
 	}
 
 	var revertIDs []string
 	now := time.Now()
 
-	// Upgrade map matches subscription tags to user IDs
+	// Upgrade map matches upgrade tags to user IDs
 	upgradeMap := make(map[string][]string)
 
 	defer rows.Close()
 	for rows.Next() {
 		var id string
-		var subTag string
-		var exp time.Time
+		var upgradeTag string
+		var upgradeExp time.Time
 
-		err = rows.Scan(&id, &subTag, &exp)
+		err = rows.Scan(&id, &upgradeTag, &upgradeExp)
 
 		if err != nil {
 			log.Printf("Error scanning user rows: %v", err)
 			return
 		}
 
-		if exp.Add(time.Hour * 72).Before(time.Now()) {
-			// User doesn't have an active membership, set send to
+		if upgradeExp.Add(time.Hour * 72).Before(time.Now()) {
+			// User doesn't have an active upgrade, set send to
 			// default amount
 			revertIDs = append(revertIDs, id)
 			continue
-		} else if now.Day() == exp.Day() || ExpDateRollover(now, exp) {
-			// User has an active membership
-			upgradeMap[subTag] = append(upgradeMap[subTag], id)
+		} else if now.Day() == upgradeExp.Day() || ExpDateRollover(now, upgradeExp) {
+			// User has an active upgrade
+			upgradeMap[upgradeTag] = append(upgradeMap[upgradeTag], id)
 		}
 	}
 
-	upgradeFunc := func(
+	updateFunc := func(
 		ids []string,
 		sendAvailable,
 		storageAvailable int64,
@@ -872,7 +867,7 @@ func CheckMemberships() {
 		return err
 	}
 
-	err = upgradeFunc(
+	err = updateFunc(
 		revertIDs,
 		config.YeetFileConfig.DefaultUserSend,
 		config.YeetFileConfig.DefaultUserStorage)
@@ -881,13 +876,13 @@ func CheckMemberships() {
 	}
 
 	for productTag, ids := range upgradeMap {
-		product, err := subscriptions.GetProductByTag(productTag)
+		product, err := upgrades.GetUpgradeByTag(productTag)
 		if err != nil {
 			log.Printf("Error locating product in upgrade cron: %v\n", err)
 			continue
 		}
 
-		err = upgradeFunc(ids, product.SendGBReal, product.StorageGBReal)
+		err = updateFunc(ids, product.SendGBReal, product.StorageGBReal)
 		if err != nil {
 			log.Printf("Error updating user storage/send: %v\n", err)
 		}
@@ -897,11 +892,11 @@ func CheckMemberships() {
 // CheckUpgradeExpiration checks for users who are a week away from having their
 // purchased upgrade expire.
 func CheckUpgradeExpiration() {
-	s := `SELECT email, member_expiration
+	s := `SELECT email, upgrade_exp
 	      FROM users
 	      WHERE email != ''
-	        AND member_expiration < current_date + interval '8' day
-	        AND member_expiration > current_date;`
+	        AND upgrade_exp < current_date + interval '8' day
+	        AND upgrade_exp > current_date;`
 
 	rows, err := db.Query(s)
 	if err != nil {
@@ -914,11 +909,11 @@ func CheckUpgradeExpiration() {
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			email            string
-			memberExpiration time.Time
+			email      string
+			upgradeExp time.Time
 		)
 
-		err = rows.Scan(&email, &memberExpiration)
+		err = rows.Scan(&email, &upgradeExp)
 		if err != nil {
 			log.Printf("Error reading rows in user upgrade expirations: %v\n", err)
 			return
@@ -926,9 +921,9 @@ func CheckUpgradeExpiration() {
 
 		oneWeekExp := time.Now().UTC().AddDate(0, 0, 7)
 		if len(email) == 0 ||
-			oneWeekExp.Day() != memberExpiration.Day() ||
-			oneWeekExp.Month() != memberExpiration.Month() ||
-			oneWeekExp.Year() != memberExpiration.Year() {
+			oneWeekExp.Day() != upgradeExp.Day() ||
+			oneWeekExp.Month() != upgradeExp.Month() ||
+			oneWeekExp.Year() != upgradeExp.Year() {
 			continue
 		}
 
@@ -945,14 +940,14 @@ func CheckUpgradeExpiration() {
 	}
 }
 
-// ExpDateRollover checks to see if the user's membership expiration date takes
+// ExpDateRollover checks to see if the user's upgrade expiration date takes
 // place on a day that doesn't exist in other months. If so, the user's transfer
 // limit should be upgraded "early". For example:
 //
 // - Expiration: Dec 31
 // - Today: June 30
 //
-// In this scenario, the membership should be upgraded today. The 31st will
+// In this scenario, the upgrade should be upgraded today. The 31st will
 // never occur in June, but the following day would be a new month.
 func ExpDateRollover(now time.Time, exp time.Time) bool {
 	if exp.Day() <= 28 {
