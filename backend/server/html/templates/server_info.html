@@ -66,6 +66,23 @@
       {{ end }}
     </ul>
   {{ end }}
+
+  {{ if .BillingEnabled }}
+  <hr>
+  <h3>Available Account Upgrades</h3>
+  <i>Note: Upgrades are one-time purchases that do not auto-renew.</i>
+  <br><br>
+  {{ range $i, $prod := .Products }}
+  <b>{{ $prod.Name }} [{{ $prod.Duration }}]</b>
+  <ul>
+    <li>{{ $prod.StorageGB }}GB vault storage</li>
+    <li>{{ $prod.SendGB }}GB/month send</li>
+    <li>Unlimited password storage</li>
+    <li>${{ $prod.Price }} x {{ $prod.Duration }}</li>
+  </ul>
+  <hr>
+  {{ end }}
+  {{ end }}
 </div>
 {{ template "footer.html" . }}
 </body>

@@ -71,54 +71,12 @@ type StripeBillingConfig struct {
 	Key           string
 	WebhookSecret string
 	PortalLink    string
-
-	SubNoviceMonthly              string
-	SubNoviceMonthlyLink          string
-	SubNoviceMonthlySubscribeLink string
-	SubNoviceYearly               string
-	SubNoviceYearlyLink           string
-	SubNoviceYearlySubscribeLink  string
-
-	SubRegularMonthly              string
-	SubRegularMonthlyLink          string
-	SubRegularMonthlySubscribeLink string
-	SubRegularYearly               string
-	SubRegularYearlyLink           string
-	SubRegularYearlySubscribeLink  string
-
-	SubAdvancedMonthly              string
-	SubAdvancedMonthlyLink          string
-	SubAdvancedMonthlySubscribeLink string
-	SubAdvancedYearly               string
-	SubAdvancedYearlyLink           string
-	SubAdvancedYearlySubscribeLink  string
 }
 
 var stripeBilling = StripeBillingConfig{
 	Key:           os.Getenv("YEETFILE_STRIPE_KEY"),
 	WebhookSecret: os.Getenv("YEETFILE_STRIPE_WEBHOOK_SECRET"),
 	PortalLink:    os.Getenv("YEETFILE_STRIPE_PORTAL_LINK"),
-
-	SubNoviceMonthly:              os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY"),
-	SubNoviceMonthlyLink:          os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_LINK"),
-	SubNoviceMonthlySubscribeLink: os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_SUBSCRIBE_LINK"),
-	SubNoviceYearly:               os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY"),
-	SubNoviceYearlyLink:           os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY_LINK"),
-	SubNoviceYearlySubscribeLink:  os.Getenv("YEETFILE_STRIPE_SUB_NOVICE_YEARLY_SUBSCRIBE_LINK"),
-
-	SubRegularMonthly:              os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY"),
-	SubRegularMonthlyLink:          os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY_LINK"),
-	SubRegularMonthlySubscribeLink: os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_MONTHLY_SUBSCRIBE_LINK"),
-	SubRegularYearly:               os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY"),
-	SubRegularYearlyLink:           os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY_LINK"),
-	SubRegularYearlySubscribeLink:  os.Getenv("YEETFILE_STRIPE_SUB_REGULAR_YEARLY_SUBSCRIBE_LINK"),
-
-	SubAdvancedMonthly:              os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY"),
-	SubAdvancedMonthlyLink:          os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_LINK"),
-	SubAdvancedMonthlySubscribeLink: os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_SUBSCRIBE_LINK"),
-	SubAdvancedYearly:               os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY"),
-	SubAdvancedYearlyLink:           os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_LINK"),
-	SubAdvancedYearlySubscribeLink:  os.Getenv("YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_SUBSCRIBE_LINK"),
 }
 
 // =============================================================================
@@ -131,13 +89,6 @@ type BTCPayBillingConfig struct {
 	WebhookSecret string
 	StoreID       string
 	ServerURL     string
-
-	SubNoviceMonthlyLink   string
-	SubNoviceYearlyLink    string
-	SubRegularMonthlyLink  string
-	SubRegularYearlyLink   string
-	SubAdvancedMonthlyLink string
-	SubAdvancedYearlyLink  string
 }
 
 var btcPayBilling = BTCPayBillingConfig{
@@ -145,13 +96,6 @@ var btcPayBilling = BTCPayBillingConfig{
 	WebhookSecret: os.Getenv("YEETFILE_BTCPAY_WEBHOOK_SECRET"),
 	StoreID:       os.Getenv("YEETFILE_BTCPAY_STORE_ID"),
 	ServerURL:     os.Getenv("YEETFILE_BTCPAY_SERVER_URL"),
-
-	SubNoviceMonthlyLink:   os.Getenv("YEETFILE_BTCPAY_SUB_NOVICE_MONTHLY_LINK"),
-	SubNoviceYearlyLink:    os.Getenv("YEETFILE_BTCPAY_SUB_NOVICE_YEARLY_LINK"),
-	SubRegularMonthlyLink:  os.Getenv("YEETFILE_BTCPAY_SUB_REGULAR_MONTHLY_LINK"),
-	SubRegularYearlyLink:   os.Getenv("YEETFILE_BTCPAY_SUB_REGULAR_YEARLY_LINK"),
-	SubAdvancedMonthlyLink: os.Getenv("YEETFILE_BTCPAY_SUB_ADVANCED_MONTHLY_LINK"),
-	SubAdvancedYearlyLink:  os.Getenv("YEETFILE_BTCPAY_SUB_ADVANCED_YEARLY_LINK"),
 }
 
 // =============================================================================
@@ -191,10 +135,8 @@ var HTMLConfig TemplateConfig
 
 func init() {
 	email.Configured = !utils.IsStructMissingAnyField(email)
-	stripeBilling.Configured = email.Configured &&
-		!utils.IsStructMissingAnyField(stripeBilling)
-	btcPayBilling.Configured = email.Configured &&
-		!utils.IsStructMissingAnyField(btcPayBilling)
+	stripeBilling.Configured = !utils.IsStructMissingAnyField(stripeBilling)
+	btcPayBilling.Configured = !utils.IsStructMissingAnyField(btcPayBilling)
 
 	var passwordHash []byte
 	var err error

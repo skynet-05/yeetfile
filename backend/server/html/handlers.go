@@ -369,6 +369,7 @@ func ServerInfoPageHandler(w http.ResponseWriter, req *http.Request) {
 			BTCPayEnabled:      serverInfo.BTCPayEnabled,
 			DefaultStorage:     storageStr,
 			DefaultSend:        sendStr,
+			Products:           serverInfo.Upgrades,
 		},
 	)
 }

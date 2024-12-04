@@ -81,6 +81,7 @@ type InfoTemplate struct {
 	BTCPayEnabled      bool
 	DefaultStorage     string
 	DefaultSend        string
+	Products           []subscriptions.Product
 }
 
 type CheckoutCompleteTemplate struct {

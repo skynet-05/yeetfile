@@ -2,7 +2,7 @@
   <img style="width: 500px; padding-bottom: 20px;" src="https://docs.yeetfile.com/images/yeetfile-banner.png">
   <br><br>
 
-  <p>A private and secure file vault + temporary file/text sharing service</p>
+  <p>A privacy-focused encrypted file/password vault and file/text sending service</p>
 
 [![Latest Release](https://img.shields.io/github/v/release/benbusby/yeetfile)](https://github.com/benbusby/yeetfile/releases)
 [![License: AGPLv3](https://img.shields.io/github/license/benbusby/yeetfile)](https://opensource.org/license/agpl-v3)
@@ -189,27 +189,9 @@ in the official YeetFile instance (https://yeetfile.com).
 | `YEETFILE_BTCPAY_WEBHOOK_SECRET` | The webhook secret for the BTCPay instance |
 | `YEETFILE_BTCPAY_STORE_ID` | The store ID within BTCPay |
 | `YEETFILE_BTCPAY_SERVER_URL` | The URL of the BTCPay instance |
-| `YEETFILE_BTCPAY_SUB_NOVICE_MONTHLY_LINK` | The URL for the BTCPay novice 1-month subscription |
-| `YEETFILE_BTCPAY_SUB_NOVICE_YEARLY_LINK` | The URL for the BTCPay novice 1-year subscription |
-| `YEETFILE_BTCPAY_SUB_REGULAR_MONTHLY_LINK` | The URL for the BTCPay regular 1-month subscription |
-| `YEETFILE_BTCPAY_SUB_REGULAR_YEARLY_LINK` | The URL for the BTCPay regular 1-year subscription |
-| `YEETFILE_BTCPAY_SUB_ADVANCED_MONTHLY_LINK` | The URL for the BTCPay advanced 1-month subscription |
-| `YEETFILE_BTCPAY_SUB_ADVANCED_YEARLY_LINK` | The URL for the BTCPay advanced 1-year subscription |
 | `YEETFILE_STRIPE_KEY` | The Stripe secret key |
 | `YEETFILE_STRIPE_WEBHOOK_SECRET` | The Stripe webhook secret |
 | `YEETFILE_STRIPE_PORTAL_LINK` | The link for users to manage their Stripe subscription |
-| `YEETFILE_STRIPE_SUB_NOVICE_MONTHLY` | The product ID for the novice monthly subscription |
-| `YEETFILE_STRIPE_SUB_NOVICE_MONTHLY_LINK` | The Stripe Checkout link for the novice monthly subscription |
-| `YEETFILE_STRIPE_SUB_NOVICE_YEARLY` | The product ID for the novice yearly subscription |
-| `YEETFILE_STRIPE_SUB_NOVICE_YEARLY_LINK` | The Stripe Checkout link for the novice yearly subscription |
-| `YEETFILE_STRIPE_SUB_REGULAR_MONTHLY` | The product ID for the regular monthly subscription |
-| `YEETFILE_STRIPE_SUB_REGULAR_MONTHLY_LINK` | The Stripe Checkout link for the regular monthly subscription |
-| `YEETFILE_STRIPE_SUB_REGULAR_YEARLY` | The product ID for the regular yearly subscription |
-| `YEETFILE_STRIPE_SUB_REGULAR_YEARLY_LINK` | The Stripe Checkout link for the regular yearly subscription |
-| `YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY` | The product ID for the advanced monthly subscription |
-| `YEETFILE_STRIPE_SUB_ADVANCED_MONTHLY_LINK` | The Stripe Checkout link for the advanced monthly subscription |
-| `YEETFILE_STRIPE_SUB_ADVANCED_YEARLY` | The product ID for the advanced yearly subscription |
-| `YEETFILE_STRIPE_SUB_ADVANCED_YEARLY_LINK` | The Stripe Checkout link for the advanced yearly subscription |
 
 ## Support
 
