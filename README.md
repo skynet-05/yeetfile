@@ -1,5 +1,5 @@
 <div align="center">
-  <img style="width: 500px; padding-bottom: 20px;" src="https://docs.yeetfile.com/images/yeetfile-banner.png">
+  <img width="500" style="padding-bottom: 20px;" src="https://docs.yeetfile.com/images/yeetfile-banner.png">
   <br><br>
 
   <p>A privacy-focused encrypted file/password vault and file/text sending service</p>
@@ -212,6 +212,6 @@ For issues related to the official YeetFile instance, you can reach out via
 email to [support@yeetfile.com](mailto:support@yeetfile.com), or send a
 message via Signal (see QR code below).
 
-[![Signal QR](https://docs.yeetfile.com/images/signal.png)](https://docs.yeetfile.com/contact/)
+<img src="https://docs.yeetfile.com/images/signal.png" width="300">
 
 For security related issues, please [email me directly](mailto:contact@benbusby.com).
