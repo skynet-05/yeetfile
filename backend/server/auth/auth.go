@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 	"yeetfile/backend/db"
+	"yeetfile/backend/server/transfer/vault"
+	"yeetfile/shared"
 )
 
 var (
@@ -112,6 +114,33 @@ func updateUser(values db.VerifiedAccountValues) error {
 	}, values.AccountID)
 
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deleteUser(id string, deleteAccount shared.DeleteAccount) error {
+	accountID := deleteAccount.Identifier
+	var err error
+	if strings.Contains(deleteAccount.Identifier, "@") {
+		accountID, err = db.GetUserIDByEmail(accountID)
+	}
+
+	if err != nil || accountID != id {
+		log.Printf("Error validating account for deletion: %v\n", err)
+		return errors.New("error validating account")
+	}
+
+	_, err = vault.DeleteVaultFolder(id, id, false, false)
+	if err != nil {
+		log.Printf("Error deleting user root folder: %v\n", err)
+		return err
+	}
+
+	err = db.DeleteUser(id)
+	if err != nil {
+		log.Printf("Error deleting user: %v\n", err)
 		return err
 	}
 

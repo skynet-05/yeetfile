@@ -15,7 +15,6 @@ import (
 	"yeetfile/backend/mail"
 	"yeetfile/backend/server/payments/stripe"
 	"yeetfile/backend/server/session"
-	"yeetfile/backend/server/transfer/vault"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
@@ -148,29 +147,9 @@ func AccountHandler(w http.ResponseWriter, req *http.Request, id string) {
 			return
 		}
 
-		accountID := deleteAccount.Identifier
-		var err error
-		if strings.Contains(deleteAccount.Identifier, "@") {
-			accountID, err = db.GetUserIDByEmail(accountID)
-		}
-
-		if err != nil || accountID != id {
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte("error verifying account"))
-			return
-		}
-
-		_, err = vault.DeleteVaultFolder(id, id, false, false)
+		err := deleteUser(id, deleteAccount)
 		if err != nil {
-			log.Printf("Error deleting user root folder: %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		err = db.DeleteUser(id)
-		if err != nil {
-			log.Printf("Error deleting user: %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "Error deleting account", http.StatusBadRequest)
 			return
 		}
 
