@@ -74,9 +74,10 @@ ___
 - Email not required at signup
   - Account ID-only signup allowed
   - Signup not required for text-only transfers
-- Options to pay via Stripe or BTCPay
+- Options to pay for account upgrades
+  - Payments handled via Stripe
   - BTC and XMR supported via BTCPay
-  - Available for <$3/month
+  - Available for under $3/month
   - Not required when self-hosting
   - Ability to rotate payment ID to remove record of payment
 
@@ -148,19 +149,27 @@ All environment variables can be defined in a file named `.env` at the root leve
 
 | Name | Purpose | Default Value | Accepted Values |
 | -- | -- | -- | -- |
-| `YEETFILE_HOST` | The host for running the YeetFile server | `0.0.0.0` | |
-| `YEETFILE_PORT` | The port for running the YeetFile server | `8090` | |
-| `YEETFILE_DEBUG` | Enable (1) or disable (0) debug mode on the server (do not use in production) | `0` | `0` or `1` |
-| `YEETFILE_STORAGE` | Store files in B2 or locally on the machine running the server | `b2` | `b2` or `local` |
-| `YEETFILE_DB_HOST` | The YeetFile PostgreSQL database host | `localhost` | |
-| `YEETFILE_DB_PORT` | The YeetFile PostgreSQL database port | `5432` | |
-| `YEETFILE_DB_USER` | The PostgreSQL user to access the YeetFile database | `postgres` | |
-| `YEETFILE_DB_PASS` | The password for the PostgreSQL user | None | |
-| `YEETFILE_DB_NAME` | The name of the database that YeetFile will use | `yeetfile` | |
-| `YEETFILE_DEFAULT_USER_STORAGE` | The default bytes of storage to assign new users | `15000000` (15MB) | `-1` for unlimited, `> 0` bytes otherwise |
-| `YEETFILE_DEFAULT_USER_SEND` | The default bytes a user can send each month | `5000000` (5MB) | `-1` for unlimited, `> 0` bytes otherwise |
-| `YEETFILE_SERVER_SECRET` | Used for encrypting password hints and 2FA recovery codes | | 32 bytes, base64 encoded |
-| `YEETFILE_DOMAIN` | The domain that the YeetFile instance is hosted on | `http://localhost:8090` | A valid domain string beginning with `http://` or `https://` |
+| YEETFILE_HOST | The host for running the YeetFile server | `0.0.0.0` | |
+| YEETFILE_PORT | The port for running the YeetFile server | `8090` | |
+| YEETFILE_DEBUG | Enable (1) or disable (0) debug mode on the server (do not use in production) | `0` | `0` or `1` |
+| YEETFILE_STORAGE | Store files in B2 or locally on the machine running the server | `b2` | `b2` or `local` |
+| YEETFILE_DB_HOST | The YeetFile PostgreSQL database host | `localhost` | |
+| YEETFILE_DB_PORT | The YeetFile PostgreSQL database port | `5432` | |
+| YEETFILE_DB_USER | The PostgreSQL user to access the YeetFile database | `postgres` | |
+| YEETFILE_DB_PASS | The password for the PostgreSQL user | None | |
+| YEETFILE_DB_NAME | The name of the database that YeetFile will use | `yeetfile` | |
+| YEETFILE_DEFAULT_USER_STORAGE | The default bytes of storage to assign new users | `15000000` (15MB) | `-1` for unlimited, `> 0` bytes otherwise |
+| YEETFILE_DEFAULT_USER_SEND | The default bytes a user can send each month | `5000000` (5MB) | `-1` for unlimited, `> 0` bytes otherwise |
+| YEETFILE_SERVER_SECRET | Used for encrypting password hints and 2FA recovery codes | | 32 bytes, base64 encoded |
+| YEETFILE_DOMAIN | The domain that the YeetFile instance is hosted on | `http://localhost:8090` | A valid domain string beginning with `http://` or `https://` |
+| YEETFILE_SESSION_AUTH_KEY | The auth key to use for user sessions | Random value | 32-byte value, base64 encoded |
+| YEETFILE_SESSION_ENC_KEY | The encryption key to use for user sessions | Random value | 32-byte value, base64 encoded |
+| YEETFILE_SERVER_PASSWORD | Enables password protection for user signups | None | Any string value |
+| YEETFILE_MAX_NUM_USERS | Enables a maximum number of user accounts for the instance | -1 (unlimited) | Any integer value |
+| YEETFILE_SERVER_SECRET | The secret value used for encrypting user password hints | | 32-byte value, base64 encoded |
+| YEETFILE_CACHE_DIR | The dir to use for caching downloaded files (B2 only) | None | Any valid directory |
+| YEETFILE_CACHE_MAX_SIZE | The maximum dir size the cache can fill before removing old cached files | 0 | An int value of bytes |
+| YEETFILE_CACHE_MAX_FILE_SIZE | The maximum file size to cache | 0 | An int value of bytes |
 
 #### Backblaze Environment Variables
 
@@ -168,29 +177,30 @@ These are required to be set if you want to use Backblaze B2 to store data that 
 
 | Name | Purpose |
 | -- | -- |
-| `B2_BUCKET_ID` | The ID of the bucket that will be used for storing uploaded content |
-| `B2_BUCKET_KEY_ID` | The ID of the key used for accessing the B2 bucket |
-| `B2_BUCKET_KEY` | The value of the key used for accessing the B2 bucket |
+| B2_BUCKET_ID | The ID of the bucket that will be used for storing uploaded content |
+| B2_BUCKET_KEY_ID | The ID of the key used for accessing the B2 bucket |
+| B2_BUCKET_KEY | The value of the key used for accessing the B2 bucket |
 
 #### Misc Environment Variables
 
-These can all be safely ignored when self-hosting, but are documented here since they're used
-in the official YeetFile instance (https://yeetfile.com).
+These can all be safely ignored when self-hosting, but are documented here
+for anyone interested in hosting a public-facing instance, with or without
+paid account upgrades.
 
 | Name | Purpose |
 | -- | -- |
-| `YEETFILE_SESSION_AUTH_KEY` | The auth key to use for user sessions (randomly generated if not set) |
-| `YEETFILE_SESSION_ENC_KEY` | The encryption key to use for user sessions (randomly generated if not set) |
-| `YEETFILE_EMAIL_ADDR` | The email address to use for correspondence |
-| `YEETFILE_EMAIL_HOST` | The host of the email address being used |
-| `YEETFILE_EMAIL_PORT` | The port of the email host |
-| `YEETFILE_EMAIL_PASSWORD` | The password for the email address |
-| `YEETFILE_BTCPAY_API_KEY` | The API key for the BTCPay instance |
-| `YEETFILE_BTCPAY_WEBHOOK_SECRET` | The webhook secret for the BTCPay instance |
-| `YEETFILE_BTCPAY_STORE_ID` | The store ID within BTCPay |
-| `YEETFILE_BTCPAY_SERVER_URL` | The URL of the BTCPay instance |
-| `YEETFILE_STRIPE_KEY` | The Stripe secret key |
-| `YEETFILE_STRIPE_WEBHOOK_SECRET` | The Stripe webhook secret |
+| YEETFILE_EMAIL_ADDR | The email address to use for correspondence |
+| YEETFILE_EMAIL_HOST | The host of the email address being used |
+| YEETFILE_EMAIL_PORT | The port of the email host |
+| YEETFILE_EMAIL_USER | The SMTP login for the email address |
+| YEETFILE_EMAIL_PASSWORD | The SMTP password for the email address |
+| YEETFILE_EMAIL_NO_REPLY | The no-reply email address for correspondence |
+| YEETFILE_BTCPAY_API_KEY | The API key for the BTCPay instance |
+| YEETFILE_BTCPAY_WEBHOOK_SECRET | The webhook secret for the BTCPay instance |
+| YEETFILE_BTCPAY_STORE_ID | The store ID within BTCPay |
+| YEETFILE_BTCPAY_SERVER_URL | The URL of the BTCPay instance |
+| YEETFILE_STRIPE_KEY | The Stripe secret key |
+| YEETFILE_STRIPE_WEBHOOK_SECRET | The Stripe webhook secret |
 
 ## Support
 
@@ -198,8 +208,10 @@ For feature requests and bugs, you can [create an issue on
 GitHub](https://github.com/benbusby/yeetfile/issues), or [submit
 a ticket on SourceHut (account not required)](https://todo.sr.ht/~benbusby/yeetfile).
 
-For issues related to the official YeetFile instance (https://yeetfile.com),
-please email [support@yeetfile.com](mailto:support@yeetfile.com), or send a
+For issues related to the official YeetFile instance, you can reach out via
+email to [support@yeetfile.com](mailto:support@yeetfile.com), or send a
 message via Signal (see QR code below).
+
+[![Signal QR](https://docs.yeetfile.com/images/signal.png)](https://docs.yeetfile.com/contact/)
 
 For security related issues, please [email me directly](mailto:contact@benbusby.com).
