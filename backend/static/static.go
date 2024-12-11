@@ -21,9 +21,10 @@ import (
 //go:embed json/*
 var StaticFiles embed.FS
 
+//go:embed stream_saver/proxy.js
 //go:embed stream_saver/sw.js
 //go:embed stream_saver/StreamSaver.js
-//go:embed stream_saver/mitm.html
+//go:embed stream_saver/proxy.html
 var StreamSaverFiles embed.FS
 
 var MinifiedFiles map[string][]byte

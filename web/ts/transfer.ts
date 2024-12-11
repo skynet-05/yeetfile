@@ -416,7 +416,7 @@ const getFileWriter = (name, length) => {
     // over https. If served over http, it'll default to:
     // https://jimmywarting.github.io/StreamSaver.js/mitm.html?version=2.0.0
     if (location.protocol.includes("https")) {
-        window.streamSaver.mitm = "/mitm.html";
+        window.streamSaver.mitm = "/proxy.html";
     }
 
     let fileStream = window.streamSaver.createWriteStream(name, {

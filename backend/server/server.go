@@ -133,7 +133,12 @@ func Run(host, port string) {
 		// These routes serve files directly from the stream_saver submodule
 		{
 			GET,
-			"/mitm.html",
+			"/proxy.html",
+			misc.FileHandler("", "/stream_saver/", static.StreamSaverFiles),
+		},
+		{
+			GET,
+			"/proxy.js",
 			misc.FileHandler("", "/stream_saver/", static.StreamSaverFiles),
 		},
 		{
