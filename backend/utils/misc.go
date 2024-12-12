@@ -154,6 +154,10 @@ func DayDiff(begin, end time.Time) int {
 	return days
 }
 
+func IsTLSReq(req *http.Request) bool {
+	return req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https"
+}
+
 // IsStructMissingAnyField checks to see if any generic struct is missing a
 // values in its string or array fields. Numeric fields are not checked since
 // 0 is a valid field value.

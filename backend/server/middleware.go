@@ -5,7 +5,6 @@ import (
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/time/rate"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 	"yeetfile/backend/config"
@@ -133,15 +132,15 @@ func NoAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cspHeader := csp
-		if strings.HasPrefix(config.YeetFileConfig.Domain, "https") {
-			w.Header().Set("X-Frame-Options", "DENY")
-			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		if utils.IsTLSReq(r) {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 			w.Header().Set("Expect-CT", "max-age=86400, enforce")
 		} else {
 			// Required by StreamSaver.js in non-https contexts
 			cspHeader += "frame-src 'self' https://jimmywarting.github.io/"
 		}
 
+		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Content-Security-Policy", cspHeader)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")

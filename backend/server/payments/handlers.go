@@ -12,6 +12,7 @@ import (
 	"yeetfile/backend/server/payments/btcpay"
 	"yeetfile/backend/server/payments/stripe"
 	"yeetfile/backend/server/upgrades"
+	"yeetfile/backend/utils"
 )
 
 // StripeWebhook handles relevant incoming webhook events from Stripe related
@@ -93,12 +94,11 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	}
 
 	scheme := "http"
-	if req.TLS != nil {
+	if utils.IsTLSReq(req) {
 		scheme = "https"
 	}
 
 	baseURL := fmt.Sprintf("%s://%s", scheme, req.Host)
-
 	checkoutLink, err := stripe.GenerateCheckoutLink(
 		product,
 		paymentID,
