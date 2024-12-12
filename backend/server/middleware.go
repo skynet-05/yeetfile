@@ -135,6 +135,7 @@ func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		if utils.IsTLSReq(r) {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 			w.Header().Set("Expect-CT", "max-age=86400, enforce")
+			cspHeader += "frame-src 'self'"
 		} else {
 			// Required by StreamSaver.js in non-https contexts
 			cspHeader += "frame-src 'self' https://jimmywarting.github.io/"

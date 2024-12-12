@@ -1059,9 +1059,13 @@ export class VaultView {
                             if (render.isNonTextFileType(file.decName)) {
                                 render.renderFileHTML(file.decName, bytes, (tag, url) => {
                                     html(tag);
-                                    let popOut = `<a target="_blank" href="${url}">Pop Out</a>`;
-                                    let download = `<a href="${url}" download="${name}">Download</a>`;
-                                    this.setStatus(`${closeFile} | ${popOut} | ${download}`);
+                                    if (url) {
+                                        let download = `<a href="${url}" download="${name}">Download</a>`;
+                                        let popOut = `<a target="_blank" href="${url}">Pop Out</a>`;
+                                        this.setStatus(`${closeFile} | ${popOut} | ${download}`);
+                                    } else {
+                                        this.setStatus(`${closeFile}`);
+                                    }
                                 });
                             } else {
                                 try {

@@ -37,6 +37,8 @@ func FileVaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string)
 					"file_vault.js",
 					"render.js",
 					"ponyfill.min.js",
+					"pdf.min.mjs",
+					"pdf.worker.min.mjs",
 				},
 				CSS:       []string{"vault.css"},
 				Config:    config.HTMLConfig,

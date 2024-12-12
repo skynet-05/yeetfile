@@ -3,9 +3,30 @@
 }
 
 #vault-items-div, #vault-file-div {
-    height: 500px;
     overflow-y: scroll;
     margin-top: 20px;
+}
+
+#vault-items-div {
+    height: 500px;
+}
+
+#vault-file-div {
+    height: 800px;
+}
+
+#pdf-canvas {
+    display: block;
+}
+
+#canvas-div {
+    display: flex !important;
+    justify-content: center;
+}
+
+#canvas-div * {
+    padding: 5px;
+    margin: 5px !important;
 }
 
 #vault-table tr, #vault-table td, #vault-table td * {
@@ -177,5 +198,10 @@ pre {
 
     #center-div {
         height: 700px;
+    }
+
+
+    #vault-items-div, #vault-file-div {
+        height: 500px;
     }
 }
