@@ -12,6 +12,8 @@ services:
       POSTGRES_USER: ${YEETFILE_DB_USER:-postgres}
       POSTGRES_PASSWORD: ${YEETFILE_DB_PASS:-postgres}
       POSTGRES_DB: ${YEETFILE_DB_NAME:-yeetfile}
+    #ports:
+      #- "5432:5432" # Map db port to host
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 3s
@@ -31,7 +33,10 @@ services:
     environment:
       YEETFILE_DB_HOST: "db"
 
+    # Map upload dir to host machine (local only)
+    volumes:
+      - ~/.local/share/yeetfile/uploads:/app/uploads
+
 volumes:
   yeetfile_data:
-    external: false
-    #external: true # Run "docker volume create --name=yeetfile_data" beforehand
+    external: true # Run "docker volume create --name=yeetfile_data" beforehand
