@@ -14,7 +14,9 @@ import (
 	"yeetfile/backend/config"
 )
 
-//go:embed js/*
+//go:embed js/*.js
+//go:embed js/*.mjs
+//go:embed js/dialogs/*
 //go:embed css/*
 //go:embed img/*
 //go:embed icons/*.svg

@@ -1,3 +1,6 @@
 [submodule "backend/static/stream_saver"]
 	path = backend/static/stream_saver
 	url = https://github.com/benbusby/StreamSaver.js.git
+[submodule "backend/static/js"]
+	path = backend/static/js
+	url = https://git.sr.ht/~benbusby/yeetfile-js
