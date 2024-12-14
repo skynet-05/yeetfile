@@ -44,7 +44,7 @@ func FinalizeInvoice(invoice Invoice) error {
 
 	utils.LogStruct(invoice)
 
-	product, err := upgrades.GetUpgradeByTag(orderType)
+	product, err := upgrades.GetUpgradeByTag(orderType, upgrades.GetLoadedUpgrades())
 	if err != nil {
 		return err
 	}

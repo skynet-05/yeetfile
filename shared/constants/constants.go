@@ -35,3 +35,10 @@ const MaxTransferThreads = 3
 const MaxSendAgeDays = 30 //days
 const MaxPassNoteLen = 500
 const RecoveryCodeLen = 8
+
+type UpgradeDuration string
+
+const (
+	DurationMonth UpgradeDuration = "month"
+	DurationYear  UpgradeDuration = "year"
+)

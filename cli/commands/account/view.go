@@ -7,7 +7,6 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"strconv"
 	"strings"
-	"yeetfile/backend/server/upgrades"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/styles"
 	"yeetfile/cli/utils"
@@ -639,7 +638,7 @@ func showUpgradeView() {
 		cancel              = -2
 	)
 
-	var availableUpgrades []upgrades.Upgrade
+	var availableUpgrades []shared.Upgrade
 	var upgradeFunc func(bool) (int, error)
 	upgradeFunc = func(isYearly bool) (int, error) {
 		var switchOption huh.Option[int]
@@ -701,7 +700,7 @@ func showUpgradeView() {
 	}
 }
 
-func showCheckoutModel(upgrade upgrades.Upgrade) {
+func showCheckoutModel(upgrade shared.Upgrade) {
 	const (
 		stripe int = iota
 		btcpay
@@ -715,7 +714,7 @@ func showCheckoutModel(upgrade upgrades.Upgrade) {
 
 	quantity := "1"
 	upgradeName := upgrade.Name
-	if upgrade.Duration == upgrades.DurationYear {
+	if upgrade.Duration == constants.DurationYear {
 		upgradeName += " (Year)"
 		duration = "years"
 	} else {

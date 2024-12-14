@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"yeetfile/backend/server/upgrades"
 	"yeetfile/cli/crypto"
 	"yeetfile/cli/globals"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 )
 
 type ChangePasswordForm struct {
@@ -154,9 +154,9 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 	return account, accountDetails
 }
 
-func generateUpgradeDesc(upgrade upgrades.Upgrade) string {
+func generateUpgradeDesc(upgrade shared.Upgrade) string {
 	var duration string
-	if upgrade.Duration == upgrades.DurationYear {
+	if upgrade.Duration == constants.DurationYear {
 		duration = "year"
 	} else {
 		duration = "month"

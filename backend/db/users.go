@@ -876,7 +876,7 @@ func CheckActiveUpgrades() {
 	}
 
 	for productTag, ids := range upgradeMap {
-		product, err := upgrades.GetUpgradeByTag(productTag)
+		product, err := upgrades.GetUpgradeByTag(productTag, upgrades.GetLoadedUpgrades())
 		if err != nil {
 			log.Printf("Error locating product in upgrade cron: %v\n", err)
 			continue

@@ -2,7 +2,7 @@ package shared
 
 import (
 	"time"
-	"yeetfile/backend/server/upgrades"
+	"yeetfile/shared/constants"
 )
 
 type AccountResponse struct {
@@ -298,9 +298,9 @@ type ServerInfo struct {
 	DefaultStorage     int64  `json:"defaultStorage"`
 	DefaultSend        int64  `json:"defaultSend"`
 
-	Upgrades      []upgrades.Upgrade `json:"upgrades"`
-	MonthUpgrades []upgrades.Upgrade `json:"monthUpgrades"`
-	YearUpgrades  []upgrades.Upgrade `json:"yearUpgrades"`
+	Upgrades      []Upgrade `json:"upgrades"`
+	MonthUpgrades []Upgrade `json:"monthUpgrades"`
+	YearUpgrades  []Upgrade `json:"yearUpgrades"`
 }
 
 type PassEntry struct {
@@ -316,4 +316,20 @@ type ItemIndex struct {
 	Name   string   `json:"name"`
 	Folder string   `json:"folder"`
 	URIs   []string `json:"uris"`
+}
+
+type Upgrade struct {
+	Tag         string                    `json:"tag"`
+	Name        string                    `json:"name"`
+	Description string                    `json:"description"`
+	Price       int64                     `json:"price"`
+	Duration    constants.UpgradeDuration `json:"duration"`
+
+	SendGB     int `json:"send_gb"`
+	SendGBReal int64
+
+	StorageGB     int `json:"storage_gb"`
+	StorageGBReal int64
+
+	BTCPayLink string `json:"btcpay_link"`
 }

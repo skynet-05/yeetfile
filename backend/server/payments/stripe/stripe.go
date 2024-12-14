@@ -18,6 +18,7 @@ import (
 	"yeetfile/backend/mail"
 	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
+	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
 )
 
@@ -104,7 +105,7 @@ func processCheckoutEvent(event *stripe.EventData) error {
 		return errors.New("missing product tag")
 	}
 
-	product, err := upgrades.GetUpgradeByTag(productTag)
+	product, err := upgrades.GetUpgradeByTag(productTag, upgrades.GetLoadedUpgrades())
 	if err != nil {
 		log.Printf("Error fetching product ID for stripe order: %v\n", err)
 		return err
@@ -289,7 +290,7 @@ func processNewSubscription(paymentID, customerID string) error {
 // setUserSubscription retrieves values from storage/send/type maps and uses those
 // to update the user's database entry
 func setUserSubscription(paymentID, productID string, quantity int) error {
-	product, err := upgrades.GetUpgradeByTag(productID)
+	product, err := upgrades.GetUpgradeByTag(productID, upgrades.GetLoadedUpgrades())
 	if err != nil {
 		log.Printf("Error getting user subscription product '%s': %v\n", productID, err)
 		return err
@@ -322,7 +323,7 @@ func generateProrationAmount(paymentID string) (int64, error) {
 
 	prevSubProration := float64(0)
 	if len(subType) > 0 && subExp.After(time.Now()) {
-		prevSub, err := upgrades.GetUpgradeByTag(subType)
+		prevSub, err := upgrades.GetUpgradeByTag(subType, upgrades.GetLoadedUpgrades())
 		if err != nil {
 			return 0, nil
 		}
@@ -341,7 +342,7 @@ func generateProrationAmount(paymentID string) (int64, error) {
 }
 
 func GenerateCheckoutLink(
-	product upgrades.Upgrade,
+	product shared.Upgrade,
 	paymentID string,
 	quantity int,
 	baseURL string,

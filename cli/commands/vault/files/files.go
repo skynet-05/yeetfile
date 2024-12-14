@@ -214,11 +214,13 @@ func (ctx *VaultContext) CreateFolder(folderName string, isPassVault bool) error
 	}
 
 	ctx.InsertItem(models.VaultItem{
-		ID:       response.ID,
-		RefID:    response.ID,
-		Name:     folderName,
-		IsFolder: true,
-		Modified: time.Now(),
+		ID:        response.ID,
+		RefID:     response.ID,
+		Name:      folderName,
+		IsFolder:  true,
+		Modified:  time.Now(),
+		CanModify: ctx.CanEdit,
+		IsOwner:   ctx.IsOwner,
 	})
 
 	return nil

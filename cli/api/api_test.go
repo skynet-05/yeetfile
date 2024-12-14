@@ -8,15 +8,12 @@ import (
 	"net"
 	"os"
 	"testing"
-	"yeetfile/backend/utils"
 	"yeetfile/cli/crypto"
 	"yeetfile/shared"
 )
 
 var userPassword = "password"
-var server = fmt.Sprintf(
-	"http://localhost:%s",
-	utils.GetEnvVar("YEETFILE_PORT", "8090"))
+var server string
 
 type TestUser struct {
 	id      string
@@ -94,9 +91,12 @@ func cleanUpUserAccount(user TestUser) {
 
 func TestMain(m *testing.M) {
 	userFileIDs = make(map[string][]string)
-	server = fmt.Sprintf(
-		"http://localhost:%s",
-		utils.GetEnvVar("YEETFILE_PORT", "8090"))
+	port, exists := os.LookupEnv("YEETFILE_PORT")
+	if !exists {
+		port = "8090"
+	}
+
+	server = fmt.Sprintf("http://localhost:%s", port)
 
 	UserA = setupTestUser()
 	UserB = setupTestUser()

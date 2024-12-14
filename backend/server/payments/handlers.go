@@ -67,7 +67,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 // using Stripe Checkout
 func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
-	product, err := upgrades.GetUpgradeByTag(itemType)
+	product, err := upgrades.GetUpgradeByTag(itemType, upgrades.GetLoadedUpgrades())
 	if err != nil {
 		http.Error(w, "Invalid product tag", http.StatusBadRequest)
 		return
@@ -146,7 +146,7 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
 	quantity := req.URL.Query().Get("quantity")
-	product, err := upgrades.GetUpgradeByTag(itemType)
+	product, err := upgrades.GetUpgradeByTag(itemType, upgrades.GetLoadedUpgrades())
 	if err != nil {
 		http.Error(w, "Invalid product tag", http.StatusBadRequest)
 		return

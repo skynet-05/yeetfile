@@ -188,7 +188,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 		durationFilter = constants.DurationMonth
 	}
 
-	products := upgrades.GetUpgrades(durationFilter)
+	products := upgrades.GetUpgrades(durationFilter, upgrades.GetLoadedUpgrades())
 
 	_ = templates.ServeTemplate(
 		w,

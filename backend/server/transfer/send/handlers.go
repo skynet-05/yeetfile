@@ -184,7 +184,7 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request) {
 
 	metadata, err := db.RetrieveMetadata(id)
 	if err != nil || metadata.Expiration.Before(time.Now().UTC()) {
-		http.Error(w, "No metadata found", http.StatusBadRequest)
+		http.Error(w, "File expired", http.StatusBadRequest)
 		return
 	}
 
