@@ -33,21 +33,21 @@
         {{ end }}
             <table>
                 <tr>
-                    <td><label for="email">Email:</label></td>
-                    <td><input type="text" id="email" name="email" placeholder="Email"></td>
+                    <td><label for="email">Email Address:</label></td>
+                    <td><input type="text" id="email" name="email" placeholder="Email Address"></td>
                 </tr>
                 <tr>
-                    <td><label for="password">Password:</label></td>
+                    <td><label for="password">Password <span class="small-text">(min 8 chars)</span>:</label></td>
                     <td><input type="password" id="password" name="password" placeholder="Password"></td>
                 </tr>
                 <tr>
-                    <td><label for="confirm-password">Confirm:</label></td>
+                    <td><label for="confirm-password">Confirm Password:</label></td>
                     <td><input type="password" id="confirm-password" placeholder="Confirm Password"></td>
                 </tr>
             </table>
             <hr class="half-hr">
             <table>
-                <tr><td><label for="password-hint">Password Hint (optional):</label></td></tr>
+                <tr><td><label for="password-hint">Password Hint <span class="small-text">(optional)</span>:</label></td></tr>
                 <tr><td><input class="hint-input" type="text" id="password-hint" placeholder="Hint..."></td></tr>
                 <tr id="hint-row"><td>
                     <span class="small-text">
@@ -66,11 +66,11 @@
         {{ end }}
             <table>
                 <tr>
-                    <td><label for="account-password">Password:</label></td>
+                    <td><label for="account-password">Password <span class="small-text">(min 8 chars)</span>:</label></td>
                     <td><input data-testid="account-password" type="password" id="account-password" name="password" placeholder="Password"></td>
                 </tr>
                 <tr>
-                    <td><label for="account-confirm-password">Confirm:</label></td>
+                    <td><label for="account-confirm-password">Confirm Password:</label></td>
                     <td><input data-testid="account-confirm-password" type="password" id="account-confirm-password" placeholder="Confirm Password"></td>
                 </tr>
             </table>

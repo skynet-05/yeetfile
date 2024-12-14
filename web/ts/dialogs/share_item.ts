@@ -14,6 +14,10 @@ export class ShareContentDialog {
     tableBody: HTMLTableElement;
 
     constructor() {
+        this.init();
+    }
+
+    init = () => {
         this.dialog = document.getElementById("share-dialog") as HTMLDialogElement;
         this.target = document.getElementById("share-target") as HTMLInputElement;
         this.modify = document.getElementById("share-modify") as HTMLInputElement;
@@ -39,6 +43,7 @@ export class ShareContentDialog {
         isFolder: boolean,
         callback: (s: DialogSignal) => void,
     ) => {
+        this.init();
         this.loading.style.display = "inherit";
         this.table.style.display = "none";
         this.tableBody.innerHTML = "";

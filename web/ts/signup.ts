@@ -226,14 +226,14 @@ const generateAccountIDSignupHTML = (id: string, img: string) => {
  */
 const generateSuccessHTML = (id: string) => {
     document.addEventListener("click", (event) => {
-        if ((event.target as HTMLElement).id === "goto-account") {
-            window.location.assign("/account");
+        if ((event.target as HTMLElement).id === "goto-send") {
+            window.location.assign(Endpoints.HTMLSend.path);
         }
     });
 
     return `<p>Your account ID is: <b data-testid="final-account-id">${id}</b> -- write this down!<br>
     This is what you will use to log in, and <b>will not be shown again.</b></p>
-    <button data-testid="goto-account" id="goto-account">Go To Account</button>`
+    <button data-testid="goto-send" id="goto-send">Start Yeeting</button>`
 }
 
 /**

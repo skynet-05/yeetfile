@@ -7,7 +7,6 @@ const init = () => {
 }
 
 const loadVaultView = (privKey: CryptoKey, pubKey: CryptoKey) => {
-    console.log("Load init:", Date.now())
     let vaultView = new VaultView(VaultViewType.FileVault, privKey, pubKey);
     vaultView.initialize();
 }

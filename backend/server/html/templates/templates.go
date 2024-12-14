@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"yeetfile/backend/config"
-	"yeetfile/backend/server/upgrades"
+	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
 )
 
@@ -81,7 +81,7 @@ type InfoTemplate struct {
 	BTCPayEnabled      bool
 	DefaultStorage     string
 	DefaultSend        string
-	Products           []upgrades.Upgrade
+	Products           []shared.Upgrade
 }
 
 type CheckoutCompleteTemplate struct {
@@ -113,7 +113,7 @@ type AccountTemplate struct {
 	ErrorMessage      string
 	SuccessMessage    string
 	BillingEndpoints  endpoints.BillingEndpoints
-	Products          []upgrades.Upgrade
+	Products          []shared.Upgrade
 }
 
 type VerificationTemplate struct {

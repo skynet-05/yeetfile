@@ -36,7 +36,7 @@ const submitVerificationCode = () => {
             await resetKeys();
             showMessage("Your email has been verified! Redirecting...", false);
             setTimeout(() => {
-                window.location.assign(Endpoints.HTMLAccount.path)
+                window.location.assign(Endpoints.HTMLSend.path)
             }, 1500);
         } else {
             fieldset.disabled = false;

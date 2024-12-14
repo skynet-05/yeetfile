@@ -44,7 +44,7 @@ def test_signup(browser_context: BrowserContext):
 
     account_id = page.get_by_test_id("final-account-id").text_content()
 
-    expect(page.get_by_test_id("goto-account")).to_be_visible()
+    expect(page.get_by_test_id("goto-send")).to_be_visible()
 
 
 def test_logout(browser_context: BrowserContext):
@@ -89,10 +89,8 @@ def test_text_send(browser_context: BrowserContext):
     result_div = page.get_by_test_id("file-tag-div")
     result_div.wait_for()
 
+    expect(page.get_by_test_id("file-link")).not_to_be_empty()
     text_link = page.get_by_test_id("file-link").text_content()
-    text_tag = page.get_by_test_id("file-tag").text_content()
-    assert text_link.endswith(text_tag)
-
     page.goto(text_link)
     expect(page).to_have_title("YeetFile - Download")
 
@@ -132,10 +130,8 @@ def test_file_send(browser_context: BrowserContext):
     result_div = page.get_by_test_id("file-tag-div")
     result_div.wait_for()
 
+    expect(page.get_by_test_id("file-link")).not_to_be_empty()
     text_link = page.get_by_test_id("file-link").text_content()
-    text_tag = page.get_by_test_id("file-tag").text_content()
-    assert text_link.endswith(text_tag)
-
     page.goto(text_link)
     expect(page).to_have_title("YeetFile - Download")
     submit_btn = page.get_by_test_id("submit")

@@ -40,7 +40,7 @@ def test_signup(browser_context: tuple[BrowserContext, BrowserContext]):
 
         account_id = page.get_by_test_id("final-account-id").text_content()
 
-        expect(page.get_by_test_id("goto-account")).to_be_visible()
+        expect(page.get_by_test_id("goto-send")).to_be_visible()
         return account_id
 
     account_id_a = signup(context_a.new_page())

@@ -21,7 +21,6 @@ const uploadMetadata = (
     callback: (id: string) => void,
     errorCallback: () => void,
 ) => {
-    console.log(metadata);
     let xhr = new XMLHttpRequest();
     xhr.open("POST", endpoint.path, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -95,7 +94,6 @@ const uploadChunks = async (
 
     const uploadChunk = async (chunk) => {
         return new Promise(async (resolve, reject) => {
-            console.log("Uploading chunk " + chunk);
             progressAmount += 0.5;
             let progress = (progressAmount / chunks) * 100;
             if (progressBar && chunks > 1) {

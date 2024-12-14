@@ -1148,8 +1148,6 @@ export class VaultView {
             title.innerText = item.decName;
         }
 
-        console.log(isFolder)
-
         let actionDownload = document.getElementById("action-download");
         actionDownload.style.display = isFolder ? "none" : "flex";
         actionDownload.addEventListener("click", event => {

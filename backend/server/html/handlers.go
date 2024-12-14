@@ -13,6 +13,7 @@ import (
 	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
+	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
 
@@ -180,11 +181,11 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 	obscuredEmail, _ := utils.ObscureEmail(user.Email)
 	isPrevUpgraded := user.UpgradeExp.Year() >= 2024
 
-	var durationFilter upgrades.UpgradeDuration
+	var durationFilter constants.UpgradeDuration
 	if isYearly {
-		durationFilter = upgrades.DurationYear
+		durationFilter = constants.DurationYear
 	} else {
-		durationFilter = upgrades.DurationMonth
+		durationFilter = constants.DurationMonth
 	}
 
 	products := upgrades.GetUpgrades(durationFilter)

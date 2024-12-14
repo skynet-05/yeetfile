@@ -15,6 +15,7 @@ type SendForm = {
 
 const init = () => {
     setupTypeToggles();
+    setupCopyButton();
 
     let usePasswordCB = document.getElementById("use-password") as HTMLInputElement;
     let passwordInput = document.getElementById("password") as HTMLInputElement;
@@ -425,7 +426,6 @@ const validateDownloads = (numDownloads) => {
 
 const showFileTag = (id, secret) => {
     let tagDiv = document.getElementById("file-tag-div");
-    let fileTag = document.getElementById("file-tag");
     let fileLink = document.getElementById("file-link") as HTMLAnchorElement;
 
     let endpoint = Endpoints.format(Endpoints.HTMLSendDownload, id);
@@ -445,9 +445,27 @@ const showFileTag = (id, secret) => {
     }
 
     tagDiv.style.display = "inherit";
-    fileTag.textContent = `${id}#${secret}`;
     fileLink.textContent = link;
     fileLink.href = link;
+}
+
+const setupCopyButton = () => {
+    let copyBtn = document.getElementById("copy-link") as HTMLButtonElement;
+    copyBtn.addEventListener("click", event => {
+        event.preventDefault();
+        let link = document.getElementById("file-link") as HTMLAnchorElement;
+        copyToClipboard(link.href, success => {
+            if (success) {
+                let originalLabel = copyBtn.innerText;
+                copyBtn.innerText = "Copied to clipboard!"
+                setTimeout(() => {
+                    copyBtn.innerText = originalLabel;
+                }, 2000);
+            } else {
+                alert("Failed to copy link to clipboard");
+            }
+        });
+    })
 }
 
 const setupTypeToggles = () => {
