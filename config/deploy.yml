@@ -1,0 +1,15 @@
+service: yeetfile
+image: meddlehead/yeetfile
+
+registry:
+  server: registry.digitalocean.com
+  username:
+    - YEETFILE_KAMAL_REGISTRY_USERNAME
+  password:
+    - YEETFILE_KAMAL_REGISTRY_PASSWORD
+
+proxy:
+  forward_headers: true
+
+builder:
+  arch: amd64

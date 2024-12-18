@@ -77,7 +77,7 @@ func folderViewHandler(w http.ResponseWriter, req *http.Request, userID string, 
 
 	items, ownership, err := db.GetVaultItems(userID, folderID, passVault)
 	if err != nil {
-		utils.Logf("Error fetching vault items: %v\n", err)
+		log.Printf("Error fetching vault items: %v\n", err)
 
 		if err == db.AccessError {
 			http.Error(w, "Unauthorized access",
@@ -312,21 +312,21 @@ func UploadDataHandler(w http.ResponseWriter, req *http.Request, userID string) 
 
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
-		utils.Logf("[YF Vault] Error fetching metadata: %v\n", err)
+		log.Printf("[YF Vault] Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}
 
 	data, err := utils.LimitedChunkReader(w, req.Body)
 	if err != nil {
-		utils.Logf("[YF Vault] Error reading uploaded data: %v\n", err)
+		log.Printf("[YF Vault] Error reading uploaded data: %v\n", err)
 		http.Error(w, "Error reading request", http.StatusBadRequest)
 		abortUpload(metadata, userID, 0, chunkNum)
 		return
 	}
 
 	if chunkNum > metadata.Chunks {
-		utils.Logf("[YF Vault] User uploading beyond stated # of chunks")
+		log.Printf("[YF Vault] User uploading beyond stated # of chunks")
 		http.Error(w, "Attempting to upload more chunks than specified",
 			http.StatusBadRequest)
 		abortUpload(metadata, userID, 0, chunkNum)
@@ -379,11 +379,8 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 
 	metadata, err := db.RetrieveVaultMetadata(id, userID)
 	if err != nil {
-		serverMsg, clientMsg := utils.GenErrMsgs(
-			"Error fetching metadata",
-			err)
-		log.Println(serverMsg)
-		http.Error(w, clientMsg, http.StatusBadRequest)
+		log.Println("Error fetching metadata:", err)
+		http.Error(w, "Error fetching metadata", http.StatusBadRequest)
 		return
 	}
 
@@ -392,9 +389,8 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	if config.YeetFileConfig.DefaultUserStorage > 0 {
 		bandwidth, err := db.GetUserBandwidth(userID)
 		if err != nil {
-			serverMsg, clientMsg := utils.GenErrMsgs("Server error", err)
-			log.Println(serverMsg)
-			http.Error(w, clientMsg, http.StatusInternalServerError)
+			log.Println("Server error:", err)
+			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
 		} else if bandwidth < metadata.Length {
 			log.Printf("Bandwidth limit triggered")
@@ -408,11 +404,8 @@ func DownloadHandler(w http.ResponseWriter, req *http.Request, userID string) {
 	if metadata.PasswordData == nil || len(metadata.PasswordData) == 0 {
 		downloadID, err = db.InitDownload(metadata.RefID, userID, metadata.Chunks)
 		if err != nil {
-			serverMsg, clientMsg := utils.GenErrMsgs(
-				"Error initializing download",
-				err)
-			log.Println(serverMsg)
-			http.Error(w, clientMsg, http.StatusInternalServerError)
+			log.Println("Error initializing download:", err)
+			http.Error(w, "Error initializing download", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -457,7 +450,7 @@ func DownloadChunkHandler(w http.ResponseWriter, req *http.Request, userID strin
 
 	metadata, err := db.RetrieveVaultMetadata(metadataID, userID)
 	if err != nil {
-		utils.Logf("Error fetching metadata: %v\n", err)
+		log.Printf("Error fetching metadata: %v\n", err)
 		http.Error(w, "No metadata found", http.StatusBadRequest)
 		return
 	}

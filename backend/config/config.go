@@ -70,13 +70,11 @@ type StripeBillingConfig struct {
 	Configured    bool
 	Key           string
 	WebhookSecret string
-	PortalLink    string
 }
 
 var stripeBilling = StripeBillingConfig{
 	Key:           os.Getenv("YEETFILE_STRIPE_KEY"),
 	WebhookSecret: os.Getenv("YEETFILE_STRIPE_WEBHOOK_SECRET"),
-	PortalLink:    os.Getenv("YEETFILE_STRIPE_PORTAL_LINK"),
 }
 
 // =============================================================================
@@ -85,17 +83,11 @@ var stripeBilling = StripeBillingConfig{
 
 type BTCPayBillingConfig struct {
 	Configured    bool
-	APIKey        string
 	WebhookSecret string
-	StoreID       string
-	ServerURL     string
 }
 
 var btcPayBilling = BTCPayBillingConfig{
-	APIKey:        os.Getenv("YEETFILE_BTCPAY_API_KEY"),
 	WebhookSecret: os.Getenv("YEETFILE_BTCPAY_WEBHOOK_SECRET"),
-	StoreID:       os.Getenv("YEETFILE_BTCPAY_STORE_ID"),
-	ServerURL:     os.Getenv("YEETFILE_BTCPAY_SERVER_URL"),
 }
 
 // =============================================================================

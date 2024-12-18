@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"yeetfile/backend/config"
 	"yeetfile/backend/server/auth"
@@ -172,6 +173,9 @@ func serve(r *router, host, port string) {
 	addr := fmt.Sprintf("%s:%s", host, port)
 
 	if len(config.TLSCert) > 0 && len(config.TLSKey) > 0 {
+		config.TLSKey = strings.ReplaceAll(config.TLSKey, "\\n", "\n")
+		config.TLSCert = strings.ReplaceAll(config.TLSCert, "\\n", "\n")
+
 		cert, err = tls.X509KeyPair(
 			[]byte(config.TLSCert),
 			[]byte(config.TLSKey))

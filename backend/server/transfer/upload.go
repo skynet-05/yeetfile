@@ -79,7 +79,7 @@ func UploadSingleChunk(upload FileUpload, b2Values db.B2Upload) (bool, error) {
 		upload.data)
 
 	if err != nil {
-		utils.Logf("Error uploading to B2: %v\n", err)
+		log.Printf("Error uploading to B2: %v\n", err)
 		return false, err
 	}
 
@@ -112,7 +112,7 @@ func UploadMultiChunk(upload FileUpload, b2Values db.B2Upload) (bool, error) {
 			upload.data)
 
 		if err != nil {
-			utils.Logf("Error: %v\n", err)
+			log.Printf("Error: %v\n", err)
 			return err
 		}
 

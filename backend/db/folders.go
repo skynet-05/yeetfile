@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"yeetfile/backend/utils"
 	"yeetfile/shared"
 )
 
@@ -79,7 +78,7 @@ func insertFolder(id, ownerID string, folder shared.NewVaultFolder, pwFolder boo
 func FolderIDExists(id string) bool {
 	rows, err := db.Query(`SELECT * FROM folders WHERE id=$1`, id)
 	if err != nil {
-		utils.Logf("Error checking folder id: %v", err)
+		log.Printf("Error checking folder id: %v", err)
 		return true
 	}
 

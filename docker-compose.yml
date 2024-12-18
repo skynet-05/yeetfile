@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${YEETFILE_DB_PASS:-postgres}
       POSTGRES_DB: ${YEETFILE_DB_NAME:-yeetfile}
     #ports:
-      #- "5432:5432" # Map db port to host
+    #  - "5432:5432" # Map db port to host
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 3s

@@ -31,7 +31,7 @@ func PrepCache(fileID string, size int64) {
 
 	totalCacheSize, err := utils.CheckDirSize(path)
 	if err != nil {
-		utils.Log(fmt.Sprintf("Unable to check cache dir size: %v", err))
+		log.Printf(fmt.Sprintf("Unable to check cache dir size: %v", err))
 		return
 	}
 
@@ -265,5 +265,5 @@ func init() {
 		panic(err)
 	}
 
-	utils.Log(fmt.Sprintf("Caching files to directory: %s", path))
+	log.Printf("Caching files to directory: %s", path)
 }

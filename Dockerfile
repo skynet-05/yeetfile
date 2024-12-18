@@ -25,6 +25,7 @@ FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/yeetfile-server /app
 RUN chmod +x /app/yeetfile-server
+RUN apk add --update curl
 EXPOSE 8090
 
 CMD ["/app/yeetfile-server"]

@@ -91,7 +91,7 @@ func SignupHandler(w http.ResponseWriter, req *http.Request) {
 			response = shared.SignupResponse{
 				Error: "Error creating account ID",
 			}
-			utils.Logf("Error: %v\n", err)
+			log.Printf("Error: %v\n", err)
 		} else {
 			response = shared.SignupResponse{
 				Identifier: id,
@@ -263,7 +263,7 @@ func VerifyAccountHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	} else if utils.IsStructMissingAnyField(verify) {
-		utils.Log("Missing required fields for verification")
+		log.Println("Missing required fields for verification")
 		http.Error(w, "Unable to parse request", http.StatusBadRequest)
 		return
 	}
@@ -388,14 +388,14 @@ func PubKeyHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	}
 
 	if err != nil || len(userID) == 0 {
-		utils.Logf("Error in user lookup for pub key: %v\n", err)
+		log.Printf("Error in user lookup for pub key: %v\n", err)
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
 	pubKey, err := db.GetUserPubKey(userID)
 	if err != nil {
-		utils.Logf("Error fetching pub key: %v\n", err)
+		log.Printf("Error fetching pub key: %v\n", err)
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}

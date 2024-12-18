@@ -31,6 +31,7 @@ func UserCanSend(size int64, req *http.Request) (bool, error) {
 		log.Printf("Error validating ability to upload: %v\n", err)
 		return false, err
 	} else if availableSend-usedSend < size {
+		log.Printf("[Send] Out of space: %d - %d > %d", availableSend, usedSend, size)
 		return false, OutOfSpaceError
 	}
 

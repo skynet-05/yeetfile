@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/blake2b"
@@ -236,6 +237,10 @@ func EncryptChunk(key []byte, data []byte) ([]byte, error) {
 // the key is unable to decrypt the data, an error is returned, otherwise the
 // decrypted data is returned.
 func DecryptChunk(key []byte, chunk []byte) ([]byte, error) {
+	if len(chunk) <= constants.IVSize {
+		return nil, errors.New("invalid chunk size")
+	}
+
 	iv := chunk[:constants.IVSize]
 	data := chunk[constants.IVSize:]
 

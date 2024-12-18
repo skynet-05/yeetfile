@@ -8,6 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	"io"
 	"log"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,14 +31,39 @@ func init() {
 		user     = utils.GetEnvVar("YEETFILE_DB_USER", "postgres")
 		password = utils.GetEnvVar("YEETFILE_DB_PASS", "")
 		dbname   = utils.GetEnvVar("YEETFILE_DB_NAME", "yeetfile")
+		cert     = utils.GetEnvVar("YEETFILE_DB_CERT", "")
 	)
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+	connStr := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s",
 		user,
 		password,
 		host,
 		port,
 		dbname)
+
+	if len(cert) > 0 {
+		cert = strings.ReplaceAll(cert, "\\n", "\n")
+
+		certFile, err := os.CreateTemp("", ".*")
+		if err != nil {
+			log.Fatalln("Error creating tmp dir for db cert:", err)
+		}
+
+		if _, err = certFile.WriteString(cert); err != nil {
+			log.Fatalf("Unable to write tmp CA cert file: %v\n", err)
+		}
+
+		if err = certFile.Close(); err != nil {
+			log.Fatalf("Unable to close tmp CA cert file: %v\n", err)
+		}
+
+		connStr += fmt.Sprintf(
+			"?sslmode=verify-full&sslrootcert=%s",
+			certFile.Name())
+	} else {
+		connStr += "?sslmode=disable"
+	}
 
 	// Open db connection
 	var err error
@@ -129,7 +155,7 @@ func clearDatabase(id string) {
 func TableIDExists(tableName, id string) bool {
 	rows, err := db.Query(`SELECT * FROM `+tableName+` WHERE id=$1`, id)
 	if err != nil {
-		utils.Logf("Error checking for id in table '%s': %v", tableName, err)
+		log.Printf("Error checking for id in table '%s': %v", tableName, err)
 		return true
 	}
 

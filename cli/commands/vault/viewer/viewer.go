@@ -133,7 +133,7 @@ func downloadFile(id string, key []byte) ([]byte, error) {
 			metadata.ID,
 			strconv.Itoa(chunk))
 		chunkData, err := globals.API.DownloadFileChunk(url)
-		if err != nil {
+		if err != nil || len(chunkData) == 0 {
 			return nil, err
 		}
 

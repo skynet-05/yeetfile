@@ -134,7 +134,9 @@ func (task CronTask) runCronTask() {
 	}
 
 	if !lockAcquired {
-		log.Printf("'%s' task lock already acquired, skipping", task.Name)
+		if config.IsDebugMode {
+			log.Printf("'%s' task lock already acquired, skipping", task.Name)
+		}
 		return
 	}
 

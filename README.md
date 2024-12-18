@@ -177,9 +177,9 @@ These are required to be set if you want to use Backblaze B2 to store data that 
 
 | Name | Purpose |
 | -- | -- |
-| B2_BUCKET_ID | The ID of the bucket that will be used for storing uploaded content |
-| B2_BUCKET_KEY_ID | The ID of the key used for accessing the B2 bucket |
-| B2_BUCKET_KEY | The value of the key used for accessing the B2 bucket |
+| `YEETFILE_B2_BUCKET_ID` | The ID of the bucket that will be used for storing uploaded content |
+| `YEETFILE_B2_BUCKET_KEY_ID` | The ID of the key used for accessing the B2 bucket |
+| `YEETFILE_B2_BUCKET_KEY` | The value of the key used for accessing the B2 bucket |
 
 #### Misc Environment Variables
 

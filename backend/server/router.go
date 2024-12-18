@@ -3,7 +3,6 @@ package server
 import (
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
@@ -63,9 +62,7 @@ func (r *router) AddRoutes(routes []RouteDef) {
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for el, handler := range r.routes {
 		if r.matchPath(el.Path, req.URL.Path) && el.Method == req.Method {
-			if os.Getenv("YEETFILE_DEBUG") == "1" {
-				log.Printf("%s %s\n", req.Method, req.URL)
-			}
+			log.Printf("%s %s\n", req.Method, req.URL)
 			handler(w, req)
 			return
 		}

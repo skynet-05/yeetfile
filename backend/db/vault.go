@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"yeetfile/backend/utils"
 	"yeetfile/shared"
 )
 
@@ -107,7 +106,7 @@ func GetVaultItems(
 	}
 
 	if err != nil {
-		utils.Logf("Error retrieving vault contents: %v", err)
+		log.Printf("Error retrieving vault contents: %v", err)
 		return nil, shared.FolderOwnershipInfo{}, err
 	}
 
@@ -306,7 +305,7 @@ func ShareFile(share shared.NewSharedItem, userID string) (string, error) {
 func VaultItemIDExists(id string) bool {
 	rows, err := db.Query(`SELECT * FROM vault WHERE id=$1`, id)
 	if err != nil {
-		utils.Logf("Error checking vault item id: %v", err)
+		log.Printf("Error checking vault item id: %v", err)
 		return true
 	}
 

@@ -21,35 +21,28 @@ import (
 	"yeetfile/shared/endpoints"
 )
 
-func Log(msg string) {
-	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
-		log.Println(msg)
-	}
-}
-
-func Logf(msg string, a ...any) {
-	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
-		log.Printf(msg, a...)
-	}
-}
-
-func GenErrMsgs(msg string, err error) (string, string) {
-	var serverMsg string
-	var clientMsg string
-
-	serverMsg = fmt.Sprintf("%s\n└─ Error: %v\n", msg, err)
-	if GetEnvVar("YEETFILE_DEBUG", "0") == "1" {
-		clientMsg = serverMsg
-	} else {
-		clientMsg = msg
-	}
-
-	return serverMsg, clientMsg
-}
-
-func GetEnvVarBytesB64(key string, fallback []byte) []byte {
+// GetEnvVar is the primary method for reading variables from the environment.
+// Note that variables are unset after they are retrieved, so the value needs
+// to be stored in some way if it needs to be accessed more than once.
+func GetEnvVar(key string, fallback string) string {
 	value, exists := os.LookupEnv(key)
 	if !exists {
+		value = fallback
+	}
+
+	err := os.Unsetenv(key)
+	if err != nil {
+		log.Fatalf("Failed to unset %s key: %v\n", key, err)
+	}
+
+	return strings.TrimSpace(value)
+}
+
+// GetEnvVarBytesB64 retrieves a base64 string from the environment and returns
+// the value as a []byte.
+func GetEnvVarBytesB64(key string, fallback []byte) []byte {
+	value := GetEnvVar(key, "")
+	if value == "" {
 		return fallback
 	}
 
@@ -61,15 +54,8 @@ func GetEnvVarBytesB64(key string, fallback []byte) []byte {
 	return decoded
 }
 
-func GetEnvVar(key string, fallback string) string {
-	value, exists := os.LookupEnv(key)
-	if !exists {
-		value = fallback
-	}
-
-	return strings.TrimSpace(value)
-}
-
+// GetEnvVarInt retrieves a string value from the environment and converts it
+// into an integer.
 func GetEnvVarInt(key string, fallback int) int {
 	value := GetEnvVar(key, strconv.Itoa(fallback))
 	if value == "" {
@@ -78,12 +64,15 @@ func GetEnvVarInt(key string, fallback int) int {
 
 	num, err := strconv.Atoi(value)
 	if err != nil {
+		log.Printf("WARNING: Value for %s is not a valid number, using fallback...\n", key)
 		return fallback
 	}
 
 	return num
 }
 
+// GetEnvVarInt64 retrieves a string valkue from the environment and converts it
+// into a 64-bit integer.
 func GetEnvVarInt64(key string, fallback int64) int64 {
 	value := GetEnvVar(key, strconv.FormatInt(fallback, 10))
 	if value == "" {
@@ -98,14 +87,17 @@ func GetEnvVarInt64(key string, fallback int64) int64 {
 	return num
 }
 
+// GetEnvVarBool retrieves a value from the environment and interprets it as a
+// bool value -- 0/n/false == false, 1/y/true == true
 func GetEnvVarBool(key string, fallback bool) bool {
 	value := GetEnvVar(key, "")
 	value = strings.ToLower(value)
+
 	if value == "" {
 		return fallback
-	} else if value == "0" || value == "n" {
+	} else if value == "0" || value == "n" || value == "false" {
 		return false
-	} else if value == "1" || value == "y" {
+	} else if value == "1" || value == "y" || value == "true" {
 		return true
 	}
 
@@ -220,7 +212,7 @@ func ParseSizeString(str string) int64 {
 		numStr := matches[1]
 		num, err := strconv.Atoi(numStr)
 		if err != nil {
-			Logf("Error converting number: %v\n", err)
+			log.Printf("Error converting number: %v\n", err)
 			return 0
 		}
 

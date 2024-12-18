@@ -41,7 +41,7 @@ func init() {
 		B2BucketID = os.Getenv("YEETFILE_B2_BUCKET_ID")
 
 		if len(B2BucketID) == 0 {
-			log.Fatal("Missing B2_BUCKET_ID environment variable")
+			log.Fatal("Missing YEETFILE_B2_BUCKET_ID environment variable")
 		}
 
 		log.Println("Authorizing B2 account...")
