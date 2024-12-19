@@ -1,4 +1,4 @@
-package files
+package items
 
 import (
 	"errors"
@@ -59,15 +59,17 @@ type Storage struct {
 }
 
 const FileVaultHelp = `
-Enter -> select/open | x -----> delete | s --> share | u ---> upload |
-Backspace ----> back | n -> new folder | r -> rename | d -> download |`
+ Enter -> select/open   x -> delete       s -> share    u -> upload
+ Backspace -> back      n -> new folder   r -> rename   d -> download
+ / -> filter`
 
 const PassVaultHelp = `
-Enter -> select/open | x -----> delete | s --> share | u ---> add item |
-Backspace ----> back | n -> new folder | r -> rename |`
+ Enter -> select/open   x -> delete       s -> share    u -> add item
+ Backspace -> back      n -> new folder   r -> rename
+ / -> filter`
 
 const FilterHelp = `
-Enter -> select/open | escape -> exit filter`
+ Enter -> select/open   escape -> exit filter`
 
 var status Status
 var storage Storage
@@ -328,7 +330,7 @@ func (m Model) tableViewer() string {
 		errMsg := status.Err.Error()
 		vaultView += "\n✗ Error: " + errMsg
 	} else if m.filtering || len(m.filterStr) > 0 {
-		vaultView += "\nFilter: " + m.filterStr
+		vaultView += "\n Filter: " + m.filterStr
 	} else if len(status.Success) > 0 {
 		vaultView += "\n " + status.Success
 	} else if status.Loading {
@@ -345,7 +347,7 @@ func (m Model) tableViewer() string {
 		storageUsed := shared.ReadableFileSize(storage.used)
 		storageAvailable := shared.ReadableFileSize(storage.available)
 		progressStr := fmt.Sprintf(
-			"\n Storage: %s full | %s / %s \n",
+			"\n Storage: %s full | %s / %s",
 			m.progress.ViewAs(percentage),
 			storageUsed,
 			storageAvailable)

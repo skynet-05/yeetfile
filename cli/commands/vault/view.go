@@ -4,9 +4,9 @@ import (
 	"log"
 	"yeetfile/cli/commands/vault/confirmation"
 	"yeetfile/cli/commands/vault/filepicker"
-	"yeetfile/cli/commands/vault/files"
 	"yeetfile/cli/commands/vault/folder"
 	"yeetfile/cli/commands/vault/internal"
+	"yeetfile/cli/commands/vault/items"
 	"yeetfile/cli/commands/vault/pass"
 	"yeetfile/cli/commands/vault/rename"
 	"yeetfile/cli/commands/vault/share"
@@ -15,8 +15,8 @@ import (
 )
 
 func ShowPassVaultModel() {
-	m, err := files.RunVaultModel(
-		files.Model{IsPassVault: true},
+	m, err := items.RunVaultModel(
+		items.Model{IsPassVault: true},
 		internal.Event{})
 	if err != nil {
 		log.Fatal(err)
@@ -26,8 +26,8 @@ func ShowPassVaultModel() {
 }
 
 func ShowFileVaultModel() {
-	m, err := files.RunVaultModel(
-		files.Model{IsPassVault: false},
+	m, err := items.RunVaultModel(
+		items.Model{IsPassVault: false},
 		internal.Event{})
 	if err != nil {
 		log.Fatal(err)
@@ -36,7 +36,7 @@ func ShowFileVaultModel() {
 	showVaultModel(m)
 }
 
-func showVaultModel(m files.Model) {
+func showVaultModel(m items.Model) {
 	var err error
 	for err == nil && m.ViewRequest.View > internal.NullView {
 		if err != nil {
@@ -74,11 +74,11 @@ func showVaultModel(m files.Model) {
 		case internal.ViewPassView:
 			subviewErr = pass.RunViewPassEntryModel(m.ViewRequest.Item)
 		case internal.FilesView:
-			m, err = files.RunVaultModel(m, m.IncomingEvent)
+			m, err = items.RunVaultModel(m, m.IncomingEvent)
 			continue
 		}
 
 		utils.HandleCLIError("Error in subview", subviewErr)
-		m, err = files.RunVaultModel(m, event)
+		m, err = items.RunVaultModel(m, event)
 	}
 }

@@ -47,6 +47,7 @@ set -a
 source "$ENV_FILE"
 set +a
 
+mkdir -p .kamal
 rm -f "$SECRETS_FILE"
 rm -f "$ENV_SECRETS_TMP_FILE"
 rm -f "$SERVER_IPS_TMP_FILE"

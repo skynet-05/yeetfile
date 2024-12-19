@@ -62,6 +62,7 @@ func UploadMetadataHandler(w http.ResponseWriter, req *http.Request, _ string) {
 	}
 
 	if b2Err != nil {
+		log.Println("Error initializing storage", b2Err)
 		http.Error(w, "Error initializing storage", http.StatusInternalServerError)
 		return
 	}
