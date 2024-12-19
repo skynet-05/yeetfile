@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 	"yeetfile/backend/config"
+	"yeetfile/backend/service"
 	"yeetfile/shared/constants"
 )
 
@@ -17,6 +18,7 @@ const (
 	DownloadsTask  = "downloads"
 	UpgradeTask    = "upgrade"
 	UpgradeExpTask = "upgrade-expiration"
+	B2AuthTask     = "b2-auth-task"
 )
 
 type CronTask struct {
@@ -76,6 +78,13 @@ var tasks = []CronTask{
 		IntervalAmount: 1,
 		Enabled:        true,
 		TaskFn:         CleanUpDownloads,
+	},
+	{
+		Name:           B2AuthTask,
+		Interval:       time.Hour,
+		IntervalAmount: 3,
+		Enabled:        config.YeetFileConfig.StorageType == config.B2Storage,
+		TaskFn:         service.AuthorizeB2,
 	},
 }
 
