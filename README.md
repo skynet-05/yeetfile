@@ -38,9 +38,11 @@ Contents
 
 ## About
 
-YeetFile is a file vault and file/text transferring service, with both a [web](https://yeetfile.com) and
-[CLI client](https://github.com/benbusby/yeetfile/releases) officially supported. All content is encrypted
-locally, and the server is incapable of decrypting any transmitted content.
+YeetFile is a file vault and file/text transferring service, with both a
+[web](https://yeetfile.com) and [CLI
+client](https://github.com/benbusby/yeetfile/releases) officially supported.
+All content is encrypted locally, and the server is incapable of decrypting any
+transmitted content.
 
 ## Features
 
@@ -48,8 +50,8 @@ locally, and the server is incapable of decrypting any transmitted content.
 
 ![vault example](https://docs.yeetfile.com/images/vault-example.png)
 
-- File storage + folder creation
-- File + folder sharing w/ YeetFile users
+- File and password storage + folder creation
+- File/password/folder sharing w/ YeetFile users
   - Read/write permissions per user
 - No upload size limit
 
@@ -99,9 +101,10 @@ You can quickly create your own instance of YeetFile using `docker compose`:
 
 `docker compose up`
 
-This will create the Postgres db and the server running on http://localhost:8090. You can modify the docker-compose.yml
-to use an external data volume by running `docker volume create --name=yeetfile_data` and including the following in
-your docker-compose.yml:
+This will create the Postgres db and the server running on
+http://localhost:8090. You can modify the docker-compose.yml to use an external
+data volume by running `docker volume create --name=yeetfile_data` and
+including the following in your docker-compose.yml:
 
 ```
 volumes:
@@ -201,6 +204,7 @@ paid account upgrades.
 | YEETFILE_BTCPAY_SERVER_URL | The URL of the BTCPay instance |
 | YEETFILE_STRIPE_KEY | The Stripe secret key |
 | YEETFILE_STRIPE_WEBHOOK_SECRET | The Stripe webhook secret |
+| YEETFILE_UPGRADES_JSON | A JSON array describing the available account upgrades (see shared.Upgrade struct) |
 
 ## Support
 
