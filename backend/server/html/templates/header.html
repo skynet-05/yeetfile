@@ -5,15 +5,15 @@
   <div class="right">
     {{ if .Base.LoggedIn }}
       {{ if eq .Base.Page "pass" }}
-      <a class="selected-page" href="{{.Base.Endpoints.Pass}}">Pass</a>
+      <a class="selected-page" href="{{.Base.Endpoints.Pass}}">Passwords</a>
       {{ else }}
-      <a href="{{.Base.Endpoints.Pass}}">Pass</a>
+      <a href="{{.Base.Endpoints.Pass}}">Passwords</a>
       {{ end }}
 
       {{ if eq .Base.Page "vault" }}
-      <a class="selected-page" href="{{.Base.Endpoints.Vault}}">Vault</a>
+      <a class="selected-page" href="{{.Base.Endpoints.Vault}}">Files</a>
       {{ else }}
-      <a href="{{.Base.Endpoints.Vault}}">Vault</a>
+      <a href="{{.Base.Endpoints.Vault}}">Files</a>
       {{ end }}
 
       {{ if eq .Base.Page "send" }}

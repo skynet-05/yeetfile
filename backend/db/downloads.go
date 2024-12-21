@@ -56,8 +56,8 @@ func UpdateDownload(id string) error {
 	             WHERE chunk + 1 >= total_chunks
 	             AND id=$1`
 
-	err := db.QueryRow(s, id, time.Now().UTC())
-	return err.Err()
+	_, err := db.Exec(s, id, time.Now().UTC())
+	return err
 }
 
 // CleanUpDownloads removes all in-progress downloads that haven't been updated

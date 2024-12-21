@@ -50,20 +50,20 @@ var defaultConfig string
 func setupConfigDir() (Paths, error) {
 	var localConfig string
 	var configErr error
-	if runtime.GOOS == "windows" {
-		baseDir, err := os.UserConfigDir()
-		if err != nil {
-			return Paths{}, err
-		}
-
-		localConfig, configErr = makeConfigDirectories(baseDir, "yeetfile")
-	} else {
+	if runtime.GOOS == "darwin" {
 		baseDir, err := os.UserHomeDir()
 		if err != nil {
 			return Paths{}, err
 		}
 
 		localConfig, configErr = makeConfigDirectories(baseDir, baseConfigPath)
+	} else {
+		baseDir, err := os.UserConfigDir()
+		if err != nil {
+			return Paths{}, err
+		}
+
+		localConfig, configErr = makeConfigDirectories(baseDir, "yeetfile")
 	}
 
 	if configErr != nil {
