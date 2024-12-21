@@ -7,7 +7,6 @@ import (
 	"os"
 	"sort"
 	"time"
-	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/constants"
 )
@@ -78,9 +77,6 @@ func init() {
 	})
 
 	if len(upgrades) > 0 {
-		log.Println("Loaded upgrades:")
-		for _, upgrade := range upgrades {
-			utils.LogStruct(upgrade)
-		}
+		log.Printf("-- Loaded %d upgrades\n", len(upgrades))
 	}
 }
