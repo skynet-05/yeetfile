@@ -25,7 +25,8 @@ const (
 	SetPasswordHint
 	SetTwoFactor
 	DeleteTwoFactor
-	PurchaseUpgrade
+	PurchaseSendUpgrade
+	PurchaseVaultUpgrade
 	RecyclePaymentID
 	DeleteAccount
 	Exit
@@ -620,10 +621,18 @@ func generateSelectOptions(
 
 	options = append(options, twoFactorOption)
 
-	if globals.ServerInfo.BillingEnabled && len(globals.ServerInfo.Upgrades) > 0 {
-		options = append(
-			options,
-			huh.NewOption("Upgrade Account", PurchaseUpgrade))
+	if globals.ServerInfo.BillingEnabled {
+		if len(globals.ServerInfo.Upgrades.SendUpgrades) > 0 {
+			options = append(
+				options,
+				huh.NewOption("Upgrade Send", PurchaseSendUpgrade))
+		}
+
+		if len(globals.ServerInfo.Upgrades.VaultUpgrades) > 0 {
+			options = append(
+				options,
+				huh.NewOption("Upgrade Vault", PurchaseVaultUpgrade))
+		}
 	}
 
 	options = append(options, huh.NewOption("Recycle Payment ID", RecyclePaymentID))
@@ -632,17 +641,57 @@ func generateSelectOptions(
 	return options
 }
 
-func showUpgradeView() {
+func showSendUpgradeView() {
+	const cancel = -1
+	var selected int
+
+	availableUpgrades := globals.ServerInfo.Upgrades.SendUpgrades
+	options := []huh.Option[int]{huh.NewOption("Cancel", cancel)}
+	fields := []huh.Field{
+		huh.NewNote().
+			Title(utils.GenerateTitle("Upgrade Send")).
+			Description("Note: Send upgrades are permanent and do " +
+				"not expire until the upgraded amount has been used up."),
+	}
+
+	for i, upgrade := range availableUpgrades {
+		upgradeOption := huh.NewOption(upgrade.Name+" ->", i)
+		upgradeDesc := utils.GenerateDescription(
+			generateUpgradeDesc(*upgrade), 25)
+		upgradeNote := huh.NewNote().
+			Title(upgrade.Name).
+			Description(upgradeDesc)
+		options = append(options, upgradeOption)
+		fields = append(fields, upgradeNote)
+	}
+
+	fields = append(fields, huh.NewSelect[int]().
+		Options(options...).
+		Value(&selected))
+	err := huh.NewForm(huh.NewGroup(fields...)).
+		WithTheme(styles.Theme).
+		Run()
+
+	if err == huh.ErrUserAborted || selected == cancel {
+		ShowAccountModel()
+	} else {
+		showCheckoutModel(*availableUpgrades[selected], false)
+	}
+}
+
+func showVaultUpgradeView() {
 	const (
 		switchYearlyMonthly = -1
 		cancel              = -2
 	)
 
-	var availableUpgrades []shared.Upgrade
-	var upgradeFunc func(bool) (int, error)
-	upgradeFunc = func(isYearly bool) (int, error) {
-		var switchOption huh.Option[int]
-		var selected int
+	var upgradeFunc func(bool) (shared.Upgrade, error)
+	upgradeFunc = func(isYearly bool) (shared.Upgrade, error) {
+		var (
+			availableUpgrades []shared.Upgrade
+			switchOption      huh.Option[int]
+			selected          int
+		)
 		if isYearly {
 			switchOption = huh.NewOption(
 				"Switch to monthly",
@@ -653,10 +702,12 @@ func showUpgradeView() {
 				switchYearlyMonthly)
 		}
 
-		if isYearly {
-			availableUpgrades = globals.ServerInfo.YearUpgrades
-		} else {
-			availableUpgrades = globals.ServerInfo.MonthUpgrades
+		for _, upgrade := range globals.ServerInfo.Upgrades.VaultUpgrades {
+			if upgrade.Annual != isYearly {
+				continue
+			}
+
+			availableUpgrades = append(availableUpgrades, *upgrade)
 		}
 
 		options := []huh.Option[int]{
@@ -666,8 +717,8 @@ func showUpgradeView() {
 
 		fields := []huh.Field{
 			huh.NewNote().
-				Title(utils.GenerateTitle("Upgrade Account")).
-				Description("Note: All upgrades are one-time " +
+				Title(utils.GenerateTitle("Upgrade Vault")).
+				Description("Note: Vault upgrades are one-time " +
 					"purchases and do not auto-renew."),
 		}
 
@@ -687,20 +738,22 @@ func showUpgradeView() {
 
 		if err == nil && selected == switchYearlyMonthly {
 			return upgradeFunc(!isYearly)
+		} else if selected == cancel {
+			return shared.Upgrade{}, huh.ErrUserAborted
 		}
 
-		return selected, err
+		return availableUpgrades[selected], err
 	}
 
-	selected, err := upgradeFunc(false)
-	if err == huh.ErrUserAborted || selected == cancel {
+	upgrade, err := upgradeFunc(false)
+	if err == huh.ErrUserAborted {
 		ShowAccountModel()
 	} else {
-		showCheckoutModel(availableUpgrades[selected])
+		showCheckoutModel(upgrade, true)
 	}
 }
 
-func showCheckoutModel(upgrade shared.Upgrade) {
+func showCheckoutModel(upgrade shared.Upgrade, isVaultUpgrade bool) {
 	const (
 		stripe int = iota
 		btcpay
@@ -708,18 +761,22 @@ func showCheckoutModel(upgrade shared.Upgrade) {
 	)
 
 	var (
-		selected int
-		duration string
+		selected     int
+		quantityType string
 	)
 
 	quantity := "1"
 	upgradeName := upgrade.Name
-	if upgrade.Duration == constants.DurationYear {
-		upgradeName += " (Year)"
-		duration = "years"
+	if isVaultUpgrade {
+		if upgrade.Annual {
+			upgradeName += " (Year)"
+			quantityType = "years"
+		} else {
+			upgradeName += " (Month)"
+			quantityType = "months"
+		}
 	} else {
-		upgradeName += " (Month)"
-		duration = "months"
+		quantityType = "units"
 	}
 
 	subDesc := generateUpgradeDesc(upgrade)
@@ -729,22 +786,19 @@ func showCheckoutModel(upgrade shared.Upgrade) {
 		utils.GenerateWrappedText("You do not need to log "+
 			"into your YeetFile account on the web to complete the transaction.")
 
-	options := []huh.Option[int]{
-		huh.NewOption("Stripe Checkout (USD, CAD, GBP, etc)", stripe),
-		huh.NewOption("BTCPay Checkout (BTC or XMR)", btcpay),
-		huh.NewOption("Go Back", back),
-	}
-
-	err := huh.NewForm(huh.NewGroup(
+	fields := []huh.Field{
 		huh.NewNote().
 			Title(utils.GenerateTitle("Upgrade")).
 			Description(utils.GenerateDescriptionSection(
 				upgradeName,
 				subDesc,
 				30)),
-		huh.NewInput().
+	}
+
+	if isVaultUpgrade {
+		quantityInput := huh.NewInput().
 			Title("Quantity").
-			Description("Number of "+duration).
+			Description("Number of " + quantityType).
 			Value(&quantity).Validate(
 			func(s string) error {
 				intVal, err := strconv.Atoi(s)
@@ -757,16 +811,27 @@ func showCheckoutModel(upgrade shared.Upgrade) {
 				}
 
 				return nil
-			}),
-		huh.NewSelect[int]().Options(options...).Value(&selected),
-	)).WithTheme(styles.Theme).Run()
+			})
+		fields = append(fields, quantityInput)
+	}
+
+	options := []huh.Option[int]{
+		huh.NewOption("Stripe Checkout (USD, CAD, GBP, etc)", stripe),
+		huh.NewOption("BTCPay Checkout (BTC or XMR)", btcpay),
+		huh.NewOption("Go Back", back),
+	}
+
+	selectField := huh.NewSelect[int]().Options(options...).Value(&selected)
+	fields = append(fields, selectField)
+
+	err := huh.NewForm(huh.NewGroup(fields...)).WithTheme(styles.Theme).Run()
 
 	var link string
 	if err == huh.ErrUserAborted || selected == back {
-		showUpgradeView()
+		showVaultUpgradeView()
 		return
 	} else if selected == stripe {
-		link, err = globals.API.InitStripeCheckout(upgrade.Tag, quantity)
+		link, err = globals.API.InitStripeCheckout(upgrade, quantity)
 		if err == nil {
 			showCheckoutLinkModel(link)
 		}
@@ -779,36 +844,29 @@ func showCheckoutModel(upgrade shared.Upgrade) {
 
 	if err != nil {
 		utils.ShowErrorForm("Error generating checkout link")
-		showUpgradeView()
+		showVaultUpgradeView()
 	}
 }
 
 func showCheckoutLinkModel(link string) {
-	desc := fmt.Sprintf("Use the link below to finish checkout:\n\n%s\n\n"+
-		"When you are finished checking out, you can return to the CLI.",
-		shared.EscapeString(link))
-
-	_ = huh.NewForm(huh.NewGroup(
-		huh.NewNote().
-			Title(utils.GenerateTitle("Checkout")).
-			Description(desc),
-		huh.NewConfirm().Affirmative("OK").Negative("")),
-	).WithTheme(styles.Theme).Run()
+	fmt.Printf("\nUse link below to finish checkout:\n\n%s\n\n", link)
+	fmt.Printf("When you are finished checking out, you can return to the CLI.\n\n")
 }
 
 func exitView() {}
 
 func init() {
 	actionMap = map[Action]func(){
-		SetEmail:         showChangeEmailView,
-		ChangeEmail:      showChangeEmailWarning,
-		ChangePassword:   showChangePasswordView,
-		SetPasswordHint:  showPasswordHintView,
-		SetTwoFactor:     showSetTwoFactorView,
-		PurchaseUpgrade:  showUpgradeView,
-		DeleteTwoFactor:  showDeleteTwoFactorView,
-		RecyclePaymentID: showRecyclePaymentIDView,
-		DeleteAccount:    showAccountDeletionView,
-		Exit:             exitView,
+		SetEmail:             showChangeEmailView,
+		ChangeEmail:          showChangeEmailWarning,
+		ChangePassword:       showChangePasswordView,
+		SetPasswordHint:      showPasswordHintView,
+		SetTwoFactor:         showSetTwoFactorView,
+		PurchaseSendUpgrade:  showSendUpgradeView,
+		PurchaseVaultUpgrade: showVaultUpgradeView,
+		DeleteTwoFactor:      showDeleteTwoFactorView,
+		RecyclePaymentID:     showRecyclePaymentIDView,
+		DeleteAccount:        showAccountDeletionView,
+		Exit:                 exitView,
 	}
 }

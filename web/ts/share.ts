@@ -16,6 +16,7 @@ type SendForm = {
 const init = () => {
     setupTypeToggles();
     setupCopyButton();
+    updateProgressBar();
 
     let usePasswordCB = document.getElementById("use-password") as HTMLInputElement;
     let passwordInput = document.getElementById("password") as HTMLInputElement;
@@ -192,6 +193,25 @@ const validateForm = (form: SendForm) => {
 }
 
 /**
+ * Updates the "send used" vs "send available" progress bar and the remaining amount
+ * indicator below the bar
+ * @param newAmount {number} - The number of bytes added after upload (optional)
+ */
+const updateProgressBar = (newAmount: number = 0) => {
+    let progressBar = document.getElementById("send-bar") as HTMLProgressElement;
+    let sendRemainingSpan = document.getElementById("send-remaining") as HTMLSpanElement;
+
+    if (newAmount > 0) {
+        progressBar.value += newAmount;
+    }
+
+    let used = calcFileSize(progressBar.value);
+    let max = calcFileSize(progressBar.max);
+    let remaining = calcFileSize(progressBar.max - progressBar.value);
+    sendRemainingSpan.innerText = `${used} / ${max} (${remaining} remaining)`;
+}
+
+/**
  * Submits a multi-file form, zipping the contents together and then encrypting
  * the zip file.
  * @param form {SendForm} - The form values being submitted
@@ -287,6 +307,7 @@ const submitFormSingle = async (
         transfer.uploadSendChunks(id, file, key, (done: boolean) => {
             if (done) {
                 showFileTag(id, secret);
+                updateProgressBar(file.size);
             } else {
                 updateProgress(`Uploading... (${percent}%)`);
             }

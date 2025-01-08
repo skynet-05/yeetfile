@@ -208,7 +208,7 @@ func GetServerInfoStruct() shared.ServerInfo {
 		storageBackend = "Server Storage"
 	}
 
-	allUpgrades := upgrades.GetLoadedUpgrades()
+	allUpgrades := upgrades.GetAllUpgrades()
 
 	return shared.ServerInfo{
 		StorageBackend:     storageBackend,
@@ -221,8 +221,8 @@ func GetServerInfoStruct() shared.ServerInfo {
 		DefaultStorage:     YeetFileConfig.DefaultUserStorage,
 		DefaultSend:        YeetFileConfig.DefaultUserSend,
 
-		Upgrades:      upgrades.GetUpgrades("", allUpgrades),
-		MonthUpgrades: upgrades.GetUpgrades(constants.DurationMonth, allUpgrades),
-		YearUpgrades:  upgrades.GetUpgrades(constants.DurationYear, allUpgrades),
+		Upgrades:      *allUpgrades,
+		MonthUpgrades: upgrades.GetVaultUpgrades(false, allUpgrades.VaultUpgrades),
+		YearUpgrades:  upgrades.GetVaultUpgrades(true, allUpgrades.VaultUpgrades),
 	}
 }

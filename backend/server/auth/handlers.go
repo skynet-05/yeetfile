@@ -1,19 +1,15 @@
 package auth
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/crypto"
 	"yeetfile/backend/db"
 	"yeetfile/backend/mail"
-	"yeetfile/backend/server/payments/stripe"
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
@@ -661,47 +657,14 @@ func TwoFactorHandler(w http.ResponseWriter, req *http.Request, userID string) {
 func RecyclePaymentIDHandler(w http.ResponseWriter, _ *http.Request, userID string) {
 	paymentID, err := db.GetPaymentIDByUserID(userID)
 	if err != nil {
+		log.Println("Error fetching user payment ID", err)
 		http.Error(w, "Error fetching user", http.StatusBadRequest)
 		return
 	}
 
-	stripeCustomer, err := db.GetStripeCustomerByPaymentID(paymentID)
-	if err != nil && err != sql.ErrNoRows {
-		msg := "Error fetching stripe customer id"
-		log.Println(msg, ":", err)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
-	} else if len(stripeCustomer.SubID) > 0 {
-		minRecycleDate := stripeCustomer.CreatedAt.Add(60 * 24 * time.Hour)
-		if minRecycleDate.After(time.Now()) {
-			msg := fmt.Sprintf("Cannot recycle payment ID until %s",
-				minRecycleDate.Format(time.DateOnly))
-			http.Error(w, msg, http.StatusBadRequest)
-			return
-		}
-
-		active, err := stripe.IsActiveSubscription(stripeCustomer.SubID)
-		if err != nil {
-			log.Println("Error checking stripe customer sub", err)
-			http.Error(w, "Stripe error", http.StatusInternalServerError)
-			return
-		} else if active {
-			http.Error(w,
-				"Cannot recycle payment ID with an active subscription",
-				http.StatusBadRequest)
-			return
-		}
-
-		err = stripe.DeleteCustomer(stripeCustomer.CustomerID)
-		if err != nil {
-			log.Println("Error deleting stripe customer:", err)
-			http.Error(w, "Error deleting stripe customer", http.StatusInternalServerError)
-			return
-		}
-	}
-
 	err = db.RecycleUserPaymentID(paymentID)
 	if err != nil {
+		log.Println("Error recycling payment ID", err)
 		http.Error(w, "Error recycling payment ID", http.StatusBadRequest)
 		return
 	}

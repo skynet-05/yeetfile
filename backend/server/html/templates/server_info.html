@@ -68,20 +68,36 @@
   {{ end }}
 
   {{ if .BillingEnabled }}
-  <hr>
-  <h3>Available Account Upgrades</h3>
-  <i>Note: Upgrades are one-time purchases that do not auto-renew.</i>
-  <br><br>
-  {{ range $i, $prod := .Products }}
-  <b>{{ $prod.Name }} [{{ $prod.Duration }}]</b>
-  <ul>
-    <li>{{ $prod.StorageGB }}GB vault storage</li>
-    <li>{{ $prod.SendGB }}GB/month send</li>
-    <li>Unlimited password storage</li>
-    <li>${{ $prod.Price }} x {{ $prod.Duration }}</li>
-  </ul>
-  <hr>
-  {{ end }}
+    <hr>
+    <h2>Available Account Upgrades</h2>
+    <i>Note: Payments are one-time payments and vault upgrades do not auto-renew. When upgrading your vault to a higher-tier
+      plan, any unused value from your current plan will be applied to the new plan as a credit.</i>
+    <br><br>
+    {{ if .SendUpgrades }}
+      <h3>Send Upgrades</h3><br>
+      {{ range $i, $upgrade := .SendUpgrades }}
+      <b>{{ $upgrade.Name }}:</b>
+      <ul>
+        <li>Add {{ $upgrade.ReadableBytes }} to YeetFile Send</li>
+        <li>Never expires</li>
+        <li>${{ $upgrade.Price }}</li>
+      </ul>
+      <hr>
+      {{ end }}
+    {{ end }}
+
+    {{ if .VaultUpgrades }}
+      <h3>Vault Upgrades</h3><br>
+      {{ range $i, $upgrade := .VaultUpgrades }}
+      <b>{{ $upgrade.Name }} {{ if $upgrade.Annual }} [Year] {{ else }} [Month] {{ end }}</b>
+      <ul>
+        <li>{{ $upgrade.ReadableBytes }}GB vault storage</li>
+        <li>Unlimited password storage</li>
+        <li>${{ $upgrade.Price }} x {{ if $upgrade.Annual }} year {{ else }} month {{ end }}</li>
+      </ul>
+      <hr>
+      {{ end }}
+    {{ end }}
   {{ end }}
 </div>
 {{ template "footer.html" . }}

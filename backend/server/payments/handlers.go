@@ -13,6 +13,7 @@ import (
 	"yeetfile/backend/server/payments/stripe"
 	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
+	"yeetfile/shared"
 )
 
 // StripeWebhook handles relevant incoming webhook events from Stripe related
@@ -66,12 +67,7 @@ func StripeWebhook(w http.ResponseWriter, req *http.Request) {
 // StripeCheckout initiates the process for a user adding to their meter
 // using Stripe Checkout
 func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
-	itemType := req.URL.Query().Get("type")
-	product, err := upgrades.GetUpgradeByTag(itemType, upgrades.GetLoadedUpgrades())
-	if err != nil {
-		http.Error(w, "Invalid product tag", http.StatusBadRequest)
-		return
-	}
+	var selectedUpgrades []shared.Upgrade
 
 	paymentID, err := db.GetPaymentIDByUserID(id)
 	if err != nil {
@@ -79,18 +75,53 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	// TODO: Need to decide if auto-renew is worth supporting (probably not)
-	//autoRenew := false
-	//if len(req.URL.Query().Get("autorenew")) > 0 {
-	//	autoRenew = true
-	//}
+	extractUpgrade := func(paramPrefix string) (shared.Upgrade, error) {
+		upgradeParam := fmt.Sprintf("%s-upgrade", paramPrefix)
+		quantityParam := fmt.Sprintf("%s-quantity", paramPrefix)
 
-	quantity := 1
-	if len(req.URL.Query().Get("quantity")) > 0 {
-		quantityInt, err := strconv.Atoi(req.URL.Query().Get("quantity"))
-		if err == nil && quantityInt > 0 && quantityInt < 12 {
-			quantity = quantityInt
+		if req.URL.Query().Has(upgradeParam) {
+			upgradeTag := req.URL.Query().Get(upgradeParam)
+			upgrade, err := upgrades.GetUpgradeByTag(
+				upgradeTag,
+				upgrades.GetAllUpgrades())
+			if err != nil {
+				return shared.Upgrade{}, err
+			}
+
+			if req.URL.Query().Has(quantityParam) {
+				quantityStr := req.URL.Query().Get(quantityParam)
+				quantity, err := strconv.Atoi(quantityStr)
+				if err != nil {
+					return shared.Upgrade{}, err
+				}
+
+				upgrade.Quantity = quantity
+			} else {
+				upgrade.Quantity = 1
+			}
+
+			return upgrade, nil
 		}
+
+		return shared.Upgrade{}, nil
+	}
+
+	sendUpgrade, err := extractUpgrade("send")
+	if err != nil {
+		log.Println("Error processing requested send upgrade", err)
+		http.Error(w, "Error processing requested send upgrade", http.StatusBadRequest)
+		return
+	} else if len(sendUpgrade.Tag) > 0 {
+		selectedUpgrades = append(selectedUpgrades, sendUpgrade)
+	}
+
+	vaultUpgrade, err := extractUpgrade("vault")
+	if err != nil {
+		log.Println("Error processing requested vault upgrade", err)
+		http.Error(w, "Error processing requested vault upgrade", http.StatusBadRequest)
+		return
+	} else if len(vaultUpgrade.Tag) > 0 {
+		selectedUpgrades = append(selectedUpgrades, vaultUpgrade)
 	}
 
 	scheme := "http"
@@ -100,9 +131,8 @@ func StripeCheckout(w http.ResponseWriter, req *http.Request, id string) {
 
 	baseURL := fmt.Sprintf("%s://%s", scheme, req.Host)
 	checkoutLink, err := stripe.GenerateCheckoutLink(
-		product,
+		selectedUpgrades,
 		paymentID,
-		quantity,
 		baseURL)
 
 	if err != nil {
@@ -146,9 +176,9 @@ func BTCPayWebhook(w http.ResponseWriter, req *http.Request) {
 func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
 	itemType := req.URL.Query().Get("type")
 	quantity := req.URL.Query().Get("quantity")
-	product, err := upgrades.GetUpgradeByTag(itemType, upgrades.GetLoadedUpgrades())
+	upgrade, err := upgrades.GetUpgradeByTag(itemType, upgrades.GetAllUpgrades())
 	if err != nil {
-		http.Error(w, "Invalid product tag", http.StatusBadRequest)
+		http.Error(w, "Invalid upgrade tag", http.StatusBadRequest)
 		return
 	}
 
@@ -158,11 +188,11 @@ func BTCPayCheckout(w http.ResponseWriter, req *http.Request, id string) {
 		return
 	}
 
-	if len(product.BTCPayLink) == 0 {
+	if len(upgrade.BTCPayLink) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	checkoutLink := fmt.Sprintf("%s?orderId=%s&quantity=%s", product.BTCPayLink, paymentID, quantity)
+	checkoutLink := fmt.Sprintf("%s?orderId=%s&quantity=%s", upgrade.BTCPayLink, paymentID, quantity)
 	http.Redirect(w, req, checkoutLink, http.StatusTemporaryRedirect)
 }

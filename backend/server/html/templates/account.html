@@ -1,10 +1,10 @@
 {{ template "head.html" . }}
 <body>
 {{ template "header.html" . }}
-<div id="center-div">
+<div class="auto-width" id="center-div">
   <h1>Account</h1>
   <hr class="accent-hr">
-  <div>
+  <div class="account-div">
     <table class="account-table">
       {{ if .EmailConfigured }}
       <tr>
@@ -25,7 +25,14 @@
           <label class="slightly-bold-text">Vault:</label>
         </td>
         <td>
-          <span>{{ .StorageUsed }} / {{ .StorageAvailable }}</span>
+          <span>
+            {{ .StorageUsed }} / {{ .StorageAvailable }}
+            {{ if .IsActive }}
+              <br>(expires {{ .ExpString }})
+            {{ else if .IsPrevUpgraded }}
+              <br>(expired {{ .ExpString }})
+            {{ end }}
+          </span>
         </td>
       </tr>
       <tr>
@@ -33,25 +40,21 @@
           <label class="slightly-bold-text">Send:</label>
         </td>
         <td>
-          <span>{{ .SendUsed }} / {{ .SendAvailable }} / month</span>
+          <span>{{ .SendUsed }} / {{ .SendAvailable }}</span>
         </td>
       </tr>
-      {{ if .Base.Config.BillingEnabled }}
       <tr>
         <td>
-          <label class="slightly-bold-text">Upgrades:</label>
+          <label class="slightly-bold-text">2FA:</label>
         </td>
         <td>
-          {{ if .IsActive }}
-          <span>Active (expires {{ .ExpString }})</span>
-          {{ else if .IsPrevUpgraded }}
-          <span>Expired {{ .ExpString }}</span>
+          {{ if .Has2FA }}
+          <span class="green-text">Enabled</span> — <a id="disable-2fa" href="#">Disable</a>
           {{ else }}
-          <span>Inactive</span>
+          <span class="red-text">Not Set</span> — <a href="{{ .Base.Endpoints.TwoFactor }}">Enable</a>
           {{ end }}
         </td>
       </tr>
-      {{ end }}
       {{ if ne .Email "" }}
       <tr>
         <td>
@@ -66,20 +69,14 @@
         </td>
       </tr>
       {{ end }}
-      <tr>
-        <td>
-          <label class="slightly-bold-text">Two-Factor Auth:</label>
-        </td>
-        <td>
-          {{ if .Has2FA }}
-          <span class="green-text">Enabled</span> — <a id="disable-2fa" href="#">Disable</a>
-          {{ else }}
-          <span class="red-text">Not Set</span> — <a href="{{ .Base.Endpoints.TwoFactor }}">Enable</a>
-          {{ end }}
-        </td>
-      </tr>
     </table>
-    <button id="change-pw-btn">Change Password</button> <button data-testid="logout-btn" id="logout-btn">Log Out</button>
+    {{ if or .Base.Config.StripeEnabled .Base.Config.BTCPayEnabled }}
+    <a class="no-underline" href="{{ .Base.Endpoints.Upgrade }}">
+      <button id="upgrade-btn" class="accent-btn">Upgrade</button>
+    </a><br>
+    {{ end }}
+    <button id="change-pw-btn">Change Password</button><br>
+    <button data-testid="logout-btn" id="logout-btn">Log Out</button>
     <details>
       <summary data-testid="advanced-summary">Advanced</summary>
       <table>
@@ -112,64 +109,6 @@
     <p id="success-message"></p>
   </div>
   {{ end }}
-  {{ if or .Base.Config.StripeEnabled .Base.Config.BTCPayEnabled }}
-    <hr>
-    <div class="upgrade-container">
-      <h1>Upgrades</h1>
-      <div class="radio-group">
-        <input type="radio" id="monthly-option" name="options" {{ if not .IsYearly }}checked{{ end }}>
-        <label id="monthly-toggle" for="monthly-option"><a href="{{ .Base.Endpoints.Account }}">Monthly</a></label>
-        <input type="radio" id="yearly-option" name="options" {{ if .IsYearly }}checked{{ end }}>
-        <label id="yearly-toggle" for="yearly-option"><a href="{{ .Base.Endpoints.Account }}?yearly=1">Yearly (2 months free)</a></label>
-      </div>
-    </div>
-    {{ if .Base.Config.BillingEnabled }}
-      <div id="upgrade-div">
-          {{ range $i, $prod := .Products }}
-            <div class="pricing-box col-{{$i}}">
-              <h3>{{ $prod.Name }}</h3>
-              <ul>
-                <li>{{ $prod.StorageGB }}GB vault storage</li>
-                <li>{{ $prod.SendGB }}GB/month send</li>
-                <li>Unlimited password storage</li>
-              </ul>
-
-              {{ if $.IsYearly }}
-              <span><b>${{ $prod.Price }} per year</b></span>
-              {{ else }}
-              <span><b>${{ $prod.Price }} per month</b></span>
-              {{ end }}
-              <br>
-
-              {{ if $.IsYearly }}
-              <label for="quantity">Years:</label>
-              {{ else }}
-              <label for="quantity">Months:</label>
-              {{ end }}
-              <input class="quantity-input" type="number" id="quantity" value="1" max="12" min="1">
-
-              {{ if $.Base.Config.StripeEnabled }}
-              <a href="{{ $.BillingEndpoints.StripeCheckout }}?type={{ $prod.Tag }}&quantity=1">
-                <button class="stripe-btn payment-btn">Purchase</button>
-              </a><br>
-<!--              <a href="{{ $.BillingEndpoints.StripeCheckout }}?type={{ $prod.Tag }}&autorenew=1">-->
-<!--                <button class="stripe-btn payment-btn">Subscribe</button>-->
-<!--              </a><br>-->
-              {{ end }}
-              {{ if $.Base.Config.BTCPayEnabled }}
-                {{ if ne $prod.BTCPayLink "" }}
-                  <a href="{{ $.BillingEndpoints.BTCPayCheckout }}?type={{ $prod.Tag }}&quantity=1">
-                    {{ template "btcpay-button.html" }}
-                  </a>
-                {{ end }}
-              {{ end }}
-            </div>
-          {{ end }}
-        </div>
-        {{ end }}
-    <br>
-    <span class="italic">Note: Payments are one-time payments and do not auto-renew.</span>
-    {{ end }}
 </div>
 
 {{ template "two-factor-dialog.html" }}

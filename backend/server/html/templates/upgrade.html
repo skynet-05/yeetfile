@@ -1,0 +1,125 @@
+{{ template "head.html" . }}
+<body>
+{{ template "header.html" . }}
+<div id="center-div">
+    <div class="btcpay-div">
+        <h1>Upgrade</h1>
+        {{ if .Base.Config.BTCPayEnabled }}
+        <div>
+            <label for="btcpay-cb">Use BTCPay (BTC, XMR)</label>
+            <input id="btcpay-cb" name="btcpay-cb" type="checkbox" {{ if .IsBTCPay }} checked {{ end }}>
+        </div>
+        {{ end }}
+    </div>
+    <hr class="accent-hr">
+
+    <table>
+        {{ if .SendUpgrades }}
+        <tr><td>
+            <div class="upgrade-container">
+                <h3>Upgrade Send</h3>
+                <div class="radio-group">
+                    <input type="radio" id="permanent-option" name="perm" checked>
+                    <label id="permanent-toggle" for="permanent-option">Permanent</label>
+                </div>
+            </div>
+            <div class="upgrade-div">
+                {{ range $i, $upgrade := .SendUpgrades }}
+                <div data-upgrade-type="send" id="{{ $upgrade.Tag }}-div" class="pricing-box col-{{$i}}">
+                    <h3 id="{{ $upgrade.Tag }}-name">{{ $upgrade.Name }}</h3>
+                    <ul>
+                        <li>+{{ $upgrade.ReadableBytes }} Send</li>
+                        <li>Never expires</li>
+                    </ul>
+
+                    <span><b>${{ $upgrade.Price }}</b></span>
+                    <br>
+
+                    <label class="hidden" for="quantity">Quantity:</label>
+                    <input class="hidden quantity-input" type="number" id="quantity" value="1" max="12" min="1">
+                    <br class="hidden">
+
+                    {{ if $.IsBTCPay }}
+                        {{ if ne $upgrade.BTCPayLink "" }}
+                            <a href="{{ $.BillingEndpoints.BTCPayCheckout }}?type={{ $upgrade.Tag }}&quantity=1">
+                                {{ template "btcpay-button.html" }}
+                            </a>
+                        {{ end }}
+                    {{ else }}
+                        <button data-upgrade-type="send" id="{{ $upgrade.Tag }}" class="accent-btn select-btn payment-btn">Select</button>
+                    {{ end }}
+                </div>
+                {{ end }}
+            </div>
+        </td></tr>
+        {{ end }}
+
+        {{ if .VaultUpgrades }}
+        <tr><td>
+        <div class="upgrade-container">
+            <h3>Upgrade Vault</h3>
+            <div class="radio-group">
+                <input type="radio" id="monthly-option" name="options" {{ if not .IsYearly }}checked{{ end }}>
+                <label id="monthly-toggle" for="monthly-option"><a href="{{ .Base.Endpoints.Upgrade }}?btcpay={{ if .IsBTCPay }}1{{ else }}0{{ end }}">Monthly</a></label>
+                <input type="radio" id="yearly-option" name="options" {{ if .IsYearly }}checked{{ end }}>
+                <label id="yearly-toggle" for="yearly-option"><a href="{{ .Base.Endpoints.Upgrade }}?yearly=1&btcpay={{ if .IsBTCPay }}1{{ else }}0{{ end }}">Yearly (2 months free)</a></label>
+            </div>
+        </div>
+
+        {{ if .ShowVaultUpgradeNote }}
+            <div class="padding-bottom-5">
+                <span class="italic">If you upgrade your vault to a higher-tier plan, any unused value from your current plan will be applied to the new plan as a credit.</span>
+            </div>
+        {{ end }}
+        <div class="upgrade-div">
+            {{ range $i, $upgrade := .VaultUpgrades }}
+            <div data-upgrade-type="vault" id="{{ $upgrade.Tag }}-div" class="pricing-box col-{{$i}}">
+                <h3 id="{{ $upgrade.Tag }}-name">{{ $upgrade.Name }}</h3>
+                <ul>
+                    <li>{{ $upgrade.ReadableBytes }} vault storage</li>
+                    <li>Unlimited password storage</li>
+                </ul>
+
+                {{ if $.IsYearly }}
+                <span><b>${{ $upgrade.Price }} per year</b></span>
+                {{ else }}
+                <span><b>${{ $upgrade.Price }} per month</b></span>
+                {{ end }}
+                <br>
+
+                {{ if $.IsYearly }}
+                <label for="{{ $upgrade.Tag }}-quantity">Years:</label>
+                {{ else }}
+                <label for="{{ $upgrade.Tag }}-quantity">Months:</label>
+                {{ end }}
+                <input class="quantity-input" type="number" id="{{ $upgrade.Tag }}-quantity" value="1" max="12" min="1">
+
+                {{ if $.IsBTCPay }}
+                    {{ if ne $upgrade.BTCPayLink "" }}
+                    <a href="{{ $.BillingEndpoints.BTCPayCheckout }}?type={{ $upgrade.Tag }}&quantity=1">
+                        {{ template "btcpay-button.html" }}
+                    </a>
+                    {{ end }}
+                {{ else }}
+                    <button data-upgrade-type="vault" id="{{ $upgrade.Tag }}" class="accent-btn select-btn payment-btn">Select</button>
+                {{ end }}
+            </div>
+            {{ end }}
+        </div>
+        </td></tr>
+        {{ end }}
+
+        {{ if or .VaultUpgrades .SendUpgrades }}
+        <tr id="checkout-row" class="checkout-row"><td>
+            <div class="checkout-div">
+                <span class="italic padding-right-5">Note: Payments are one-time payments and vault upgrades do not auto-renew.</span>
+                <button id="checkout-btn" class="{{ if .IsBTCPay }} hidden {{ end }} accent-btn" disabled>Checkout</button>
+            </div>
+        </td></tr>
+        {{ end }}
+    </table>
+    <br>
+</div>
+
+{{ template "footer.html" . }}
+</body>

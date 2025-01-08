@@ -27,6 +27,10 @@ fieldset {
     border: 0 !important;
 }
 
+.auto-width {
+    width: auto !important;
+}
+
 .note-text {
     font-size: small;
     font-style: italic;
@@ -193,7 +197,7 @@ progress {
     transform: translate(-50%, -50%);
     width: 85%;
     max-width: 800px;
-    max-height: 90%;
+    max-height: 87%;
     overflow-y: auto;
     border-radius: .66rem;
     padding: 20px;
@@ -357,6 +361,11 @@ input:disabled, textarea:disabled {
     transform: rotate(180deg);
 }
 
+.accent-link {
+    color: var(--accent-color) !important;
+    cursor: pointer;
+}
+
 .red-link {
     color: var(--destructive-color) !important;
     text-decoration: none;
@@ -369,6 +378,10 @@ input:disabled, textarea:disabled {
 
 .green-text {
     color: var(--shared-color) !important;
+}
+
+.no-underline {
+    text-decoration: none !important;
 }
 
 .slightly-bold-text {
@@ -463,6 +476,14 @@ input:disabled, textarea:disabled {
 
 .padding-top-5 {
     padding-top: 5px;
+}
+
+.padding-bottom-5 {
+    padding-bottom: 5px;
+}
+
+.padding-right-5 {
+    padding-right: 5px;
 }
 
 .padding-left-3 {

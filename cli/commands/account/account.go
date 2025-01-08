@@ -8,7 +8,6 @@ import (
 	"yeetfile/cli/globals"
 	"yeetfile/cli/utils"
 	"yeetfile/shared"
-	"yeetfile/shared/constants"
 )
 
 type ChangePasswordForm struct {
@@ -34,14 +33,9 @@ func getStorageString(used, available int64, isSend bool) string {
 	} else if available <= 0 && used >= 0 {
 		return fmt.Sprintf("%s used", shared.ReadableFileSize(used))
 	} else {
-		var monthIndicator string
-		if isSend {
-			monthIndicator = "/ month"
-		}
-		return fmt.Sprintf("%s / %s %s (%s remaining)",
+		return fmt.Sprintf("%s / %s (%s remaining)",
 			shared.ReadableFileSize(used),
 			shared.ReadableFileSize(available),
-			monthIndicator,
 			shared.ReadableFileSize(available-used))
 	}
 }
@@ -155,19 +149,11 @@ func FetchAccountDetails() (shared.AccountResponse, string) {
 }
 
 func generateUpgradeDesc(upgrade shared.Upgrade) string {
-	var duration string
-	if upgrade.Duration == constants.DurationYear {
-		duration = "year"
-	} else {
-		duration = "month"
-	}
+	descStr := fmt.Sprintf(
+		`%s
 
-	price := upgrade.Price
-	storage := shared.ReadableFileSize(upgrade.StorageGBReal)
-	send := shared.ReadableFileSize(upgrade.SendGBReal)
-
-	return shared.EscapeString(fmt.Sprintf(`- %s Vault Storage
-- Send %s/month
-
- ** $%d/%s **`, storage, send, price, duration))
+** $%d **`,
+		upgrade.Description,
+		upgrade.Price)
+	return shared.EscapeString(descStr)
 }

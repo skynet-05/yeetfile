@@ -24,7 +24,7 @@ func init() {
 	} else {
 		cliKey := crypto.ReadCLIKey()
 		if cliKey == nil || len(cliKey) == 0 {
-			log.Println("missing YEETFILE_CLI_KEY to decrypt session")
+			// Missing YEETFILE_CLI_KEY for decrypting session
 			API = api.InitContext(Config.Server, "")
 		} else {
 			sessionVal, err := crypto.DecryptChunk(cliKey, session)

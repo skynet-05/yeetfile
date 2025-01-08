@@ -13,7 +13,6 @@ import (
 	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
 	"yeetfile/shared"
-	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
 
@@ -79,8 +78,8 @@ func PassVaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string)
 				Config:    config.HTMLConfig,
 				Endpoints: endpoints.HTMLPageEndpoints,
 			},
-			StorageUsed:      passCount,
-			StorageAvailable: maxPassCount,
+			StorageUsed:      int64(passCount),
+			StorageAvailable: int64(maxPassCount),
 			VaultName:        "Password Vault",
 			IsPasswordVault:  true,
 		},
@@ -89,12 +88,32 @@ func PassVaultPageHandler(w http.ResponseWriter, _ *http.Request, userID string)
 
 // SendPageHandler returns the html template used for sending files
 func SendPageHandler(w http.ResponseWriter, req *http.Request) {
+	var (
+		sendUsed      int64
+		sendAvailable int64
+	)
+
+	showUpgradeLink := false
+	isValidSession := false
+	userID, err := session.GetSessionAndUserID(req)
+	if err == nil && len(userID) > 0 {
+		isValidSession = true
+
+		sendUsed, sendAvailable, err = db.GetUserSendLimits(userID)
+		if err != nil {
+			log.Println("Error fetching user send limits", err)
+		}
+
+		showUpgradeLink = sendAvailable == config.YeetFileConfig.DefaultUserSend &&
+			len(upgrades.GetAllUpgrades().SendUpgrades) > 0
+	}
+
 	_ = templates.ServeTemplate(
 		w,
 		templates.SendHTML,
-		templates.LoginTemplate{
+		templates.SendTemplate{
 			Base: templates.BaseTemplate{
-				LoggedIn: session.IsValidSession(w, req),
+				LoggedIn: isValidSession,
 				Title:    "Send",
 				Page:     "send",
 				Javascript: []string{
@@ -105,7 +124,9 @@ func SendPageHandler(w http.ResponseWriter, req *http.Request) {
 				Config:    config.HTMLConfig,
 				Endpoints: endpoints.HTMLPageEndpoints,
 			},
-			Meter: 0,
+			SendUsed:        sendUsed,
+			SendAvailable:   sendAvailable,
+			ShowUpgradeLink: showUpgradeLink,
 		},
 	)
 }
@@ -176,19 +197,9 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 	}
 
 	successMsg, errorMsg := generateAccountMessages(req)
-	isYearly := req.URL.Query().Has("yearly")
 	hasHint := user.PasswordHint != nil && len(user.PasswordHint) > 0
 	obscuredEmail, _ := utils.ObscureEmail(user.Email)
 	isPrevUpgraded := user.UpgradeExp.Year() >= 2024
-
-	var durationFilter constants.UpgradeDuration
-	if isYearly {
-		durationFilter = constants.DurationYear
-	} else {
-		durationFilter = constants.DurationMonth
-	}
-
-	products := upgrades.GetUpgrades(durationFilter, upgrades.GetLoadedUpgrades())
 
 	_ = templates.ServeTemplate(
 		w,
@@ -213,13 +224,53 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 			SendUsed:         shared.ReadableFileSize(user.SendUsed),
 			StorageAvailable: shared.ReadableFileSize(user.StorageAvailable),
 			StorageUsed:      shared.ReadableFileSize(user.StorageUsed),
-			IsYearly:         isYearly,
-			BillingEndpoints: endpoints.BillingPageEndpoints,
 			HasPasswordHint:  hasHint,
 			Has2FA:           user.Secret != nil && len(user.Secret) > 0,
 			ErrorMessage:     errorMsg,
 			SuccessMessage:   successMsg,
-			Products:         products,
+		},
+	)
+}
+
+// UpgradePageHandler displays available YeetFile upgrades that the user can
+// purchase via Stripe or BTCPay (depending on server config).
+func UpgradePageHandler(w http.ResponseWriter, req *http.Request, userID string) {
+	user, err := db.GetUserByID(userID)
+	if err != nil || user.ID != userID {
+		handleError(w, "Unable to fetch user info", http.StatusUnauthorized)
+		return
+	}
+
+	isYearly := req.URL.Query().Has("yearly")
+	isBTCPay := req.URL.Query().Has("btcpay") && req.URL.Query().Get("btcpay") == "1"
+	vaultUpgrades := upgrades.GetVaultUpgrades(
+		isYearly,
+		upgrades.GetAllUpgrades().VaultUpgrades)
+
+	showVaultUpgradeNote := !isBTCPay &&
+		user.UpgradeExp.Year() >= 2024 &&
+		time.Now().Before(user.UpgradeExp)
+
+	_ = templates.ServeTemplate(
+		w,
+		templates.UpgradeHTML,
+		templates.UpgradeTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:   true,
+				Title:      "Upgrade",
+				Page:       "account",
+				Javascript: []string{"upgrade.js"},
+				CSS:        []string{"account.css"},
+				Config:     config.HTMLConfig,
+				Endpoints:  endpoints.HTMLPageEndpoints,
+			},
+			IsBTCPay:         isBTCPay,
+			IsYearly:         isYearly,
+			BillingEndpoints: endpoints.BillingPageEndpoints,
+			SendUpgrades:     upgrades.GetAllUpgrades().SendUpgrades,
+			VaultUpgrades:    vaultUpgrades,
+
+			ShowVaultUpgradeNote: showVaultUpgradeNote,
 		},
 	)
 }
@@ -364,7 +415,9 @@ func ServerInfoPageHandler(w http.ResponseWriter, req *http.Request) {
 			BTCPayEnabled:      serverInfo.BTCPayEnabled,
 			DefaultStorage:     storageStr,
 			DefaultSend:        sendStr,
-			Products:           serverInfo.Upgrades,
+
+			SendUpgrades:  serverInfo.Upgrades.SendUpgrades,
+			VaultUpgrades: serverInfo.Upgrades.VaultUpgrades,
 		},
 	)
 }

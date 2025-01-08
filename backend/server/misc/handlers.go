@@ -24,7 +24,8 @@ func UpHandler(w http.ResponseWriter, _ *http.Request) {
 
 // InfoHandler returns information about the current instance
 func InfoHandler(w http.ResponseWriter, _ *http.Request) {
-	_ = json.NewEncoder(w).Encode(config.GetServerInfoStruct())
+	info := config.GetServerInfoStruct()
+	_ = json.NewEncoder(w).Encode(info)
 }
 
 // FileHandler uses the embedded files from staticFiles to return a file

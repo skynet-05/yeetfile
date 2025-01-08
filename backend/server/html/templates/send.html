@@ -75,7 +75,6 @@
                     </div>
                 </div>
             </div>
-
         </fieldset>
 
         <div class="align-items-right">
@@ -96,8 +95,17 @@
                     <td><button id="copy-link" class="accent-btn">Copy Link</button></td>
                 </tr>
             </table>
+            <hr>
         </div>
     </form>
+
+    {{ if .Base.LoggedIn }}
+        <progress max="{{ .SendAvailable }}" value="{{ .SendUsed }}" id="send-bar"></progress>
+        <span id="send-remaining">...</span>
+        {{ if .ShowUpgradeLink }}
+            — <a href="{{ .Base.Endpoints.Upgrade }}">Upgrade</a>
+        {{ end }}
+    {{ end }}
 </div>
 {{ template "footer.html" . }}
 </body>

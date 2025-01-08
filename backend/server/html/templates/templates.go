@@ -19,6 +19,7 @@ const (
 	SignupHTML           = "signup.html"
 	LoginHTML            = "login.html"
 	AccountHTML          = "account.html"
+	UpgradeHTML          = "upgrade.html"
 	ForgotHTML           = "forgot.html"
 	ChangeEmailHTML      = "change_email.html"
 	ChangePasswordHTML   = "change_password.html"
@@ -60,12 +61,19 @@ type LoginTemplate struct {
 	Meter int
 }
 
+type SendTemplate struct {
+	Base            BaseTemplate
+	SendUsed        int64
+	SendAvailable   int64
+	ShowUpgradeLink bool
+}
+
 type VaultTemplate struct {
 	Base             BaseTemplate
 	VaultName        string
 	FolderName       string
-	StorageAvailable int
-	StorageUsed      int
+	StorageAvailable int64
+	StorageUsed      int64
 	IsPasswordVault  bool
 }
 
@@ -81,7 +89,9 @@ type InfoTemplate struct {
 	BTCPayEnabled      bool
 	DefaultStorage     string
 	DefaultSend        string
-	Products           []shared.Upgrade
+
+	SendUpgrades  []*shared.Upgrade
+	VaultUpgrades []*shared.Upgrade
 }
 
 type CheckoutCompleteTemplate struct {
@@ -104,7 +114,6 @@ type AccountTemplate struct {
 	StorageUsed       string
 	SendAvailable     string
 	SendUsed          string
-	IsYearly          bool
 	StripeConfigured  bool
 	BTCPayConfigured  bool
 	BillingConfigured bool
@@ -112,8 +121,18 @@ type AccountTemplate struct {
 	Has2FA            bool
 	ErrorMessage      string
 	SuccessMessage    string
-	BillingEndpoints  endpoints.BillingEndpoints
-	Products          []shared.Upgrade
+}
+
+type UpgradeTemplate struct {
+	Base BaseTemplate
+
+	IsYearly         bool
+	IsBTCPay         bool
+	BillingEndpoints endpoints.BillingEndpoints
+	SendUpgrades     []*shared.Upgrade
+	VaultUpgrades    []*shared.Upgrade
+
+	ShowVaultUpgradeNote bool
 }
 
 type VerificationTemplate struct {

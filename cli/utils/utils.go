@@ -68,6 +68,20 @@ func GenerateTitle(s string) string {
 	return title
 }
 
+func GenerateWrappedString(text string, width int) string {
+	if len(text) <= width {
+		return text
+	}
+
+	var result []string
+	for len(text) > width {
+		result = append(result, text[:width])
+		text = text[width:]
+	}
+	result = append(result, text)
+	return strings.Join(result, "\n")
+}
+
 func GenerateWrappedText(s string) string {
 	maxLen := 50
 	words := strings.Split(s, " ")

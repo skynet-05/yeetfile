@@ -400,6 +400,7 @@ func (ctx *Context) Finalize2FA(totp shared.SetTOTP) (shared.SetTOTPResponse, er
 	return setTOTP, nil
 }
 
+// RecyclePaymentID frees the user's current payment ID and grants them a new one.
 func (ctx *Context) RecyclePaymentID() error {
 	url := endpoints.RecyclePaymentID.Format(ctx.Server)
 	resp, err := requests.PutRequest(ctx.Session, url, nil)
@@ -410,17 +411,4 @@ func (ctx *Context) RecyclePaymentID() error {
 	}
 
 	return nil
-}
-
-func (ctx *Context) GetCustomerPortalLink() (string, error) {
-	url := endpoints.StripeManage.Format(ctx.Server)
-	resp, err := requests.GetRequest(ctx.Session, url)
-	if err != nil {
-		return "", err
-	} else if resp.StatusCode != http.StatusTemporaryRedirect {
-		return "", utils.ParseHTTPError(resp)
-	}
-
-	redirect := resp.Header.Get("Location")
-	return redirect, nil
 }

@@ -21,12 +21,12 @@ type HTMLEndpoints struct {
 	TwoFactor      string
 	VaultFile      string
 	Info           string
+	Upgrade        string
 }
 
 type BillingEndpoints struct {
 	BTCPayCheckout string
 	StripeCheckout string
-	StripeManage   string
 }
 
 var HTMLPageEndpoints HTMLEndpoints
@@ -77,7 +77,6 @@ var (
 	ProtectedKey = Endpoint("/api/protectedkey")
 
 	StripeWebhook  = Endpoint("/stripe/webhook")
-	StripeManage   = Endpoint("/stripe/manage")
 	StripeCheckout = Endpoint("/stripe/checkout")
 	BTCPayWebhook  = Endpoint("/btcpay/webhook")
 	BTCPayCheckout = Endpoint("/btcpay/checkout")
@@ -105,6 +104,7 @@ var (
 	HTMLTwoFactor        = Endpoint("/2fa")
 	HTMLServerInfo       = Endpoint("/info")
 	HTMLCheckoutComplete = Endpoint("/checkout/complete")
+	HTMLUpgrade          = Endpoint("/upgrade")
 )
 
 var JSVarNameMap = map[Endpoint]string{
@@ -150,6 +150,8 @@ var JSVarNameMap = map[Endpoint]string{
 	ProtectedKey: "ProtectedKey",
 
 	StaticFile: "StaticFile",
+
+	StripeCheckout: "StripeCheckout",
 
 	HTMLHome:             "HTMLHome",
 	HTMLAccount:          "HTMLAccount",
@@ -202,11 +204,11 @@ func init() {
 		VerifyEmail:    string(HTMLVerifyEmail),
 		TwoFactor:      string(HTMLTwoFactor),
 		Info:           string(HTMLServerInfo),
+		Upgrade:        string(HTMLUpgrade),
 	}
 
 	BillingPageEndpoints = BillingEndpoints{
 		BTCPayCheckout: string(BTCPayCheckout),
 		StripeCheckout: string(StripeCheckout),
-		StripeManage:   string(StripeManage),
 	}
 }

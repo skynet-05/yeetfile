@@ -298,9 +298,9 @@ type ServerInfo struct {
 	DefaultStorage     int64  `json:"defaultStorage"`
 	DefaultSend        int64  `json:"defaultSend"`
 
-	Upgrades      []Upgrade `json:"upgrades"`
-	MonthUpgrades []Upgrade `json:"monthUpgrades"`
-	YearUpgrades  []Upgrade `json:"yearUpgrades"`
+	Upgrades      Upgrades   `json:"upgrades"`
+	MonthUpgrades []*Upgrade `json:"monthUpgrades"`
+	YearUpgrades  []*Upgrade `json:"yearUpgrades"`
 }
 
 type PassEntry struct {
@@ -319,10 +319,25 @@ type ItemIndex struct {
 }
 
 type Upgrade struct {
+	Tag         string `json:"tag"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Price       int64  `json:"price"`
+	Bytes       int64  `json:"bytes"`
+	Annual      bool   `json:"annual,omitempty"`
+	BTCPayLink  string `json:"btcpay_link"`
+
+	ReadableBytes  string
+	IsVaultUpgrade bool
+	Quantity       int
+}
+
+type VaultUpgrade struct {
 	Tag         string                    `json:"tag"`
 	Name        string                    `json:"name"`
 	Description string                    `json:"description"`
 	Price       int64                     `json:"price"`
+	Bytes       int64                     `json:"bytes"`
 	Duration    constants.UpgradeDuration `json:"duration"`
 
 	SendGB     int `json:"send_gb"`
@@ -332,4 +347,9 @@ type Upgrade struct {
 	StorageGBReal int64
 
 	BTCPayLink string `json:"btcpay_link"`
+}
+
+type Upgrades struct {
+	SendUpgrades  []*Upgrade `json:"send_upgrades"`
+	VaultUpgrades []*Upgrade `json:"vault_upgrades"`
 }

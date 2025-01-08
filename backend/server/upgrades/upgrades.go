@@ -7,49 +7,53 @@ import (
 	"os"
 	"sort"
 	"time"
+	"yeetfile/backend/utils"
 	"yeetfile/shared"
-	"yeetfile/shared/constants"
 )
 
-var upgrades []*shared.Upgrade
+var upgrades *shared.Upgrades
 
-// upgradeDurationFnMap maps account upgrade types to a function for
-// generating the correct end date for the user's upgrade
-var upgradeDurationFnMap = map[constants.UpgradeDuration]func(quantity int) time.Time{
-	constants.DurationMonth: func(quantity int) time.Time { return AddDate(0, 1*quantity) },
-	constants.DurationYear:  func(quantity int) time.Time { return AddDate(1*quantity, 0) },
-}
-
-func GetLoadedUpgrades() []*shared.Upgrade {
+func GetAllUpgrades() *shared.Upgrades {
 	return upgrades
 }
 
 // GetUpgradeExpiration returns a point in time in the future that the user's
-// selected upgrade should expire.
-func GetUpgradeExpiration(duration constants.UpgradeDuration, quantity int) (time.Time, error) {
-	expFn, ok := upgradeDurationFnMap[duration]
-	if !ok {
-		return time.Time{}, errors.New("invalid sub duration")
+// selected vault upgrade should expire.
+func GetUpgradeExpiration(upgrade shared.Upgrade, quantity int) (time.Time, error) {
+	if !upgrade.IsVaultUpgrade {
+		return time.Time{}, errors.New("requested upgrade exp for non-vault upgrade")
 	}
 
-	return expFn(quantity), nil
+	if upgrade.Annual {
+		// Years * quantity purchased
+		return AddDate(1*quantity, 0), nil
+	} else {
+		// Months * quantity purchased
+		return AddDate(0, 1*quantity), nil
+	}
 }
 
-func GetUpgrades(durationFilter constants.UpgradeDuration, upgrades []*shared.Upgrade) []shared.Upgrade {
-	var result []shared.Upgrade
+func GetVaultUpgrades(annual bool, upgrades []*shared.Upgrade) []*shared.Upgrade {
+	var result []*shared.Upgrade
 	for _, upgrade := range upgrades {
-		if len(durationFilter) > 0 && upgrade.Duration != durationFilter {
+		if upgrade.Annual != annual {
 			continue
 		}
 
-		result = append(result, *upgrade)
+		result = append(result, upgrade)
 	}
 
 	return result
 }
 
-func GetUpgradeByTag(tag string, upgrades []*shared.Upgrade) (shared.Upgrade, error) {
-	for _, upgrade := range upgrades {
+func GetUpgradeByTag(tag string, upgrades *shared.Upgrades) (shared.Upgrade, error) {
+	for _, upgrade := range upgrades.SendUpgrades {
+		if upgrade.Tag == tag {
+			return *upgrade, nil
+		}
+	}
+
+	for _, upgrade := range upgrades.VaultUpgrades {
 		if upgrade.Tag == tag {
 			return *upgrade, nil
 		}
@@ -63,20 +67,38 @@ func init() {
 	if len(upgradesJson) > 0 {
 		err := json.Unmarshal([]byte(upgradesJson), &upgrades)
 		if err != nil {
-			panic(err)
+			log.Fatalln("Error reading upgrades json:", err)
 		}
+	} else {
+		upgrades = &shared.Upgrades{
+			SendUpgrades:  []*shared.Upgrade{},
+			VaultUpgrades: []*shared.Upgrade{},
+		}
+		return
 	}
 
-	for _, product := range upgrades {
-		product.SendGBReal = int64(product.SendGB * 1000 * 1000 * 1000)
-		product.StorageGBReal = int64(product.StorageGB * 1000 * 1000 * 1000)
+	finalizeUpgrades := func(subUpgrades []*shared.Upgrade, isVaultUpgrade bool) {
+		for _, upgrade := range subUpgrades {
+			if len(upgrade.Tag) == 0 {
+				utils.LogStruct(upgrade)
+				log.Fatalln("Missing upgrade tag")
+			}
+
+			upgrade.ReadableBytes = shared.ReadableFileSize(upgrade.Bytes)
+			upgrade.IsVaultUpgrade = isVaultUpgrade
+		}
+
+		sort.Slice(subUpgrades, func(i, j int) bool {
+			return subUpgrades[i].Price < subUpgrades[j].Price
+		})
 	}
 
-	sort.Slice(upgrades, func(i, j int) bool {
-		return upgrades[i].Price < upgrades[j].Price
-	})
+	finalizeUpgrades(upgrades.SendUpgrades, false)
+	finalizeUpgrades(upgrades.VaultUpgrades, true)
 
-	if len(upgrades) > 0 {
-		log.Printf("-- Loaded %d upgrades\n", len(upgrades))
+	if len(upgrades.SendUpgrades) > 0 || len(upgrades.VaultUpgrades) > 0 {
+		log.Printf("-- Loaded %d send upgrades and %d vault upgrades\n",
+			len(upgrades.SendUpgrades),
+			len(upgrades.VaultUpgrades))
 	}
 }

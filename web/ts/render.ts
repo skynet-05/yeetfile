@@ -96,7 +96,7 @@ const renderPDFPage = (num: number): void => {
     pageNum = num;
     pageRendering = true;
     pdfDoc.getPage(num).then(function(page) {
-        let scale = 2.25;
+        let scale = 1.75;
         if (pdfFullScreen) {
             scale += 1.25;
         }

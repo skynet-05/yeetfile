@@ -1,7 +1,9 @@
 package btcpay
 
 import (
+	"log"
 	"strconv"
+	"time"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/upgrades"
 	"yeetfile/backend/utils"
@@ -42,27 +44,42 @@ func FinalizeInvoice(invoice Invoice) error {
 		return nil
 	}
 
+	hasInvoice, err := db.HasInvoice(invoice.InvoiceID)
+	if err != nil || hasInvoice {
+		log.Printf("Possible duplicate BTCPay invoice (err: %v)\n", err)
+		return err
+	}
+
 	utils.LogStruct(invoice)
 
-	product, err := upgrades.GetUpgradeByTag(orderType, upgrades.GetLoadedUpgrades())
+	upgrade, err := upgrades.GetUpgradeByTag(orderType, upgrades.GetAllUpgrades())
 	if err != nil {
 		return err
 	}
 
-	exp, err := upgrades.GetUpgradeExpiration(product.Duration, quantity)
+	if upgrade.IsVaultUpgrade {
+		var exp time.Time
+		exp, err = upgrades.GetUpgradeExpiration(upgrade, quantity)
+		if err != nil {
+			return err
+		}
+
+		err = db.SetUserVaultUpgrade(
+			invoice.Metadata.OrderID,
+			orderType,
+			exp,
+			upgrade.Bytes)
+	} else {
+		err = db.SetUserSendUpgrade(
+			invoice.Metadata.OrderID,
+			upgrade.Bytes)
+	}
+
 	if err != nil {
+		log.Println("Error processing BTCPay upgrade in database", err)
 		return err
 	}
 
-	err = db.SetUserUpgrade(
-		invoice.Metadata.OrderID,
-		orderType,
-		exp,
-		product.StorageGBReal,
-		product.SendGBReal)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	err = db.AddInvoice(invoice.InvoiceID, invoice.Metadata.OrderID, "btcpay")
+	return err
 }

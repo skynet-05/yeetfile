@@ -6,15 +6,24 @@ import (
 	"net/http"
 	"yeetfile/cli/requests"
 	"yeetfile/cli/utils"
+	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
 )
 
 // InitStripeCheckout produces a link that the user can use to check out via Stripe
-func (ctx *Context) InitStripeCheckout(subType, quantity string) (string, error) {
-	url := fmt.Sprintf("%s?type=%s&quantity=%s",
-		endpoints.StripeCheckout.Format(ctx.Server),
-		subType,
-		quantity)
+func (ctx *Context) InitStripeCheckout(upgrade shared.Upgrade, quantity string) (string, error) {
+	var url string
+	if upgrade.IsVaultUpgrade {
+		url = fmt.Sprintf("%s?vault-upgrade=%s&vault-quantity=%s",
+			endpoints.StripeCheckout.Format(ctx.Server),
+			upgrade.Tag,
+			quantity)
+	} else {
+		url = fmt.Sprintf("%s?send-upgrade=%s",
+			endpoints.StripeCheckout.Format(ctx.Server),
+			upgrade.Tag)
+	}
+
 	resp, err := requests.GetRequest(ctx.Session, url)
 	if err != nil {
 		return "", err

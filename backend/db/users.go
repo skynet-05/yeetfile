@@ -32,13 +32,13 @@ type User struct {
 }
 
 type UserStorage struct {
-	StorageAvailable int
-	StorageUsed      int
+	StorageAvailable int64
+	StorageUsed      int64
 }
 
 type UserSend struct {
-	SendAvailable int
-	SendUsed      int
+	SendAvailable int64
+	SendUsed      int64
 }
 
 var defaultExp time.Time
@@ -226,10 +226,14 @@ func GetUserStorage(id string) (UserStorage, UserSend, error) {
 
 	defer rows.Close()
 
-	var storageAvailable int
-	var storageUsed int
-	var sendAvailable int
-	var sendUsed int
+	var (
+		storageAvailable int64
+		storageUsed      int64
+
+		sendAvailable int64
+		sendUsed      int64
+	)
+
 	err = rows.Scan(&storageAvailable, &storageUsed, &sendAvailable, &sendUsed)
 	if err != nil {
 		return UserStorage{}, UserSend{}, err
@@ -737,12 +741,13 @@ func GetUserEmailByPaymentID(paymentID string) (string, error) {
 	return "", errors.New("unable to find user by payment id")
 }
 
-// SetUserUpgrade updates a user's upgrade to have the correct amount
-// of storage and sending available
-func SetUserUpgrade(
-	paymentID, subTag string,
+// SetUserVaultUpgrade updates a user's vault to have an updated amount
+// of storage available
+func SetUserVaultUpgrade(
+	paymentID string,
+	upgradeTag string,
 	exp time.Time,
-	storage, send int64,
+	storage int64,
 ) error {
 	totalWeeklyBandwidth := storage *
 		constants.TotalBandwidthMultiplier *
@@ -750,16 +755,35 @@ func SetUserUpgrade(
 
 	s := `UPDATE users
               SET upgrade_exp=$1,
-                  storage_available=$2, send_available=$3,
-                  upgrade_tag=$4,
-                  last_upgraded_month=$5, bandwidth=$6
-              WHERE payment_id=$7`
+                  storage_available=$2,
+                  upgrade_tag=$3,
+                  last_upgraded_month=$4, bandwidth=$5
+              WHERE payment_id=$6`
 
 	_, err := db.Exec(s,
 		exp,
-		storage, send,
-		subTag, int(time.Now().Month()),
-		totalWeeklyBandwidth, paymentID)
+		storage,
+		upgradeTag,
+		int(time.Now().Month()),
+		totalWeeklyBandwidth,
+		paymentID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetUserSendUpgrade updates a user's available send
+func SetUserSendUpgrade(paymentID string, sendUpgradeBytes int64) error {
+	s := `UPDATE users
+              SET send_available = send_available - send_used + $1,
+                  send_used = 0
+              WHERE payment_id=$2`
+
+	_, err := db.Exec(s,
+		sendUpgradeBytes,
+		paymentID)
 	if err != nil {
 		return err
 	}
@@ -842,11 +866,7 @@ func CheckActiveUpgrades() {
 		}
 	}
 
-	updateFunc := func(
-		ids []string,
-		sendAvailable,
-		storageAvailable int64,
-	) error {
+	updateFunc := func(ids []string, storageAvailable int64) error {
 		if ids == nil || len(ids) == 0 {
 			return nil
 		}
@@ -854,13 +874,10 @@ func CheckActiveUpgrades() {
 		idStr := fmt.Sprintf("{%s}", strings.Join(ids, ","))
 
 		u := `UPDATE users
-		      SET send_used=0,
-		          send_available=$1,
-		          storage_available=$2,
-		          last_upgraded_month=$3
-		      WHERE id=ANY($4)`
+		      SET storage_available=$1,
+		          last_upgraded_month=$2
+		      WHERE id=ANY($3)`
 		_, err := db.Exec(u,
-			sendAvailable,
 			storageAvailable,
 			int(now.Month()),
 			idStr)
@@ -869,20 +886,21 @@ func CheckActiveUpgrades() {
 
 	err = updateFunc(
 		revertIDs,
-		config.YeetFileConfig.DefaultUserSend,
 		config.YeetFileConfig.DefaultUserStorage)
 	if err != nil {
 		log.Printf("Error resetting unpaid user storage/send")
 	}
 
-	for productTag, ids := range upgradeMap {
-		product, err := upgrades.GetUpgradeByTag(productTag, upgrades.GetLoadedUpgrades())
+	for upgradeTag, ids := range upgradeMap {
+		vaultUpgrade, err := upgrades.GetUpgradeByTag(
+			upgradeTag,
+			upgrades.GetAllUpgrades())
 		if err != nil {
-			log.Printf("Error locating product in upgrade cron: %v\n", err)
+			log.Printf("Error locating upgrade in cron: %v\n", err)
 			continue
 		}
 
-		err = updateFunc(ids, product.SendGBReal, product.StorageGBReal)
+		err = updateFunc(ids, vaultUpgrade.Bytes)
 		if err != nil {
 			log.Printf("Error updating user storage/send: %v\n", err)
 		}

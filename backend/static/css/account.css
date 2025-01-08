@@ -1,4 +1,9 @@
-#upgrade-div, #subscription-div {
+.account-div button {
+    width: 300px;
+    margin-top: 10px;
+}
+
+.upgrade-div, #subscription-div {
     display: grid;
     text-align: center;
     grid-auto-columns: minmax(0, 1fr);
@@ -7,6 +12,11 @@
 
 ul {
     text-align: left;
+}
+
+.upgrade-container h3 {
+    padding-top: 15px;
+    padding-bottom: 15px;
 }
 
 .pricing-box {
@@ -34,14 +44,24 @@ ul {
     grid-column-start: 3;
 }
 
-.account-table {
+table {
+    width: 100%;
     margin-bottom: 10px;
+}
+
+.account-table td:nth-child(2) {
+    text-align: end;
 }
 
 .payment-btn {
     color: white;
-    width: 125px;
-    margin: 5px;
+    width: 100%;
+    margin: 0 0 5px 0;
+    height: 40px;
+}
+
+.disabled-upgrade {
+    opacity: 0.3;
 }
 
 .stripe-btn {
@@ -99,7 +119,7 @@ details::after {
     cursor: pointer;
 }
 
-.radio-group input[type="radio"]:checked + label {
+.radio-group input[type="radio"]:checked + label, #permanent-toggle {
     background-color: var(--accent-color);
     color: white !important;
 }
@@ -112,7 +132,45 @@ label a {
     text-decoration: none;
 }
 
-@media (max-width: 600px) {
+.checkout-row {
+    position: sticky;
+    background-color: var(--accent-color);
+    bottom: 0;
+    width: 100%;
+}
+
+.checkout-div {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.checkout-div * {
+    align-content: center;
+}
+
+.btcpay-div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@media (orientation: portrait) {
+    .auto-width {
+        width: auto !important;
+    }
+
+    #center-div {
+        width: 95% !important;
+        max-height: 82% !important;
+    }
+
+    .account-div button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 800px) {
     .pricing-box {
         margin-bottom: 15px;
         border: 1px solid var(--light-border) !important;
@@ -126,7 +184,7 @@ label a {
         margin: 0 0 10px 5px;
     }
 
-    #upgrade-div, #subscription-div {
+    .upgrade-div, #subscription-div {
         grid-auto-flow: row;
         grid-template-columns: 1fr;
         grid-template-rows: auto;
@@ -148,8 +206,6 @@ label a {
     }
 
     .payment-btn {
-        width: 100%;
-        margin: 0 0 5px 0;
         height: 50px;
     }
 }
