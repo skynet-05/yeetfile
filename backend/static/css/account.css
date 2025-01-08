@@ -1,6 +1,7 @@
 .account-div button {
-    width: 300px;
+    min-width: 300px;
     margin-top: 10px;
+    width: 100%;
 }
 
 .upgrade-div, #subscription-div {
@@ -166,6 +167,7 @@ label a {
     }
 
     .account-div button {
+        min-width: auto;
         width: 100%;
     }
 }
