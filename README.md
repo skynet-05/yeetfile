@@ -76,12 +76,11 @@ ___
 - Email not required at signup
   - Account ID-only signup allowed
   - Signup not required for text-only transfers
-- Options to pay for account upgrades
+- Options to pay for vault/send upgrades
   - Payments handled via Stripe
   - BTC and XMR supported via BTCPay
-  - Available for under $3/month
   - Not required when self-hosting
-  - Ability to rotate payment ID to remove record of payment
+  - Ability to recycle payment ID to remove record of payment
 
 ___
 
@@ -128,7 +127,7 @@ You should create your own `.env` file with whichever variables needed to custom
 ### Setup
 
 1. Start PostgreSQL
-2. Create a database in PostgreSQL named "yeetfile" using user "postgres"
+2. Create a database in PostgreSQL named "yeetfile"
     1. This can be customized to your preference, just use the `YEETFILE_DB_*` environment variables outlined
        below to configure before launching the server.
 3. Build YeetFile server (see next section)
@@ -162,7 +161,7 @@ All environment variables can be defined in a file named `.env` at the root leve
 | YEETFILE_DB_PASS | The password for the PostgreSQL user | None | |
 | YEETFILE_DB_NAME | The name of the database that YeetFile will use | `yeetfile` | |
 | YEETFILE_DEFAULT_USER_STORAGE | The default bytes of storage to assign new users | `15000000` (15MB) | `-1` for unlimited, `> 0` bytes otherwise |
-| YEETFILE_DEFAULT_USER_SEND | The default bytes a user can send each month | `5000000` (5MB) | `-1` for unlimited, `> 0` bytes otherwise |
+| YEETFILE_DEFAULT_USER_SEND | The default bytes a user can send | `5000000` (5MB) | `-1` for unlimited, `> 0` bytes otherwise |
 | YEETFILE_SERVER_SECRET | Used for encrypting password hints and 2FA recovery codes | | 32 bytes, base64 encoded |
 | YEETFILE_DOMAIN | The domain that the YeetFile instance is hosted on | `http://localhost:8090` | A valid domain string beginning with `http://` or `https://` |
 | YEETFILE_SESSION_AUTH_KEY | The auth key to use for user sessions | Random value | 32-byte value, base64 encoded |
