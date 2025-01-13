@@ -2,7 +2,7 @@
   <img width="500" style="padding-bottom: 20px;" src="https://docs.yeetfile.com/images/yeetfile-banner.png">
   <br><br>
 
-  <p>A privacy-focused encrypted file/password vault and file/text sending service</p>
+  <p>A privacy-focused encrypted file sending service and file/password vault</p>
 
 [![Latest Release](https://img.shields.io/github/v/release/benbusby/yeetfile)](https://github.com/benbusby/yeetfile/releases)
 [![License: AGPLv3](https://img.shields.io/github/license/benbusby/yeetfile)](https://opensource.org/license/agpl-v3)
@@ -179,9 +179,9 @@ These are required to be set if you want to use Backblaze B2 to store data that 
 
 | Name | Purpose |
 | -- | -- |
-| `YEETFILE_B2_BUCKET_ID` | The ID of the bucket that will be used for storing uploaded content |
-| `YEETFILE_B2_BUCKET_KEY_ID` | The ID of the key used for accessing the B2 bucket |
-| `YEETFILE_B2_BUCKET_KEY` | The value of the key used for accessing the B2 bucket |
+| YEETFILE_B2_BUCKET_ID | The ID of the bucket that will be used for storing uploaded content |
+| YEETFILE_B2_BUCKET_KEY_ID | The ID of the key used for accessing the B2 bucket |
+| YEETFILE_B2_BUCKET_KEY | The value of the key used for accessing the B2 bucket |
 
 #### Misc Environment Variables
 
@@ -197,10 +197,7 @@ paid account upgrades.
 | YEETFILE_EMAIL_USER | The SMTP login for the email address |
 | YEETFILE_EMAIL_PASSWORD | The SMTP password for the email address |
 | YEETFILE_EMAIL_NO_REPLY | The no-reply email address for correspondence |
-| YEETFILE_BTCPAY_API_KEY | The API key for the BTCPay instance |
 | YEETFILE_BTCPAY_WEBHOOK_SECRET | The webhook secret for the BTCPay instance |
-| YEETFILE_BTCPAY_STORE_ID | The store ID within BTCPay |
-| YEETFILE_BTCPAY_SERVER_URL | The URL of the BTCPay instance |
 | YEETFILE_STRIPE_KEY | The Stripe secret key |
 | YEETFILE_STRIPE_WEBHOOK_SECRET | The Stripe webhook secret |
 | YEETFILE_UPGRADES_JSON | A JSON array describing the available account upgrades (see shared.Upgrade struct) |
@@ -212,9 +209,6 @@ GitHub](https://github.com/benbusby/yeetfile/issues), or [submit
 a ticket on SourceHut (account not required)](https://todo.sr.ht/~benbusby/yeetfile).
 
 For issues related to the official YeetFile instance, you can reach out via
-email to [support@yeetfile.com](mailto:support@yeetfile.com), or send a
-message via Signal (see QR code below).
-
-<img src="https://docs.yeetfile.com/images/signal.png" width="300">
+email to [support@yeetfile.com](mailto:support@yeetfile.com).
 
 For security related issues, please [email me directly](mailto:contact@benbusby.com).
