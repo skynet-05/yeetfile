@@ -202,11 +202,11 @@ const validateExpiration = (exp: number, unit: ExpUnits): boolean => {
  */
 const indexToExpUnit = (index: number): ExpUnits => {
     switch (index) {
-        case 1:
+        case 0:
             return ExpUnits.Minutes;
-        case 2:
+        case 1:
             return ExpUnits.Hours;
-        case 3:
+        case 2:
             return ExpUnits.Days;
         default:
             return ExpUnits.Minutes;
