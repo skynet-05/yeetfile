@@ -23,8 +23,8 @@
 Contents
 1. [About](#about)
 1. [Features](#features)
-    1. [YeetFile Vault](#yeetfile-vault)
     1. [YeetFile Send](#yeetfile-send)
+    1. [YeetFile Vault](#yeetfile-vault)
     1. [Accounts](#accounts)
     1. [Other](#other)
 1. [How It Works / Security](#how-it-works--security)
@@ -46,17 +46,6 @@ transmitted content.
 
 ## Features
 
-### YeetFile Vault
-
-![vault example](https://docs.yeetfile.com/images/vault-example.png)
-
-- File and password storage + folder creation
-- File/password/folder sharing w/ YeetFile users
-  - Read/write permissions per user
-- No upload size limit
-
-___
-
 ### YeetFile Send
 
 ![send example](https://docs.yeetfile.com/images/send-example.png)
@@ -68,6 +57,17 @@ ___
   - Number of downloads (max 10)
   - Optional password protection
 - Free text transfers (up to 2000 characters)
+
+___
+
+### YeetFile Vault
+
+![vault example](https://docs.yeetfile.com/images/vault-example.png)
+
+- File and password storage + folder creation
+- File/password/folder sharing w/ YeetFile users
+  - Read/write permissions per user
+- No upload size limit
 
 ___
 
