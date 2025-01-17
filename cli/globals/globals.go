@@ -38,9 +38,17 @@ func init() {
 	}
 
 	var err error
-	ServerInfo, err = API.GetServerInfo()
+	ServerInfo, err = Config.GetServerInfo()
 	if err != nil {
-		log.Fatalf("Error fetching server info: %v\n", err)
+		ServerInfo, err = API.GetServerInfo()
+		if err != nil {
+			log.Fatalf("Error fetching server info: %v\n", err)
+		}
+
+		err = Config.SetServerInfo(ServerInfo)
+		if err != nil {
+			log.Println("Failed to save server info to config dir", err)
+		}
 	}
 
 	LongWordlist, ShortWordlist, err = Config.GetWordlists()

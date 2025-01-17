@@ -5,16 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 	"yeetfile/cli/utils"
+	"yeetfile/shared"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Paths struct {
+	directory string
+
 	config        string
 	gitignore     string
 	session       string
@@ -34,16 +40,24 @@ type Config struct {
 
 var baseConfigPath = filepath.Join(".config", "yeetfile")
 
-const configFileName = "config.yml"
-const gitignoreName = ".gitignore"
-const sessionName = "session"
-const encPrivateKeyName = "enc-priv-key"
-const publicKeyName = "pub-key"
-const longWordlistName = "long-wordlist.json"
-const shortWordlistName = "short-wordlist.json"
+const (
+	configFileName    = "config.yml"
+	gitignoreName     = ".gitignore"
+	sessionName       = "session"
+	encPrivateKeyName = "enc-priv-key"
+	publicKeyName     = "pub-key"
+	longWordlistName  = "long-wordlist.json"
+	shortWordlistName = "short-wordlist.json"
+
+	serverInfoNameFmt = "%s.json" // ie "yeetfile.com.json"
+)
 
 //go:embed config.yml
 var defaultConfig string
+
+func (p Paths) getConfigFilePath(filename string) string {
+	return filepath.Join(p.directory, filename)
+}
 
 // setupConfigDir ensures that the directory necessary for yeetfile's config
 // have been created. This path defaults to $HOME/.config/yeetfile.
@@ -71,6 +85,7 @@ func setupConfigDir() (Paths, error) {
 	}
 
 	return Paths{
+		directory:     localConfig,
 		config:        filepath.Join(localConfig, configFileName),
 		gitignore:     filepath.Join(localConfig, gitignoreName),
 		session:       filepath.Join(localConfig, sessionName),
@@ -306,6 +321,71 @@ func (c Config) GetWordlists() ([]string, []string, error) {
 	}
 
 	return longWordlistStrings, shortWordlistStrings, nil
+}
+
+// GetServerInfo returns information related to the currently configured server,
+// if it has been recently fetched within the last 24 hours. If it doesn't exist
+// or is out of date, an error is returned.
+func (c Config) GetServerInfo() (shared.ServerInfo, error) {
+	if len(c.Server) == 0 {
+		return shared.ServerInfo{}, errors.New("missing server in config file")
+	}
+
+	server, err := url.Parse(c.Server)
+	if err != nil {
+		return shared.ServerInfo{}, err
+	}
+
+	serverInfoName := fmt.Sprintf(serverInfoNameFmt, server.Host)
+	serverInfoPath := c.Paths.getConfigFilePath(serverInfoName)
+	infoStat, err := os.Stat(serverInfoPath)
+	if err != nil {
+		return shared.ServerInfo{}, err
+		} else if infoStat.ModTime().Add(24 * time.Hour).Before(time.Now()) {
+		return shared.ServerInfo{}, errors.New("server info is out of date")
+	}
+
+	var serverInfo shared.ServerInfo
+	serverInfoBytes, err := os.ReadFile(serverInfoPath)
+	if err != nil {
+		return shared.ServerInfo{}, err
+	}
+
+	err = json.Unmarshal(serverInfoBytes, &serverInfo)
+	if err != nil {
+		return shared.ServerInfo{}, err
+	}
+
+	return serverInfo, nil
+}
+
+// SetServerInfo writes the information about the currently configured server to
+// a file in the user's yeetfile config dir. This can be used to skip re-fetching
+// server info for the next 24 hours.
+func (c Config) SetServerInfo(info shared.ServerInfo) error {
+	if len(c.Server) == 0 {
+		return errors.New("missing server in config file")
+	}
+
+	server, err := url.Parse(c.Server)
+	if err != nil {
+		return err
+	}
+
+	serverInfoName := fmt.Sprintf(serverInfoNameFmt, server.Host)
+	serverInfoPath := c.Paths.getConfigFilePath(serverInfoName)
+
+	serverInfoBytes, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+
+	err = utils.CopyBytesToFile(serverInfoBytes, serverInfoPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func LoadConfig() *Config {
