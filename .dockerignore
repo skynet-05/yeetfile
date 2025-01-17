@@ -1,3 +1,7 @@
 .git
+.github
 *.env
 cli
+out
+node_modules
+uploads
