@@ -19,6 +19,8 @@ jobs:
         run: exit 1
       - name: checkout code
         uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: install buildx
         id: buildx
         uses: crazy-max/ghaction-docker-buildx@v1
