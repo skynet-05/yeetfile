@@ -2,7 +2,7 @@ name: buildx
 
 on:
   workflow_run:
-    workflows: ["Tests (Go)", "Tests (Web)", "Vuln Scan"]
+    workflows: ["Tests (Web)"]
     branches: [main]
     types:
       - completed

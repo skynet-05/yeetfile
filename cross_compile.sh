@@ -63,13 +63,15 @@ do
             output_name="yeetfile-server"
         fi
 
-        if [ $GOOS = "darwin" ]; then
-            os_name="macOS"
-        elif [ $GOARCH = "arm" ]; then
+        if [ $GOARCH = "arm" ]; then
             arch_name="arm32"
         fi
 
         tar_name="${output_name}_${GOOS}_${arch_name}_${VER}.tar.gz"
+        if [ $GOOS = "darwin" ]; then
+            os_name="macOS"
+            tar_name="${output_name}_macos_${arch_name}_${VER}.tar.gz"
+        fi
 
         if [ $GOOS = "windows" ]; then
             output_name+=".exe"
