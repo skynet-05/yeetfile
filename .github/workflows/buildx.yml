@@ -44,10 +44,10 @@ jobs:
           docker buildx ls
           docker buildx build --push \
             --tag benbusby/yeetfile:latest \
-            --platform linux/amd64,linux/arm/v7,linux/arm64 .
+            --platform linux/amd64,linux/arm64 .
           docker buildx build --push \
             --tag ghcr.io/benbusby/yeetfile:latest \
-            --platform linux/amd64,linux/arm/v7,linux/arm64 .
+            --platform linux/amd64,linux/arm64 .
       - name: build and push tag
         if: startsWith(github.ref, 'refs/tags')
         run: |
@@ -55,7 +55,7 @@ jobs:
           docker buildx ls
           docker buildx build --push \
             --tag benbusby/yeetfile:${GITHUB_REF#refs/*/v}\
-            --platform linux/amd64,linux/arm/v7,linux/arm64 .
+            --platform linux/amd64,linux/arm64 .
           docker buildx build --push \
             --tag ghcr.io/benbusby/yeetfile:${GITHUB_REF#refs/*/v}\
-            --platform linux/amd64,linux/arm/v7,linux/arm64
+            --platform linux/amd64,linux/arm64
