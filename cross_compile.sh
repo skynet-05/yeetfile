@@ -16,34 +16,47 @@ platforms=(
     "linux/arm64"
     "linux/386")
 
+projects=(
+    "cli"
+    "backend")
+
 VER="$(go run ./utils/print_version.go)"
 
-for platform in "${platforms[@]}"
+for project in "${projects[@]}"
 do
-    echo "Compiling for $platform..."
-    platform_split=(${platform//\// })
-    GOOS=${platform_split[0]}
-    GOARCH=${platform_split[1]}
+    for platform in "${platforms[@]}"
+    do
+        echo "Compiling $project for $platform..."
+        platform_split=(${platform//\// })
+        GOOS=${platform_split[0]}
+        GOARCH=${platform_split[1]}
 
-    output_name="yeetfile"
-    zip_name="yeetfile-$GOOS-$GOARCH-$VER.zip"
-    if [ $GOOS = "darwin" ]; then
-        zip_name="yeetfile-macos-$GOARCH-$VER.zip"
-    elif [ $GOARCH = "arm" ]; then
-        zip_name="yeetfile-$GOOS-arm32-$VER.zip"
-    fi
+        if [ $project = "cli" ]; then
+            output_name="yeetfile"
+        else
+            output_name="yeetfile-server"
+        fi
 
-    if [ $GOOS = "windows" ]; then
-        output_name+=".exe"
-    fi
+        tar_name="${output_name}_${GOOS}_${GOARCH}_${VER}.tar.gz"
+        if [ $GOOS = "darwin" ]; then
+            tar_name="${output_name}_macos_${GOARCH}_${VER}.tar.gz"
+        elif [ $GOARCH = "arm" ]; then
+            tar_name="${output_name}-${GOOS}-arm32-${VER}.tar.gz"
+        fi
 
-    GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w" -o $output_name ./cli
-    if [ $? -ne 0 ]; then
-        echo "An error has occurred! Aborting the script execution..."
-        exit 1
-    fi
+        if [ $GOOS = "windows" ]; then
+            output_name+=".exe"
+        fi
 
-    zip out/$zip_name $output_name
-    rm -f $output_name
+        compile_cmd="GOOS=$GOOS GOARCH=$GOARCH go build -ldflags='-s -w' -o $output_name ./$project"
+        echo "└ $compile_cmd"
+        eval $compile_cmd
+        if [ $? -ne 0 ]; then
+            echo "An error has occurred! Aborting the script execution..."
+            exit 1
+        fi
+
+        tar -czvf out/$tar_name $output_name
+        rm -f $output_name
+    done
 done
-

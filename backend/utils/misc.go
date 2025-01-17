@@ -216,19 +216,20 @@ func ParseSizeString(str string) int64 {
 			return 0
 		}
 
+		i64num := int64(num)
 		letters := strings.ToUpper(matches[2])
 
 		switch letters[0] {
 		case 'T': // Terabyte
-			return int64(1024 * 1024 * 1024 * 1024 * num)
+			return int64(1024) * 1024 * 1024 * 1024 * i64num
 		case 'G': // Gigabyte
-			return int64(1024 * 1024 * 1024 * num)
+			return int64(1024) * 1024 * 1024 * i64num
 		case 'M': // Megabyte
-			return int64(1024 * 1024 * num)
+			return int64(1024) * 1024 * i64num
 		case 'K': // Kilobyte
-			return int64(1024 * num)
+			return int64(1024) * i64num
 		default:
-			return int64(num)
+			return i64num
 		}
 	} else {
 		log.Printf("No match found for size string: %s\n", str)
