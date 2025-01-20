@@ -855,7 +855,7 @@ func CheckActiveUpgrades() {
 			return
 		}
 
-		if upgradeExp.Add(time.Hour * 72).Before(time.Now()) {
+		if upgradeExp.Before(time.Now()) {
 			// User doesn't have an active upgrade, set send to
 			// default amount
 			revertIDs = append(revertIDs, id)
