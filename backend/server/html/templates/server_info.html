@@ -91,7 +91,7 @@
       {{ range $i, $upgrade := .VaultUpgrades }}
       <b>{{ $upgrade.Name }} {{ if $upgrade.Annual }} [Year] {{ else }} [Month] {{ end }}</b>
       <ul>
-        <li>{{ $upgrade.ReadableBytes }}GB vault storage</li>
+        <li>{{ $upgrade.ReadableBytes }} vault storage</li>
         <li>Unlimited password storage</li>
         <li>${{ $upgrade.Price }} x {{ if $upgrade.Annual }} year {{ else }} month {{ end }}</li>
       </ul>
