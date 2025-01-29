@@ -38,7 +38,7 @@ const init = () => {
 
         if (target.checked) {
             passwordDiv.style.display = "inline";
-        } else if (window.innerWidth <= 425) {
+        } else if (window.innerWidth <= 425 && !target.checked) {
             passwordDiv.style.display = "none";
         }
 
@@ -199,6 +199,10 @@ const validateForm = (form: SendForm) => {
  */
 const updateProgressBar = (newAmount: number = 0) => {
     let progressBar = document.getElementById("send-bar") as HTMLProgressElement;
+    if (!progressBar) {
+	    return;
+    }
+
     let sendRemainingSpan = document.getElementById("send-remaining") as HTMLSpanElement;
 
     if (newAmount > 0) {
