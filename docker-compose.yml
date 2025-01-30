@@ -29,7 +29,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: "${YEETFILE_ENV_FILE:-.env}"
+    env_file: "${YEETFILE_ENV_FILE:-template.env}"
     environment:
       YEETFILE_DB_HOST: "db"
 
