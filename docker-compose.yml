@@ -1,7 +1,7 @@
 services:
 
   api:
-    image: ghcr.io/benbusby/yeetfile:0.0.2
+    image: ghcr.io/benbusby/yeetfile:latest
     container_name: yeetfile
     restart: unless-stopped
     ports:
