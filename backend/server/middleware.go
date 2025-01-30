@@ -141,7 +141,7 @@ func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			cspHeader += "frame-src 'self' https://jimmywarting.github.io/"
 		}
 
-		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Content-Security-Policy", cspHeader)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")

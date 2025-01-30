@@ -73,7 +73,7 @@ func FileHandler(strip string, prepend string, files embed.FS) http.HandlerFunc 
 			}
 
 			w.Header().Set("X-Content-Type-Options", "nosniff")
-			w.Header().Set("X-Frame-Options", "DENY")
+			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 
 			_, _ = w.Write(minFile)
 			return
