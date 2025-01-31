@@ -29,7 +29,8 @@ Contents
     1. [Other](#other)
 1. [How It Works / Security](#how-it-works--security)
 1. [Self-Hosting](#self-hosting)
-    1.  [Notes](#notes)
+    - [Access](#access)
+    - [Email Registration](#email-registration)
 1. [CLI Configuration](#cli-configuration)
 1. [Development](#development)
     1. [Requirements](#requirements)
@@ -116,7 +117,7 @@ volumes:
 You should create your own `.env` file with whichever variables needed to customize your instance
 (see: [Environment Variables](#environment-variables)).
 
-### Notes
+#### Access
 
 When self-hosting, the web interface must be accessed either from a secure context (HTTPS/TLS) or
 from the same machine the service is hosted on (`localhost` or `0.0.0.0`).
@@ -129,13 +130,35 @@ generate a cert and set the `YEETFILE_TLS_CERT` and `YEETFILE_TLS_KEY` environme
 > This does not apply to the CLI tool. You can still use all features of YeetFile from the CLI tool
 > without a secure connection.
 
+#### Email Registration
+
+To set up email registration for your self-hosted instance, you need to define the following environment
+variables:
+
+```sh
+# The email address to use for correspondence
+YEETFILE_EMAIL_ADDR=...
+
+# The host of the email address being used
+YEETFILE_EMAIL_HOST=...
+
+# The port of the email host
+YEETFILE_EMAIL_PORT=...
+
+# The SMTP login for the email address
+YEETFILE_EMAIL_USER=...
+
+# The SMTP password for the email address
+YEETFILE_EMAIL_PASSWORD=...
+```
+
 ## CLI Configuration
 
 The YeetFile CLI tool can be configured using a `config.yml` file in the following path:
 
 **Linux/macOS**: `~/.config/yeetfile/config.yml`
 
-**Windows**: `%AppData%\yeetfile`
+**Windows**: `%AppData%\yeetfile\config.yml`
 
 When you initially launch the CLI tool, it will create this directory and add a default `config.yml`:
 
