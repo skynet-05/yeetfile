@@ -22,7 +22,7 @@ projects=(
 
 VER="$(go run ./utils/print_version.go)"
 RELEASE_NOTES_FILE="$dir/out/RELEASE_NOTES.txt"
-RELEASE_NOTES_LINK="https://github.com/benbusby/yeetfile/releases/download/$VER"
+RELEASE_NOTES_LINK="https://github.com/benbusby/yeetfile/releases/download/v$VER"
 
 cat >$RELEASE_NOTES_FILE <<EOL
 ___
