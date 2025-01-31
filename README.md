@@ -29,7 +29,8 @@ Contents
     1. [Other](#other)
 1. [How It Works / Security](#how-it-works--security)
 1. [Self-Hosting](#self-hosting)
-    1.  [Notes](#notes) 
+    1.  [Notes](#notes)
+1. [CLI Configuration](#cli-configuration)
 1. [Development](#development)
     1. [Requirements](#requirements)
     1. [Setup](#setup)
@@ -127,6 +128,29 @@ generate a cert and set the `YEETFILE_TLS_CERT` and `YEETFILE_TLS_KEY` environme
 > [!NOTE]  
 > This does not apply to the CLI tool. You can still use all features of YeetFile from the CLI tool
 > without a secure connection.
+
+## CLI Configuration
+
+The YeetFile CLI tool can be configured using a `config.yml` file in the following path:
+
+**Linux/macOS**: `~/.config/yeetfile/config.yml`
+
+**Windows**: `%AppData&\yeetfile`
+
+When you initially launch the CLI tool, it will create this directory and add a default `config.yml`:
+
+```yml
+server: https://yeetfile.com
+
+# Configure the default view to enter when running the "yeetfile" command with
+# no arguments. Can be set to "vault", "send", or "pass" (password vault)
+default_view: "vault"
+
+# Enable debug logging to a specific file
+# debug_file: "~/.config/yeetfile/debug.log"
+```
+
+You can change the `server` directive to your own instance of YeetFile. 
 
 ## Development
 
