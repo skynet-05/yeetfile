@@ -29,6 +29,7 @@ Contents
     1. [Other](#other)
 1. [How It Works / Security](#how-it-works--security)
 1. [Self-Hosting](#self-hosting)
+    1.  [Notes](#notes) 
 1. [Development](#development)
     1. [Requirements](#requirements)
     1. [Setup](#setup)
@@ -114,6 +115,19 @@ volumes:
 You should create your own `.env` file with whichever variables needed to customize your instance
 (see: [Environment Variables](#environment-variables)).
 
+### Notes
+
+When self-hosting, the web interface must be accessed either from a secure context (HTTPS/TLS) or
+from the same machine the service is hosted on (`localhost` or `0.0.0.0`).
+
+If you need to access the web interface using a machine IP on your network, for example, you can
+generate a cert and set the `YEETFILE_TLS_CERT` and `YEETFILE_TLS_KEY` environment variables (see
+[Environment Variables](#environment-variables))
+
+> [!NOTE]  
+> This does not apply to the CLI tool. You can still use all features of YeetFile from the CLI tool
+> without a secure connection.
+
 ## Development
 
 ### Requirements
@@ -172,6 +186,8 @@ All environment variables can be defined in a file named `.env` at the root leve
 | YEETFILE_CACHE_DIR | The dir to use for caching downloaded files (B2 only) | None | Any valid directory |
 | YEETFILE_CACHE_MAX_SIZE | The maximum dir size the cache can fill before removing old cached files | 0 | An int value of bytes |
 | YEETFILE_CACHE_MAX_FILE_SIZE | The maximum file size to cache | 0 | An int value of bytes |
+| YEETFILE_TLS_KEY | The SSL key to use for connections | | The string key contents (not a file path) |
+| YEETFILE_TLS_CERT | The SSL cert to use for connections | | The string cert contents (not a file path) |
 
 #### Backblaze Environment Variables
 
