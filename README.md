@@ -135,7 +135,7 @@ The YeetFile CLI tool can be configured using a `config.yml` file in the followi
 
 **Linux/macOS**: `~/.config/yeetfile/config.yml`
 
-**Windows**: `%AppData&\yeetfile`
+**Windows**: `%AppData%\yeetfile`
 
 When you initially launch the CLI tool, it will create this directory and add a default `config.yml`:
 
