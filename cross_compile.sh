@@ -96,7 +96,7 @@ do
 
         full_link="$RELEASE_NOTES_LINK/$compressed_name"
 
-        printf -- "- $os_name (\`$arch_name\`): [$tar_name]($full_link)\n" >> $RELEASE_NOTES_FILE
+        printf -- "- $os_name (\`$arch_name\`): [$compressed_name]($full_link)\n" >> $RELEASE_NOTES_FILE
     done
 
     printf "\n" >> $RELEASE_NOTES_FILE
