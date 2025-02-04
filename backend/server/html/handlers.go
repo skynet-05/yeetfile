@@ -8,6 +8,7 @@ import (
 	"time"
 	"yeetfile/backend/config"
 	"yeetfile/backend/db"
+	"yeetfile/backend/server/auth"
 	"yeetfile/backend/server/html/templates"
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/server/upgrades"
@@ -200,6 +201,8 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 	obscuredEmail, _ := shared.ObscureEmail(user.Email)
 	isPrevUpgraded := user.UpgradeExp.Year() >= 2024
 
+	isAdmin := auth.IsInstanceAdmin(userID)
+
 	_ = templates.ServeTemplate(
 		w,
 		templates.AccountHTML,
@@ -227,6 +230,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 			Has2FA:           user.Secret != nil && len(user.Secret) > 0,
 			ErrorMessage:     errorMsg,
 			SuccessMessage:   successMsg,
+			IsAdmin:          isAdmin,
 		},
 	)
 }
@@ -472,6 +476,23 @@ func CheckoutCompleteHandler(w http.ResponseWriter, req *http.Request) {
 			Title:       title,
 			Description: desc,
 			Note:        note,
+		},
+	)
+}
+
+func AdminPageHandler(w http.ResponseWriter, _ *http.Request, id string) {
+	_ = templates.ServeTemplate(
+		w,
+		templates.AdminHTML,
+		templates.AdminTemplate{
+			Base: templates.BaseTemplate{
+				LoggedIn:   true,
+				Title:      "Admin",
+				Javascript: []string{"admin.js"},
+				CSS:        []string{"admin.css"},
+				Config:     config.HTMLConfig,
+				Endpoints:  endpoints.HTMLPageEndpoints,
+			},
 		},
 	)
 }

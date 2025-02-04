@@ -5,6 +5,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"strings"
+	"yeetfile/backend/config"
 	"yeetfile/backend/db"
 	"yeetfile/backend/server/transfer/vault"
 	"yeetfile/shared"
@@ -120,7 +121,20 @@ func updateUser(values db.VerifiedAccountValues) error {
 	return nil
 }
 
-func deleteUser(id string, deleteAccount shared.DeleteAccount) error {
+func IsInstanceAdmin(currentUserID string) bool {
+	adminID := config.InstanceAdmin
+	if len(adminID) > 0 {
+		if strings.Contains(adminID, "@") {
+			adminID, _ = db.GetUserIDByEmail(adminID)
+		}
+
+		return adminID == currentUserID
+	}
+
+	return false
+}
+
+func DeleteUser(id string, deleteAccount shared.DeleteAccount) error {
 	accountID := deleteAccount.Identifier
 	var err error
 	if strings.Contains(deleteAccount.Identifier, "@") {

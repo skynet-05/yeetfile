@@ -31,6 +31,8 @@ Contents
 1. [Self-Hosting](#self-hosting)
     - [Access](#access)
     - [Email Registration](#email-registration)
+    - [Administration](#administration)
+    - [Logging](#logging)
 1. [CLI Configuration](#cli-configuration)
 1. [Development](#development)
     1. [Requirements](#requirements)
@@ -152,6 +154,48 @@ YEETFILE_EMAIL_USER=...
 YEETFILE_EMAIL_PASSWORD=...
 ```
 
+#### Administration
+
+You can declare yourself as the admin of your instance by setting the
+`YEETFILE_INSTANCE_ADMIN` environment variable to your YeetFile account ID or
+email address.
+
+This will allow you to manage users and their files on the instance. Note that
+file names are encrypted, but you will be able to see the following metadata
+for each file:
+
+- File ID
+- Last Modified
+- Size
+- Owner ID
+
+#### Logging
+
+Endpoints beginning with `/api/...` should be monitored for error codes to prevent bruteforcing.
+
+For example:
+
+- `/login` is the endpoint for the login web page, this only loads static content
+    - This will always return a `200` response, since there is nothing sensitive about loading
+      the login page.
+- `/api/login` is the endpoint for submitting credentials
+    - This can return an error code depending on the failure (i.e. `403` for invalid credentials,
+      `404` for a non-existent user, etc)
+
+You can limit requests to all `/api` endpoints in a Nginx config, for example, with something like
+this:
+
+```nginx
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/m;
+
+// ...
+
+location /api/ {
+    limit_req zone=api_limit burst=20 nodelay;
+    proxy_pass http://backend;
+}
+```
+
 ## CLI Configuration
 
 The YeetFile CLI tool can be configured using a `config.yml` file in the following path:
@@ -235,6 +279,9 @@ All environment variables can be defined in a file named `.env` at the root leve
 | YEETFILE_CACHE_MAX_FILE_SIZE | The maximum file size to cache | 0 | An int value of bytes |
 | YEETFILE_TLS_KEY | The SSL key to use for connections | | The string key contents (not a file path) |
 | YEETFILE_TLS_CERT | The SSL cert to use for connections | | The string cert contents (not a file path) |
+| YEETFILE_INSTANCE_ADMIN | The user ID or email of the user to set as admin | | A valid YeetFile email or account ID |
+| YEETFILE_LIMITER_SECONDS | The number of seconds to use in rate limiting repeated requests | 30 | Any number of seconds |
+| YEETFILE_LIMITER_ATTEMPTS | The number of attempts to allow before rate limiting | 6 | Any number of requests |
 | YEETFILE_LOCKDOWN | Disables anonymous (not logged in) interactions | 0 | `1` to enable lockdown, `0` to allow anonymous usage |
 
 #### Backblaze Environment Variables

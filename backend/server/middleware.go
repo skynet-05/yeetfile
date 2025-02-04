@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 	"yeetfile/backend/config"
+	"yeetfile/backend/server/auth"
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/utils"
-	"yeetfile/shared/constants"
 	"yeetfile/shared/endpoints"
 )
 
@@ -39,8 +39,8 @@ func getVisitor(identifier string, path string) *rate.Limiter {
 	idHash := blake2b.Sum256([]byte(identifier + path))
 	visitor, exists := visitors[idHash]
 	if !exists {
-		limit := rate.Every(time.Second * constants.LimiterSeconds)
-		limiter := rate.NewLimiter(limit, constants.LimiterAttempts)
+		limit := rate.Every(time.Second * time.Duration(config.YeetFileConfig.LimiterSeconds))
+		limiter := rate.NewLimiter(limit, config.YeetFileConfig.LimiterAttempts)
 		visitors[idHash] = &Visitor{limiter, time.Now()}
 		return limiter
 	}
@@ -113,10 +113,31 @@ func AuthMiddleware(next session.HandlerFunc) http.HandlerFunc {
 </html>`, loginURL)
 
 		w.Write([]byte(redirect))
+		return
+	}
 
-		//redirectURL := fmt.Sprintf("%s?next=%s", endpoints.HTMLLogin, req.URL.Path)
-		//redirectCode := http.StatusTemporaryRedirect
-		//http.Redirect(w, req, redirectURL, redirectCode)
+	return handler
+}
+
+// AdminMiddleware enforces that particular requests are only performed by those
+// marked as "admin" in the database.
+func AdminMiddleware(next session.HandlerFunc) http.HandlerFunc {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		if session.IsValidSession(w, req) {
+			id, err := session.GetSessionAndUserID(req)
+			if err != nil {
+				return
+			}
+
+			isAdmin := auth.IsInstanceAdmin(id)
+			if isAdmin {
+				// Call the next handler
+				next(w, req, id)
+				return
+			}
+		}
+
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -166,7 +187,7 @@ func DefaultHeadersMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // AuthLimiterMiddleware is like AuthMiddleware, but also restricts requests to
-// the same constants.LimiterAttempts per constants.LimiterSeconds by session
+// the same config.LimiterAttempts per config.LimiterSeconds by session
 // (unlike LimiterMiddleware which limits by IP address)
 func AuthLimiterMiddleware(next session.HandlerFunc) http.HandlerFunc {
 	handler := func(w http.ResponseWriter, req *http.Request) {

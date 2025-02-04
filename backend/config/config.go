@@ -32,12 +32,16 @@ var secret = utils.GetEnvVarBytesB64("YEETFILE_SERVER_SECRET", defaultSecret)
 var fallbackWebSecret = utils.GetEnvVarBytesB64(
 	"YEETFILE_FALLBACK_WEB_SECRET",
 	securecookie.GenerateRandomKey(32))
+var limiterSeconds = utils.GetEnvVarInt("YEETFILE_LIMITER_SECONDS", 30)
+var limiterAttempts = utils.GetEnvVarInt("YEETFILE_LIMITER_ATTEMPTS", 6)
 
 var TLSCert = utils.GetEnvVar("YEETFILE_TLS_CERT", "")
 var TLSKey = utils.GetEnvVar("YEETFILE_TLS_KEY", "")
 
 var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
 var IsLockedDown = utils.GetEnvVarBool("YEETFILE_LOCKDOWN", false)
+
+var InstanceAdmin = utils.GetEnvVar("YEETFILE_INSTANCE_ADMIN", "")
 
 // =============================================================================
 // Email configuration (used in account verification and billing reminders)
@@ -111,6 +115,8 @@ type ServerConfig struct {
 	PasswordHash        []byte
 	ServerSecret        []byte
 	FallbackWebSecret   []byte
+	LimiterSeconds      int
+	LimiterAttempts     int
 }
 
 type TemplateConfig struct {
@@ -165,6 +171,8 @@ func init() {
 		PasswordHash:        passwordHash,
 		ServerSecret:        secret,
 		FallbackWebSecret:   fallbackWebSecret,
+		LimiterSeconds:      limiterSeconds,
+		LimiterAttempts:     limiterAttempts,
 	}
 
 	// Subset of main server config to use in HTML templating
