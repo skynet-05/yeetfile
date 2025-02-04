@@ -11,7 +11,6 @@ import (
 	"yeetfile/backend/server/html/templates"
 	"yeetfile/backend/server/session"
 	"yeetfile/backend/server/upgrades"
-	"yeetfile/backend/utils"
 	"yeetfile/shared"
 	"yeetfile/shared/endpoints"
 )
@@ -198,7 +197,7 @@ func AccountPageHandler(w http.ResponseWriter, req *http.Request, userID string)
 
 	successMsg, errorMsg := generateAccountMessages(req)
 	hasHint := user.PasswordHint != nil && len(user.PasswordHint) > 0
-	obscuredEmail, _ := utils.ObscureEmail(user.Email)
+	obscuredEmail, _ := shared.ObscureEmail(user.Email)
 	isPrevUpgraded := user.UpgradeExp.Year() >= 2024
 
 	_ = templates.ServeTemplate(
