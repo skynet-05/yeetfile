@@ -16,6 +16,7 @@ type SendForm = {
 const init = () => {
     setupTypeToggles();
     setupCopyButton();
+    setupInsecureLinkButton();
     updateProgressBar();
 
     let usePasswordCB = document.getElementById("use-password") as HTMLInputElement;
@@ -491,6 +492,33 @@ const setupCopyButton = () => {
             }
         });
     })
+}
+
+const setupInsecureLinkButton = () => {
+    let insecureLinkBtn = document.getElementById("create-insecure-link") as HTMLButtonElement;
+    if (!insecureLinkBtn) {
+        return;
+    }
+
+    let link = document.getElementById("file-link") as HTMLAnchorElement;
+    insecureLinkBtn.addEventListener("click", event => {
+        event.preventDefault();
+
+        let linkArray = link.href.split("#");
+        if (linkArray.length <= 1) {
+            alert("Invalid link format");
+            return;
+        }
+
+        let baseLink = linkArray.slice(0, linkArray.length - 1);
+        let secret = linkArray[linkArray.length - 1];
+
+        let newLink = `${baseLink}?secret=${secret}`;
+        link.href = newLink;
+        link.innerText = newLink;
+
+        insecureLinkBtn.className = "hidden";
+    });
 }
 
 const setupTypeToggles = () => {

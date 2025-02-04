@@ -279,6 +279,7 @@ All environment variables can be defined in a file named `.env` at the root leve
 | YEETFILE_CACHE_MAX_FILE_SIZE | The maximum file size to cache | 0 | An int value of bytes |
 | YEETFILE_TLS_KEY | The SSL key to use for connections | | The string key contents (not a file path) |
 | YEETFILE_TLS_CERT | The SSL cert to use for connections | | The string cert contents (not a file path) |
+| YEETFILE_ALLOW_INSECURE_LINKS | Allows YeetFile Send links to include the key in a URL param | 0 | `0` (disabled) or `1` (enabled) |
 | YEETFILE_INSTANCE_ADMIN | The user ID or email of the user to set as admin | | A valid YeetFile email or account ID |
 | YEETFILE_LIMITER_SECONDS | The number of seconds to use in rate limiting repeated requests | 30 | Any number of seconds |
 | YEETFILE_LIMITER_ATTEMPTS | The number of attempts to allow before rate limiting | 6 | Any number of requests |

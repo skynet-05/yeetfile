@@ -17,31 +17,38 @@ import (
 // General configuration
 // =============================================================================
 
-const LocalStorage = "local"
-const B2Storage = "b2"
+const (
+	LocalStorage = "local"
+	B2Storage    = "b2"
+)
 
-var defaultSecret = []byte("yeetfile-debug-secret-key-123456")
-var storageType = utils.GetEnvVar("YEETFILE_STORAGE", LocalStorage)
-var domain = os.Getenv("YEETFILE_DOMAIN")
-var defaultUserMaxPasswords = utils.GetEnvVarInt("YEETFILE_DEFAULT_MAX_PASSWORDS", -1)
-var defaultUserStorage = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_STORAGE", -1)
-var defaultUserSend = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_SEND", -1)
-var maxNumUsers = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
-var password = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
-var secret = utils.GetEnvVarBytesB64("YEETFILE_SERVER_SECRET", defaultSecret)
-var fallbackWebSecret = utils.GetEnvVarBytesB64(
-	"YEETFILE_FALLBACK_WEB_SECRET",
-	securecookie.GenerateRandomKey(32))
-var limiterSeconds = utils.GetEnvVarInt("YEETFILE_LIMITER_SECONDS", 30)
-var limiterAttempts = utils.GetEnvVarInt("YEETFILE_LIMITER_ATTEMPTS", 6)
+var (
+	storageType             = utils.GetEnvVar("YEETFILE_STORAGE", LocalStorage)
+	domain                  = os.Getenv("YEETFILE_DOMAIN")
+	defaultUserMaxPasswords = utils.GetEnvVarInt("YEETFILE_DEFAULT_MAX_PASSWORDS", -1)
+	defaultUserStorage      = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_STORAGE", -1)
+	defaultUserSend         = utils.GetEnvVarInt64("YEETFILE_DEFAULT_USER_SEND", -1)
+	maxNumUsers             = utils.GetEnvVarInt("YEETFILE_MAX_NUM_USERS", -1)
+	password                = []byte(utils.GetEnvVar("YEETFILE_SERVER_PASSWORD", ""))
+	allowInsecureLinks      = utils.GetEnvVarBool("YEETFILE_ALLOW_INSECURE_LINKS", false)
 
-var TLSCert = utils.GetEnvVar("YEETFILE_TLS_CERT", "")
-var TLSKey = utils.GetEnvVar("YEETFILE_TLS_KEY", "")
+	// Limiter config
+	limiterSeconds  = utils.GetEnvVarInt("YEETFILE_LIMITER_SECONDS", 30)
+	limiterAttempts = utils.GetEnvVarInt("YEETFILE_LIMITER_ATTEMPTS", 6)
 
-var IsDebugMode = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
-var IsLockedDown = utils.GetEnvVarBool("YEETFILE_LOCKDOWN", false)
+	defaultSecret     = []byte("yeetfile-debug-secret-key-123456")
+	secret            = utils.GetEnvVarBytesB64("YEETFILE_SERVER_SECRET", defaultSecret)
+	fallbackWebSecret = utils.GetEnvVarBytesB64(
+		"YEETFILE_FALLBACK_WEB_SECRET",
+		securecookie.GenerateRandomKey(32))
 
-var InstanceAdmin = utils.GetEnvVar("YEETFILE_INSTANCE_ADMIN", "")
+	TLSCert = utils.GetEnvVar("YEETFILE_TLS_CERT", "")
+	TLSKey  = utils.GetEnvVar("YEETFILE_TLS_KEY", "")
+
+	IsDebugMode   = utils.GetEnvVarBool("YEETFILE_DEBUG", false)
+	IsLockedDown  = utils.GetEnvVarBool("YEETFILE_LOCKDOWN", false)
+	InstanceAdmin = utils.GetEnvVar("YEETFILE_INSTANCE_ADMIN", "")
+)
 
 // =============================================================================
 // Email configuration (used in account verification and billing reminders)
@@ -115,6 +122,7 @@ type ServerConfig struct {
 	PasswordHash        []byte
 	ServerSecret        []byte
 	FallbackWebSecret   []byte
+	AllowInsecureLinks  bool
 	LimiterSeconds      int
 	LimiterAttempts     int
 }
@@ -171,6 +179,7 @@ func init() {
 		PasswordHash:        passwordHash,
 		ServerSecret:        secret,
 		FallbackWebSecret:   fallbackWebSecret,
+		AllowInsecureLinks:  allowInsecureLinks,
 		LimiterSeconds:      limiterSeconds,
 		LimiterAttempts:     limiterAttempts,
 	}

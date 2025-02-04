@@ -63,10 +63,11 @@ type LoginTemplate struct {
 }
 
 type SendTemplate struct {
-	Base            BaseTemplate
-	SendUsed        int64
-	SendAvailable   int64
-	ShowUpgradeLink bool
+	Base               BaseTemplate
+	SendUsed           int64
+	SendAvailable      int64
+	ShowUpgradeLink    bool
+	AllowInsecureLinks bool
 }
 
 type VaultTemplate struct {

@@ -124,9 +124,10 @@ func SendPageHandler(w http.ResponseWriter, req *http.Request, _ string) {
 				Config:    config.HTMLConfig,
 				Endpoints: endpoints.HTMLPageEndpoints,
 			},
-			SendUsed:        sendUsed,
-			SendAvailable:   sendAvailable,
-			ShowUpgradeLink: showUpgradeLink,
+			SendUsed:           sendUsed,
+			SendAvailable:      sendAvailable,
+			ShowUpgradeLink:    showUpgradeLink,
+			AllowInsecureLinks: config.YeetFileConfig.AllowInsecureLinks,
 		},
 	)
 }

@@ -92,8 +92,21 @@
                     <td><a data-testid="file-link" id="file-link" href=""></a></td>
                 </tr>
                 <tr>
-                    <td><button id="copy-link" class="accent-btn">Copy Link</button></td>
+                    <td>
+                        <button id="copy-link" class="accent-btn">Copy Link</button>
+                        {{ if .AllowInsecureLinks }}
+                        <button id="create-insecure-link">Create Insecure Link</button>
+                        {{ end }}
+                    </td>
                 </tr>
+                {{ if .AllowInsecureLinks }}
+                <tr>
+                    <td>
+                        <span class="small-text">Note: Insecure links make the file key visible to the server, but
+                            allow sharing the link from behind a proxy like Cloudflared.</span>
+                    </td>
+                </tr>
+                {{ end }}
             </table>
             <hr>
         </div>

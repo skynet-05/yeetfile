@@ -27,7 +27,7 @@ const init = () => {
 
 const handleMetadata = async (download: interfaces.DownloadResponse) => {
     // Attempt to decrypt without a password first
-    let secret = location.hash.slice(1);
+    let secret = getSecret();
 
     let key = await crypto.importKey(fromURLSafeBase64(secret));
     decryptName(key, download.name).then(result => {
@@ -36,6 +36,16 @@ const handleMetadata = async (download: interfaces.DownloadResponse) => {
         console.warn(err);
         promptPassword(download);
     });
+}
+
+const getSecret = (): string => {
+    let params = new URLSearchParams(document.location.search);
+    let secret = params.get("secret");
+    if (!secret) {
+        return location.hash.slice(1);
+    }
+
+    return secret;
 }
 
 const showDownload = (name, download, key) => {
@@ -167,7 +177,7 @@ const promptPassword = (download) => {
     let btn = document.getElementById("submit") as HTMLButtonElement;
 
     btn.addEventListener("click", async () => {
-        let secret = fromURLSafeBase64(location.hash.slice(1));
+        let secret = fromURLSafeBase64(getSecret());
 
         setFormEnabled(false);
         updatePasswordBtn("Validating", true);
