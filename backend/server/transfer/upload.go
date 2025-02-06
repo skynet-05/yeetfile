@@ -99,11 +99,14 @@ func UploadMultiChunk(upload FileUpload, b2Values db.B2Upload) (bool, error) {
 			return err
 		}
 
+		localUpload := IsLocalUpload(info.UploadURL)
+		log.Printf("Uploading chunk to: %s\n", info.UploadURL)
+		log.Printf("(local: %t\n)", localUpload)
 		largeFile := b2.FilePartInfo{
 			FileID:             b2Values.UploadID,
 			AuthorizationToken: info.AuthorizationToken,
 			UploadURL:          info.UploadURL,
-			Dummy:              b2Values.Local,
+			Dummy:              localUpload,
 		}
 
 		err = b2.UploadFilePart(
@@ -156,22 +159,13 @@ func InitLargeB2Upload(filename string, upload db.B2Upload) error {
 		return err
 	}
 
-	isDummy := info.Dummy
-	if !isDummy {
-		// Ensure that the dummy option is enabled if the request URI
-		// is not actually valid
-		_, err = url.ParseRequestURI(upload.UploadURL)
-		if err != nil {
-			isDummy = true
-		}
-	}
-
+	localUpload := IsLocalUpload(info.UploadURL)
 	return db.UpdateUploadValues(
 		upload.MetadataID,
 		info.UploadURL,
 		info.AuthorizationToken,
 		info.FileID, // Multi-chunk files use the file ID for uploading
-		isDummy)
+		localUpload)
 }
 
 func ResetLargeUpload(b2FileID string, metadataID string) (b2.FilePartInfo, error) {
@@ -201,4 +195,14 @@ func FinishLargeB2Upload(b2ID string, checksums []string) (string, int64) {
 	}
 
 	return largeFile.FileID, largeFile.ContentLength
+}
+
+// IsLocalUpload validates that the URL being used for an upload is a valid URL
+func IsLocalUpload(uploadURL string) bool {
+	_, err := url.ParseRequestURI(uploadURL)
+	if err != nil {
+		return true
+	}
+
+	return false
 }
