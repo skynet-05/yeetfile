@@ -118,7 +118,7 @@ func InitVaultDownload(
 		return PendingDownload{}, err
 	}
 
-	p := initDownload(id, globals.Config.Server, key, file, metadata.Chunks)
+	p := initDownload(metadata.ID, globals.Config.Server, key, file, metadata.Chunks)
 	p.UnformattedEndpoint = endpoints.DownloadVaultFileData
 	return p, nil
 }
