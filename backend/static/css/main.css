@@ -20,6 +20,10 @@ html {
 
 body {
     margin-top: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
 }
 
 fieldset {
@@ -197,14 +201,19 @@ progress {
     padding-bottom: 2px;
 }
 
+.center-container {
+    background-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+    width: 100vw;
+}
+
 #center-div, #nojs-div {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 85%;
+    width: 85vw;
     max-width: 800px;
-    max-height: 87%;
+    max-height: 87vh;
     overflow-y: auto;
     border-radius: .66rem;
     padding: 20px;
@@ -405,7 +414,7 @@ input:disabled, textarea:disabled {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    width: 100vw;
     min-height: 63px;
     background-color: transparent;
 }
@@ -419,7 +428,7 @@ input:disabled, textarea:disabled {
     align-items: center;
     justify-content: space-between;
     margin-top: 65px;
-    width: 100%;
+    width: 100vw;
     min-height: 63px;
     background-color: transparent;
 }
@@ -592,8 +601,9 @@ input:disabled, textarea:disabled {
 
 @media (orientation: portrait) {
     #center-div {
-        width: 95% !important;
-        max-height: 82% !important;
+        width: 95vw !important;
+        max-height: 82vh !important;
+        margin-top: 0;
     }
 }
 

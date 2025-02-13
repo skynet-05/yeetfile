@@ -44,7 +44,7 @@ table input {
 }
 
 #center-div {
-    width: 50%;
+    width: 50vw;
     max-width: 600px;
 }
 
@@ -58,5 +58,9 @@ table input {
         margin-left: 0;
         width: 100%;
         max-width: unset;
+    }
+
+    input[type="radio"] {
+        width: unset;
     }
 }
