@@ -52,8 +52,8 @@ and all features of the web client are available from the CLI client.
 All content is encrypted locally, and the server is incapable of decrypting any
 transmitted content.
 
-In addition to having an official instance maintained at [https://yeetfile.com
-](https://yeetfile.com), YeetFile is [easily self-hosted](#self-hosting) and can
+In addition to having an official instance maintained at [https://yeetfile.com](
+https://yeetfile.com), YeetFile is [easily self-hosted](#self-hosting) and can
 be configured to store encrypted file data locally on the server, in [Backblaze B2](
 https://www.backblaze.com/cloud-storage), or using any S3-compatible storage providers 
 (such as AWS, [Wasabi](https://wasabi.com/cloud-object-storage), 
