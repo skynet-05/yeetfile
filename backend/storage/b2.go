@@ -196,7 +196,7 @@ func (b2Backend *B2) CancelLargeFile(remoteID, _ string) (bool, error) {
 }
 
 func (b2Backend *B2) DeleteFile(remoteID, filename string) (bool, error) {
-	if len(remoteID) == 0 {
+	if len(remoteID) == 0 && !b2Backend.local {
 		return false, errors.New("b2 ID cannot be empty")
 	}
 	return b2Backend.client.DeleteFile(remoteID, filename)
