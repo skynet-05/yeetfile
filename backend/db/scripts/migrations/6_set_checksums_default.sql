@@ -1,0 +1,1 @@
+alter table uploads alter column checksums set default '{''}'::text[];
