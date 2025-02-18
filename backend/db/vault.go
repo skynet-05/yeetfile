@@ -166,6 +166,12 @@ func GetVaultItems(
 	return result, ownership, nil
 }
 
+func SetVaultItemRemoteID(itemID, remoteID string) error {
+	s := `UPDATE vault SET b2_id=$1 WHERE id=$2`
+	_, err := db.Exec(s, remoteID, itemID)
+	return err
+}
+
 // AddVaultItem inserts file metadata into the vault table
 func AddVaultItem(userID string, item shared.VaultUpload) (string, error) {
 	if len(userID) == 0 || len(item.Name) == 0 || len(item.ProtectedKey) == 0 {

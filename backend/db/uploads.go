@@ -5,6 +5,8 @@ import (
 	"log"
 )
 
+const ChecksumPlaceholder = "?"
+
 type Upload struct {
 	MetadataID string
 	UploadURL  string
@@ -16,9 +18,9 @@ type Upload struct {
 }
 
 func CreateNewUpload(id string, name string) error {
-	s := `INSERT INTO uploads (metadata_id, upload_id, name)
-	      VALUES ($1, $2, $3)`
-	_, err := db.Exec(s, id, name, name)
+	s := `INSERT INTO uploads (metadata_id, upload_id, name, checksums)
+	      VALUES ($1, $2, $3, $4)`
+	_, err := db.Exec(s, id, name, name, pq.Array([]string{ChecksumPlaceholder}))
 	if err != nil {
 		return err
 	}
@@ -41,7 +43,7 @@ func UpdateUploadValues(
 	      WHERE metadata_id=$5`
 	_, err := db.Exec(s, uploadURL, token, uploadID, local, metadataID)
 	if err != nil {
-		log.Printf("Error updating b2 upload values: %v\n", err)
+		log.Printf("Error updating remote upload values: %v\n", err)
 		return err
 	}
 
@@ -52,7 +54,7 @@ func UpdateUploadID(id string, metadataID string) bool {
 	s := `UPDATE uploads SET upload_id=$1 WHERE metadata_id=$2`
 	_, err := db.Exec(s, id, metadataID)
 	if err != nil {
-		log.Printf("Error updating b2 upload id: %v\n", err)
+		log.Printf("Error updating remote upload id: %v\n", err)
 		return false
 	}
 

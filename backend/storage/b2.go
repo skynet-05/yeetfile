@@ -70,6 +70,11 @@ func (b2Backend *B2) InitLargeUpload(filename, metadataID string) error {
 		return err
 	}
 
+	err = db.SetVaultItemRemoteID(metadataID, info.FileID)
+	if err != nil {
+		return err
+	}
+
 	localUpload := utils.IsLocalUpload(info.UploadURL)
 	return db.UpdateUploadValues(
 		metadataID,
@@ -128,8 +133,6 @@ func (b2Backend *B2) UploadMultiChunk(chunk FileChunk, upload db.Upload) (bool, 
 		}
 
 		localUpload := utils.IsLocalUpload(info.UploadURL)
-		log.Printf("Uploading chunk to: %s\n", info.UploadURL)
-		log.Printf("(local: %t\n)", localUpload)
 		largeFile := b2.FilePartInfo{
 			FileID:             upload.UploadID,
 			AuthorizationToken: info.AuthorizationToken,
@@ -166,7 +169,7 @@ func (b2Backend *B2) UploadMultiChunk(chunk FileChunk, upload db.Upload) (bool, 
 		return false, err
 	}
 
-	if len(checksums) == chunk.TotalChunks {
+	if len(checksums) == chunk.TotalChunks && checksums[0] != db.ChecksumPlaceholder {
 		// All chunks accounted for, finalize the upload
 		b2ID, length, err := b2Backend.FinishLargeUpload(
 			upload.UploadID,

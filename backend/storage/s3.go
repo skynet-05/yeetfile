@@ -163,7 +163,7 @@ func (s3Backend *S3) UploadMultiChunk(chunk FileChunk, upload db.Upload) (bool, 
 		return false, err
 	}
 
-	if len(checksums) == chunk.TotalChunks {
+	if len(checksums) == chunk.TotalChunks && checksums[0] != db.ChecksumPlaceholder {
 		var size int64
 		_, size, err = s3Backend.FinishLargeUpload(
 			upload.UploadID,

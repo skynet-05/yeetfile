@@ -136,15 +136,21 @@ func ClearDatabase(id string) {
 	}
 
 	if DeleteUploads(id) {
-		log.Printf("%s B2 info deleted\n", id)
+		log.Printf("%s File upload info deleted\n", id)
 	} else {
-		log.Printf("Failed to delete B2 info for %s\n", id)
+		log.Printf("Failed to delete upload info for %s\n", id)
 	}
 
 	if DeleteExpiry(id) {
 		log.Printf("%s expiry fields deleted\n", id)
 	} else {
 		log.Printf("Failed to delete expiry fields for %s\n", id)
+	}
+
+	if AdminDeleteFile(id) == nil {
+		log.Printf("%s deleted from vault\n", id)
+	} else {
+		log.Printf("File does not exist in vault")
 	}
 }
 
