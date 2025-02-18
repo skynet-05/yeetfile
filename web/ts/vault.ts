@@ -238,7 +238,6 @@ export class VaultView {
                     this.deleteVaultContent(id, item.decName, isFolder, item.refID, response => {
                         this.removeRow(id, isFolder);
                         this.removeFromCache(id, isFolder);
-                        this.showStorageBar("", response.freedSpace * -1);
                     });
                 }
                 break;
