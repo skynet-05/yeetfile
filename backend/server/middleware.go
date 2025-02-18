@@ -19,8 +19,7 @@ type Visitor struct {
 	lastSeen time.Time
 }
 
-var visitors = make(map[[32]byte]*Visitor)
-var mu sync.Mutex
+var visitors sync.Map
 
 const csp = "" +
 	"default-src 'self';" +
@@ -33,20 +32,25 @@ const csp = "" +
 // associated with a rate limiter, and returns it if so. If not, it creates a
 // new entry in the visitors map associating the ip address with a new rate limiter.
 func getVisitor(identifier string, path string) *rate.Limiter {
-	mu.Lock()
-	defer mu.Unlock()
-
 	idHash := blake2b.Sum256([]byte(identifier + path))
-	visitor, exists := visitors[idHash]
-	if !exists {
-		limit := rate.Every(time.Second * time.Duration(config.YeetFileConfig.LimiterSeconds))
-		limiter := rate.NewLimiter(limit, config.YeetFileConfig.LimiterAttempts)
-		visitors[idHash] = &Visitor{limiter, time.Now()}
-		return limiter
+
+	if v, ok := visitors.Load(idHash); ok {
+		visitor := v.(*Visitor)
+		visitor.lastSeen = time.Now()
+		return visitor.limiter
 	}
 
-	visitor.lastSeen = time.Now()
-	return visitor.limiter
+	duration := time.Duration(config.YeetFileConfig.LimiterSeconds)
+	limit := rate.Every(time.Second * duration)
+	limiter := rate.NewLimiter(limit, config.YeetFileConfig.LimiterAttempts)
+	newVisitor := &Visitor{limiter, time.Now()}
+
+	actual, loaded := visitors.LoadOrStore(idHash, newVisitor)
+	if loaded {
+		return actual.(*Visitor).limiter
+	}
+
+	return limiter
 }
 
 // LimiterMiddleware restricts requests to a particular route to prevent abuse
@@ -252,11 +256,13 @@ func BTCPayMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // ManageLimiters removes an id->visitor pairing from the visitors map if they
 // haven't repeated a limiter-enabled request in constants.LimiterSeconds.
 func ManageLimiters() {
-	mu.Lock()
-	for ip, v := range visitors {
-		if time.Since(v.lastSeen) > time.Minute {
-			delete(visitors, ip)
+	now := time.Now()
+
+	visitors.Range(func(key, value any) bool {
+		visitor := value.(*Visitor)
+		if now.Sub(visitor.lastSeen) > time.Minute {
+			visitors.Delete(key)
 		}
-	}
-	mu.Unlock()
+		return true
+	})
 }
